@@ -1,0 +1,3290 @@
+{
+  "generation": 9,
+  "employees": [
+    {
+      "id": 1,
+      "name": "Toirov B",
+      "role": "Rejissyor",
+      "phone": "+998 90 101 22 33",
+      "avatar": "https://randomuser.me/api/portraits/men/32.jpg"
+    },
+    {
+      "id": 2,
+      "name": "O'lmasov Sh",
+      "role": "Operator",
+      "phone": "+998 91 204 15 22",
+      "avatar": "https://randomuser.me/api/portraits/men/46.jpg"
+    },
+    {
+      "id": 3,
+      "name": "Turdialiyev I",
+      "role": "Montajchi",
+      "phone": "+998 93 715 44 80",
+      "avatar": "https://randomuser.me/api/portraits/men/51.jpg"
+    },
+    {
+      "id": 4,
+      "name": "Raxmatulin N",
+      "role": "Muhandis",
+      "phone": "+998 97 620 12 10",
+      "avatar": "https://randomuser.me/api/portraits/men/76.jpg"
+    },
+    {
+      "id": 5,
+      "name": "Qudratov X",
+      "role": "Operator",
+      "phone": "+998 94 811 60 77",
+      "avatar": "https://randomuser.me/api/portraits/men/22.jpg"
+    },
+    {
+      "id": 6,
+      "name": "Ilmurzin A",
+      "role": "Boshlovchi",
+      "phone": "+998 99 230 77 41",
+      "avatar": "https://randomuser.me/api/portraits/men/64.jpg"
+    },
+    {
+      "id": 7,
+      "name": "Rasulov B",
+      "role": "Smena boshlig'i",
+      "phone": "+998 90 441 89 10",
+      "avatar": "https://randomuser.me/api/portraits/men/84.jpg"
+    },
+    {
+      "id": 8,
+      "name": "Rustamov E",
+      "role": "Ovoz rejissyori",
+      "phone": "+998 91 700 20 40",
+      "avatar": "https://randomuser.me/api/portraits/men/12.jpg"
+    },
+    {
+      "id": 9,
+      "name": "Mirjalolov M",
+      "role": "Texnik",
+      "phone": "+998 93 514 11 28",
+      "avatar": "https://randomuser.me/api/portraits/men/71.jpg"
+    },
+    {
+      "id": 10,
+      "name": "Shermuhammedov D",
+      "role": "Operator",
+      "phone": "+998 95 300 15 19",
+      "avatar": "https://randomuser.me/api/portraits/men/60.jpg"
+    },
+    {
+      "id": 11,
+      "name": "Axmedov B",
+      "role": "Muharrir",
+      "phone": "+998 97 611 90 71",
+      "avatar": "https://randomuser.me/api/portraits/men/44.jpg"
+    },
+    {
+      "id": 12,
+      "name": "Umarov J.",
+      "role": "Grafika",
+      "phone": "+998 99 842 45 60",
+      "avatar": "https://randomuser.me/api/portraits/men/18.jpg"
+    },
+    {
+      "id": 13,
+      "name": "Nurmatov B.",
+      "role": "Operator",
+      "phone": "+998 90 677 22 91",
+      "avatar": "https://randomuser.me/api/portraits/men/65.jpg"
+    },
+    {
+      "id": 14,
+      "name": "Azimov E.",
+      "role": "Administrator",
+      "phone": "+998 91 733 58 01",
+      "avatar": "https://randomuser.me/api/portraits/men/25.jpg"
+    },
+    {
+      "id": 15,
+      "name": "Menayev T.",
+      "role": "Texnik yordamchi",
+      "phone": "+998 94 206 71 19",
+      "avatar": "https://randomuser.me/api/portraits/men/37.jpg"
+    }
+  ],
+  "schedules": {
+    "2026-01-29": {
+      "week": {
+        "start": "2026-01-29",
+        "end": "2026-02-04",
+        "startLabel": "Yan 29",
+        "number": 6,
+        "title": "Hafta 6, 2026",
+        "range": "Yan 29 - Fev 4",
+        "todayLabel": "Dushanba, 29-yanvar",
+        "shortDays": [
+          {
+            "label": "Dush",
+            "date": 29
+          },
+          {
+            "label": "Sey",
+            "date": 30
+          },
+          {
+            "label": "Chor",
+            "date": 31
+          },
+          {
+            "label": "Pay",
+            "date": 1
+          }
+        ],
+        "generatedAt": "14:53",
+        "saved": true
+      },
+      "metrics": {
+        "total": 15,
+        "working": 49,
+        "rest": 9,
+        "backup": 5,
+        "workingToday": 8,
+        "restToday": 1
+      },
+      "groups": [
+        {
+          "id": "0-3 Studiya",
+          "day": "Dushanba",
+          "title": "Dushanba, Yan 29",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 9,
+              "name": "Mirjalolov M",
+              "avatar": "https://i.pravatar.cc/96?img=13",
+              "time": "9:00 - 22:00",
+              "employeeId": "EMP-009",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 10,
+              "name": "Shermuhammedov D",
+              "avatar": "https://i.pravatar.cc/96?img=59",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 11,
+              "name": "Axmedov B",
+              "avatar": "https://i.pravatar.cc/96?img=57",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "0-35 TJK",
+          "day": "Dushanba",
+          "title": "Dushanba, Yan 29",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 12,
+              "name": "Umarov J.",
+              "avatar": "https://i.pravatar.cc/96?img=31",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 13,
+              "name": "Nurmatov B.",
+              "avatar": "https://i.pravatar.cc/96?img=41",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            },
+            {
+              "id": 14,
+              "name": "Azimov E.",
+              "avatar": "https://i.pravatar.cc/96?img=21",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "0-3 Tongi dastur",
+          "day": "Dushanba",
+          "title": "Dushanba, Yan 29",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 15,
+              "name": "Menayev T.",
+              "avatar": "https://i.pravatar.cc/96?img=20",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 1,
+              "name": "Toirov B",
+              "avatar": "https://i.pravatar.cc/96?img=12",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 2,
+              "name": "O'lmasov Sh",
+              "avatar": "https://i.pravatar.cc/96?img=8",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "1-3 Studiya",
+          "day": "Seshanba",
+          "title": "Seshanba, Yan 30",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 11,
+              "name": "Axmedov B",
+              "avatar": "https://i.pravatar.cc/96?img=57",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 12,
+              "name": "Umarov J.",
+              "avatar": "https://i.pravatar.cc/96?img=31",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            },
+            {
+              "id": 13,
+              "name": "Nurmatov B.",
+              "avatar": "https://i.pravatar.cc/96?img=41",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "1-35 TJK",
+          "day": "Seshanba",
+          "title": "Seshanba, Yan 30",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 14,
+              "name": "Azimov E.",
+              "avatar": "https://i.pravatar.cc/96?img=21",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Zaxira",
+              "statusType": "backup"
+            },
+            {
+              "id": 15,
+              "name": "Menayev T.",
+              "avatar": "https://i.pravatar.cc/96?img=20",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 1,
+              "name": "Toirov B",
+              "avatar": "https://i.pravatar.cc/96?img=12",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Zaxira",
+              "statusType": "backup"
+            }
+          ]
+        },
+        {
+          "id": "1-3 Tongi dastur",
+          "day": "Seshanba",
+          "title": "Seshanba, Yan 30",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 2,
+              "name": "O'lmasov Sh",
+              "avatar": "https://i.pravatar.cc/96?img=8",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 3,
+              "name": "Turdialiyev I",
+              "avatar": "https://i.pravatar.cc/96?img=3",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 4,
+              "name": "Raxmatulin N",
+              "avatar": "https://i.pravatar.cc/96?img=11",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "2-3 Studiya",
+          "day": "Chorshanba",
+          "title": "Chorshanba, Yan 31",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 13,
+              "name": "Nurmatov B.",
+              "avatar": "https://i.pravatar.cc/96?img=41",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 14,
+              "name": "Azimov E.",
+              "avatar": "https://i.pravatar.cc/96?img=21",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 15,
+              "name": "Menayev T.",
+              "avatar": "https://i.pravatar.cc/96?img=20",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "2-35 TJK",
+          "day": "Chorshanba",
+          "title": "Chorshanba, Yan 31",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 1,
+              "name": "Toirov B",
+              "avatar": "https://i.pravatar.cc/96?img=12",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 2,
+              "name": "O'lmasov Sh",
+              "avatar": "https://i.pravatar.cc/96?img=8",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Zaxira",
+              "statusType": "backup"
+            },
+            {
+              "id": 3,
+              "name": "Turdialiyev I",
+              "avatar": "https://i.pravatar.cc/96?img=3",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "2-3 Tongi dastur",
+          "day": "Chorshanba",
+          "title": "Chorshanba, Yan 31",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 4,
+              "name": "Raxmatulin N",
+              "avatar": "https://i.pravatar.cc/96?img=11",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            },
+            {
+              "id": 5,
+              "name": "Qudratov X",
+              "avatar": "https://i.pravatar.cc/96?img=53",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 6,
+              "name": "Ilmurzin A",
+              "avatar": "https://i.pravatar.cc/96?img=15",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "3-3 Studiya",
+          "day": "Payshanba",
+          "title": "Payshanba, Fev 1",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 15,
+              "name": "Menayev T.",
+              "avatar": "https://i.pravatar.cc/96?img=20",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 1,
+              "name": "Toirov B",
+              "avatar": "https://i.pravatar.cc/96?img=12",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 2,
+              "name": "O'lmasov Sh",
+              "avatar": "https://i.pravatar.cc/96?img=8",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "3-35 TJK",
+          "day": "Payshanba",
+          "title": "Payshanba, Fev 1",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 3,
+              "name": "Turdialiyev I",
+              "avatar": "https://i.pravatar.cc/96?img=3",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            },
+            {
+              "id": 4,
+              "name": "Raxmatulin N",
+              "avatar": "https://i.pravatar.cc/96?img=11",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 5,
+              "name": "Qudratov X",
+              "avatar": "https://i.pravatar.cc/96?img=53",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "3-3 Tongi dastur",
+          "day": "Payshanba",
+          "title": "Payshanba, Fev 1",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 6,
+              "name": "Ilmurzin A",
+              "avatar": "https://i.pravatar.cc/96?img=15",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 7,
+              "name": "Rasulov B",
+              "avatar": "https://i.pravatar.cc/96?img=52",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 8,
+              "name": "Rustamov E",
+              "avatar": "https://i.pravatar.cc/96?img=32",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "4-3 Studiya",
+          "day": "Juma",
+          "title": "Juma, Fev 2",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 2,
+              "name": "O'lmasov Sh",
+              "avatar": "https://i.pravatar.cc/96?img=8",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            },
+            {
+              "id": 3,
+              "name": "Turdialiyev I",
+              "avatar": "https://i.pravatar.cc/96?img=3",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 4,
+              "name": "Raxmatulin N",
+              "avatar": "https://i.pravatar.cc/96?img=11",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "4-35 TJK",
+          "day": "Juma",
+          "title": "Juma, Fev 2",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 5,
+              "name": "Qudratov X",
+              "avatar": "https://i.pravatar.cc/96?img=53",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 6,
+              "name": "Ilmurzin A",
+              "avatar": "https://i.pravatar.cc/96?img=15",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 7,
+              "name": "Rasulov B",
+              "avatar": "https://i.pravatar.cc/96?img=52",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "4-3 Tongi dastur",
+          "day": "Juma",
+          "title": "Juma, Fev 2",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 8,
+              "name": "Rustamov E",
+              "avatar": "https://i.pravatar.cc/96?img=32",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 9,
+              "name": "Mirjalolov M",
+              "avatar": "https://i.pravatar.cc/96?img=13",
+              "time": "9:00 - 18:00",
+              "employeeId": "EMP-009",
+              "status": "Damda",
+              "statusType": "rest"
+            },
+            {
+              "id": 10,
+              "name": "Shermuhammedov D",
+              "avatar": "https://i.pravatar.cc/96?img=59",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "5-3 Studiya",
+          "day": "Shanba",
+          "title": "Shanba, Fev 3",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 4,
+              "name": "Raxmatulin N",
+              "avatar": "https://i.pravatar.cc/96?img=11",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 5,
+              "name": "Qudratov X",
+              "avatar": "https://i.pravatar.cc/96?img=53",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 6,
+              "name": "Ilmurzin A",
+              "avatar": "https://i.pravatar.cc/96?img=15",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "5-35 TJK",
+          "day": "Shanba",
+          "title": "Shanba, Fev 3",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 7,
+              "name": "Rasulov B",
+              "avatar": "https://i.pravatar.cc/96?img=52",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 8,
+              "name": "Rustamov E",
+              "avatar": "https://i.pravatar.cc/96?img=32",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            },
+            {
+              "id": 9,
+              "name": "Mirjalolov M",
+              "avatar": "https://i.pravatar.cc/96?img=13",
+              "time": "9:00 - 18:00",
+              "employeeId": "EMP-009",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "5-3 Tongi dastur",
+          "day": "Shanba",
+          "title": "Shanba, Fev 3",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 10,
+              "name": "Shermuhammedov D",
+              "avatar": "https://i.pravatar.cc/96?img=59",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 11,
+              "name": "Axmedov B",
+              "avatar": "https://i.pravatar.cc/96?img=57",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 12,
+              "name": "Umarov J.",
+              "avatar": "https://i.pravatar.cc/96?img=31",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Zaxira",
+              "statusType": "backup"
+            }
+          ]
+        },
+        {
+          "id": "6-3 Studiya",
+          "day": "Yakshanba",
+          "title": "Yakshanba, Fev 4",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 6,
+              "name": "Ilmurzin A",
+              "avatar": "https://i.pravatar.cc/96?img=15",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 7,
+              "name": "Rasulov B",
+              "avatar": "https://i.pravatar.cc/96?img=52",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            },
+            {
+              "id": 8,
+              "name": "Rustamov E",
+              "avatar": "https://i.pravatar.cc/96?img=32",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "6-35 TJK",
+          "day": "Yakshanba",
+          "title": "Yakshanba, Fev 4",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 9,
+              "name": "Mirjalolov M",
+              "avatar": "https://i.pravatar.cc/96?img=13",
+              "time": "9:00 - 18:00",
+              "employeeId": "EMP-009",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 10,
+              "name": "Shermuhammedov D",
+              "avatar": "https://i.pravatar.cc/96?img=59",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 11,
+              "name": "Axmedov B",
+              "avatar": "https://i.pravatar.cc/96?img=57",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "6-3 Tongi dastur",
+          "day": "Yakshanba",
+          "title": "Yakshanba, Fev 4",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 12,
+              "name": "Umarov J.",
+              "avatar": "https://i.pravatar.cc/96?img=31",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 13,
+              "name": "Nurmatov B.",
+              "avatar": "https://i.pravatar.cc/96?img=41",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Zaxira",
+              "statusType": "backup"
+            },
+            {
+              "id": 14,
+              "name": "Azimov E.",
+              "avatar": "https://i.pravatar.cc/96?img=21",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            }
+          ]
+        }
+      ],
+      "studioToday": [
+        {
+          "id": 9,
+          "name": "Mirjalolov M",
+          "avatar": "https://i.pravatar.cc/96?img=13",
+          "time": "9:00 - 22:00",
+          "employeeId": "EMP-009",
+          "status": "Working",
+          "statusType": "working"
+        },
+        {
+          "id": 10,
+          "name": "Shermuhammedov D",
+          "avatar": "https://i.pravatar.cc/96?img=59",
+          "time": "9:00 - 22:00",
+          "employeeId": "",
+          "status": "Working",
+          "statusType": "working"
+        },
+        {
+          "id": 11,
+          "name": "Axmedov B",
+          "avatar": "https://i.pravatar.cc/96?img=57",
+          "time": "9:00 - 22:00",
+          "employeeId": "",
+          "status": "Working",
+          "statusType": "working"
+        }
+      ],
+      "overviewRows": [
+        {
+          "name": "Toirov B",
+          "days": [
+            "work",
+            "work",
+            "work",
+            "work"
+          ]
+        },
+        {
+          "name": "O'lmasov Sh",
+          "days": [
+            "work",
+            "work",
+            "work",
+            "work"
+          ]
+        },
+        {
+          "name": "Turdialiyev I",
+          "days": [
+            "empty",
+            "work",
+            "work",
+            "rest"
+          ]
+        },
+        {
+          "name": "Raxmatulin N",
+          "days": [
+            "empty",
+            "work",
+            "rest",
+            "work"
+          ]
+        },
+        {
+          "name": "Qudratov X",
+          "days": [
+            "empty",
+            "empty",
+            "work",
+            "work"
+          ]
+        },
+        {
+          "name": "Ilmurzin A",
+          "days": [
+            "empty",
+            "empty",
+            "work",
+            "work"
+          ]
+        },
+        {
+          "name": "Rasulov B",
+          "days": [
+            "empty",
+            "empty",
+            "empty",
+            "work"
+          ]
+        },
+        {
+          "name": "Rustamov E",
+          "days": [
+            "empty",
+            "empty",
+            "empty",
+            "work"
+          ]
+        }
+      ],
+      "reports": [
+        {
+          "label": "Ishlayotganlar",
+          "value": 49
+        },
+        {
+          "label": "Dam olish kuni",
+          "value": 9
+        },
+        {
+          "label": "Zaxira",
+          "value": 5
+        },
+        {
+          "label": "Bugungi smena",
+          "value": 9
+        }
+      ],
+      "notifications": [
+        "Jadval ma'lumotlari yangilandi.",
+        "9 ta dam olish kuni belgilangan.",
+        "5 ta xodim zaxirada."
+      ],
+      "employees": [
+        {
+          "id": 1,
+          "name": "Toirov B",
+          "role": "Rejissyor",
+          "phone": "+998 90 101 22 33",
+          "avatar": "https://randomuser.me/api/portraits/men/32.jpg"
+        },
+        {
+          "id": 2,
+          "name": "O'lmasov Sh",
+          "role": "Operator",
+          "phone": "+998 91 204 15 22",
+          "avatar": "https://randomuser.me/api/portraits/men/46.jpg"
+        },
+        {
+          "id": 3,
+          "name": "Turdialiyev I",
+          "role": "Montajchi",
+          "phone": "+998 93 715 44 80",
+          "avatar": "https://randomuser.me/api/portraits/men/51.jpg"
+        },
+        {
+          "id": 4,
+          "name": "Raxmatulin N",
+          "role": "Muhandis",
+          "phone": "+998 97 620 12 10",
+          "avatar": "https://randomuser.me/api/portraits/men/76.jpg"
+        },
+        {
+          "id": 5,
+          "name": "Qudratov X",
+          "role": "Operator",
+          "phone": "+998 94 811 60 77",
+          "avatar": "https://randomuser.me/api/portraits/men/22.jpg"
+        },
+        {
+          "id": 6,
+          "name": "Ilmurzin A",
+          "role": "Boshlovchi",
+          "phone": "+998 99 230 77 41",
+          "avatar": "https://randomuser.me/api/portraits/men/64.jpg"
+        },
+        {
+          "id": 7,
+          "name": "Rasulov B",
+          "role": "Smena boshlig'i",
+          "phone": "+998 90 441 89 10",
+          "avatar": "https://randomuser.me/api/portraits/men/84.jpg"
+        },
+        {
+          "id": 8,
+          "name": "Rustamov E",
+          "role": "Ovoz rejissyori",
+          "phone": "+998 91 700 20 40",
+          "avatar": "https://randomuser.me/api/portraits/men/12.jpg"
+        },
+        {
+          "id": 9,
+          "name": "Mirjalolov M",
+          "role": "Texnik",
+          "phone": "+998 93 514 11 28",
+          "avatar": "https://randomuser.me/api/portraits/men/71.jpg"
+        },
+        {
+          "id": 10,
+          "name": "Shermuhammedov D",
+          "role": "Operator",
+          "phone": "+998 95 300 15 19",
+          "avatar": "https://randomuser.me/api/portraits/men/60.jpg"
+        },
+        {
+          "id": 11,
+          "name": "Axmedov B",
+          "role": "Muharrir",
+          "phone": "+998 97 611 90 71",
+          "avatar": "https://randomuser.me/api/portraits/men/44.jpg"
+        },
+        {
+          "id": 12,
+          "name": "Umarov J.",
+          "role": "Grafika",
+          "phone": "+998 99 842 45 60",
+          "avatar": "https://randomuser.me/api/portraits/men/18.jpg"
+        },
+        {
+          "id": 13,
+          "name": "Nurmatov B.",
+          "role": "Operator",
+          "phone": "+998 90 677 22 91",
+          "avatar": "https://randomuser.me/api/portraits/men/65.jpg"
+        },
+        {
+          "id": 14,
+          "name": "Azimov E.",
+          "role": "Administrator",
+          "phone": "+998 91 733 58 01",
+          "avatar": "https://randomuser.me/api/portraits/men/25.jpg"
+        },
+        {
+          "id": 15,
+          "name": "Menayev T.",
+          "role": "Texnik yordamchi",
+          "phone": "+998 94 206 71 19",
+          "avatar": "https://randomuser.me/api/portraits/men/37.jpg"
+        }
+      ]
+    },
+    "2026-01-22": {
+      "week": {
+        "start": "2026-01-22",
+        "end": "2026-01-28",
+        "startLabel": "Yan 22",
+        "number": 4,
+        "title": "Hafta 4, 2026",
+        "range": "Yan 22 - Yan 28",
+        "todayLabel": "Dushanba, 22-yanvar",
+        "shortDays": [
+          {
+            "label": "Dush",
+            "date": 22
+          },
+          {
+            "label": "Sey",
+            "date": 23
+          },
+          {
+            "label": "Chor",
+            "date": 24
+          },
+          {
+            "label": "Pay",
+            "date": 25
+          }
+        ],
+        "generatedAt": "14:49",
+        "saved": true
+      },
+      "metrics": {
+        "total": 15,
+        "working": 51,
+        "rest": 9,
+        "backup": 3,
+        "workingToday": 7,
+        "restToday": 2
+      },
+      "groups": [
+        {
+          "id": "0-3 Studiya",
+          "day": "Dushanba",
+          "title": "Dushanba, Yan 22",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 7,
+              "name": "Rasulov B",
+              "avatar": "https://i.pravatar.cc/96?img=52",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 8,
+              "name": "Rustamov E",
+              "avatar": "https://i.pravatar.cc/96?img=32",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            },
+            {
+              "id": 9,
+              "name": "Mirjalolov M",
+              "avatar": "https://i.pravatar.cc/96?img=13",
+              "time": "9:00 - 22:00",
+              "employeeId": "EMP-009",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "0-35 TJK",
+          "day": "Dushanba",
+          "title": "Dushanba, Yan 22",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 10,
+              "name": "Shermuhammedov D",
+              "avatar": "https://i.pravatar.cc/96?img=59",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 11,
+              "name": "Axmedov B",
+              "avatar": "https://i.pravatar.cc/96?img=57",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 12,
+              "name": "Umarov J.",
+              "avatar": "https://i.pravatar.cc/96?img=31",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "0-3 Tongi dastur",
+          "day": "Dushanba",
+          "title": "Dushanba, Yan 22",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 13,
+              "name": "Nurmatov B.",
+              "avatar": "https://i.pravatar.cc/96?img=41",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 14,
+              "name": "Azimov E.",
+              "avatar": "https://i.pravatar.cc/96?img=21",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 15,
+              "name": "Menayev T.",
+              "avatar": "https://i.pravatar.cc/96?img=20",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            }
+          ]
+        },
+        {
+          "id": "1-3 Studiya",
+          "day": "Seshanba",
+          "title": "Seshanba, Yan 23",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 9,
+              "name": "Mirjalolov M",
+              "avatar": "https://i.pravatar.cc/96?img=13",
+              "time": "9:00 - 22:00",
+              "employeeId": "EMP-009",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 10,
+              "name": "Shermuhammedov D",
+              "avatar": "https://i.pravatar.cc/96?img=59",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 11,
+              "name": "Axmedov B",
+              "avatar": "https://i.pravatar.cc/96?img=57",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "1-35 TJK",
+          "day": "Seshanba",
+          "title": "Seshanba, Yan 23",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 12,
+              "name": "Umarov J.",
+              "avatar": "https://i.pravatar.cc/96?img=31",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 13,
+              "name": "Nurmatov B.",
+              "avatar": "https://i.pravatar.cc/96?img=41",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 14,
+              "name": "Azimov E.",
+              "avatar": "https://i.pravatar.cc/96?img=21",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            }
+          ]
+        },
+        {
+          "id": "1-3 Tongi dastur",
+          "day": "Seshanba",
+          "title": "Seshanba, Yan 23",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 15,
+              "name": "Menayev T.",
+              "avatar": "https://i.pravatar.cc/96?img=20",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 1,
+              "name": "Toirov B",
+              "avatar": "https://i.pravatar.cc/96?img=12",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 2,
+              "name": "O'lmasov Sh",
+              "avatar": "https://i.pravatar.cc/96?img=8",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "2-3 Studiya",
+          "day": "Chorshanba",
+          "title": "Chorshanba, Yan 24",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 11,
+              "name": "Axmedov B",
+              "avatar": "https://i.pravatar.cc/96?img=57",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 12,
+              "name": "Umarov J.",
+              "avatar": "https://i.pravatar.cc/96?img=31",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 13,
+              "name": "Nurmatov B.",
+              "avatar": "https://i.pravatar.cc/96?img=41",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            }
+          ]
+        },
+        {
+          "id": "2-35 TJK",
+          "day": "Chorshanba",
+          "title": "Chorshanba, Yan 24",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 14,
+              "name": "Azimov E.",
+              "avatar": "https://i.pravatar.cc/96?img=21",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 15,
+              "name": "Menayev T.",
+              "avatar": "https://i.pravatar.cc/96?img=20",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Zaxira",
+              "statusType": "backup"
+            },
+            {
+              "id": 1,
+              "name": "Toirov B",
+              "avatar": "https://i.pravatar.cc/96?img=12",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "2-3 Tongi dastur",
+          "day": "Chorshanba",
+          "title": "Chorshanba, Yan 24",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 2,
+              "name": "O'lmasov Sh",
+              "avatar": "https://i.pravatar.cc/96?img=8",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 3,
+              "name": "Turdialiyev I",
+              "avatar": "https://i.pravatar.cc/96?img=3",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 4,
+              "name": "Raxmatulin N",
+              "avatar": "https://i.pravatar.cc/96?img=11",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "3-3 Studiya",
+          "day": "Payshanba",
+          "title": "Payshanba, Yan 25",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 13,
+              "name": "Nurmatov B.",
+              "avatar": "https://i.pravatar.cc/96?img=41",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 14,
+              "name": "Azimov E.",
+              "avatar": "https://i.pravatar.cc/96?img=21",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 15,
+              "name": "Menayev T.",
+              "avatar": "https://i.pravatar.cc/96?img=20",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "3-35 TJK",
+          "day": "Payshanba",
+          "title": "Payshanba, Yan 25",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 1,
+              "name": "Toirov B",
+              "avatar": "https://i.pravatar.cc/96?img=12",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 2,
+              "name": "O'lmasov Sh",
+              "avatar": "https://i.pravatar.cc/96?img=8",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 3,
+              "name": "Turdialiyev I",
+              "avatar": "https://i.pravatar.cc/96?img=3",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Zaxira",
+              "statusType": "backup"
+            }
+          ]
+        },
+        {
+          "id": "3-3 Tongi dastur",
+          "day": "Payshanba",
+          "title": "Payshanba, Yan 25",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 4,
+              "name": "Raxmatulin N",
+              "avatar": "https://i.pravatar.cc/96?img=11",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 5,
+              "name": "Qudratov X",
+              "avatar": "https://i.pravatar.cc/96?img=53",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            },
+            {
+              "id": 6,
+              "name": "Ilmurzin A",
+              "avatar": "https://i.pravatar.cc/96?img=15",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "4-3 Studiya",
+          "day": "Juma",
+          "title": "Juma, Yan 26",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 15,
+              "name": "Menayev T.",
+              "avatar": "https://i.pravatar.cc/96?img=20",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 1,
+              "name": "Toirov B",
+              "avatar": "https://i.pravatar.cc/96?img=12",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 2,
+              "name": "O'lmasov Sh",
+              "avatar": "https://i.pravatar.cc/96?img=8",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "4-35 TJK",
+          "day": "Juma",
+          "title": "Juma, Yan 26",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 3,
+              "name": "Turdialiyev I",
+              "avatar": "https://i.pravatar.cc/96?img=3",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 4,
+              "name": "Raxmatulin N",
+              "avatar": "https://i.pravatar.cc/96?img=11",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            },
+            {
+              "id": 5,
+              "name": "Qudratov X",
+              "avatar": "https://i.pravatar.cc/96?img=53",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "4-3 Tongi dastur",
+          "day": "Juma",
+          "title": "Juma, Yan 26",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 6,
+              "name": "Ilmurzin A",
+              "avatar": "https://i.pravatar.cc/96?img=15",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 7,
+              "name": "Rasulov B",
+              "avatar": "https://i.pravatar.cc/96?img=52",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 8,
+              "name": "Rustamov E",
+              "avatar": "https://i.pravatar.cc/96?img=32",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "5-3 Studiya",
+          "day": "Shanba",
+          "title": "Shanba, Yan 27",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 2,
+              "name": "O'lmasov Sh",
+              "avatar": "https://i.pravatar.cc/96?img=8",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 3,
+              "name": "Turdialiyev I",
+              "avatar": "https://i.pravatar.cc/96?img=3",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            },
+            {
+              "id": 4,
+              "name": "Raxmatulin N",
+              "avatar": "https://i.pravatar.cc/96?img=11",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "5-35 TJK",
+          "day": "Shanba",
+          "title": "Shanba, Yan 27",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 5,
+              "name": "Qudratov X",
+              "avatar": "https://i.pravatar.cc/96?img=53",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Zaxira",
+              "statusType": "backup"
+            },
+            {
+              "id": 6,
+              "name": "Ilmurzin A",
+              "avatar": "https://i.pravatar.cc/96?img=15",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 7,
+              "name": "Rasulov B",
+              "avatar": "https://i.pravatar.cc/96?img=52",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "5-3 Tongi dastur",
+          "day": "Shanba",
+          "title": "Shanba, Yan 27",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 8,
+              "name": "Rustamov E",
+              "avatar": "https://i.pravatar.cc/96?img=32",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 9,
+              "name": "Mirjalolov M",
+              "avatar": "https://i.pravatar.cc/96?img=13",
+              "time": "9:00 - 18:00",
+              "employeeId": "EMP-009",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 10,
+              "name": "Shermuhammedov D",
+              "avatar": "https://i.pravatar.cc/96?img=59",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            }
+          ]
+        },
+        {
+          "id": "6-3 Studiya",
+          "day": "Yakshanba",
+          "title": "Yakshanba, Yan 28",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 4,
+              "name": "Raxmatulin N",
+              "avatar": "https://i.pravatar.cc/96?img=11",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 5,
+              "name": "Qudratov X",
+              "avatar": "https://i.pravatar.cc/96?img=53",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 6,
+              "name": "Ilmurzin A",
+              "avatar": "https://i.pravatar.cc/96?img=15",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "6-35 TJK",
+          "day": "Yakshanba",
+          "title": "Yakshanba, Yan 28",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 7,
+              "name": "Rasulov B",
+              "avatar": "https://i.pravatar.cc/96?img=52",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 8,
+              "name": "Rustamov E",
+              "avatar": "https://i.pravatar.cc/96?img=32",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 9,
+              "name": "Mirjalolov M",
+              "avatar": "https://i.pravatar.cc/96?img=13",
+              "time": "9:00 - 18:00",
+              "employeeId": "EMP-009",
+              "status": "Damda",
+              "statusType": "rest"
+            }
+          ]
+        },
+        {
+          "id": "6-3 Tongi dastur",
+          "day": "Yakshanba",
+          "title": "Yakshanba, Yan 28",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 10,
+              "name": "Shermuhammedov D",
+              "avatar": "https://i.pravatar.cc/96?img=59",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 11,
+              "name": "Axmedov B",
+              "avatar": "https://i.pravatar.cc/96?img=57",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 12,
+              "name": "Umarov J.",
+              "avatar": "https://i.pravatar.cc/96?img=31",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        }
+      ],
+      "studioToday": [
+        {
+          "id": 7,
+          "name": "Rasulov B",
+          "avatar": "https://i.pravatar.cc/96?img=52",
+          "time": "9:00 - 22:00",
+          "employeeId": "",
+          "status": "Working",
+          "statusType": "working"
+        },
+        {
+          "id": 9,
+          "name": "Mirjalolov M",
+          "avatar": "https://i.pravatar.cc/96?img=13",
+          "time": "9:00 - 22:00",
+          "employeeId": "EMP-009",
+          "status": "Working",
+          "statusType": "working"
+        },
+        {
+          "id": 10,
+          "name": "Shermuhammedov D",
+          "avatar": "https://i.pravatar.cc/96?img=59",
+          "time": "9:00 - 18:00",
+          "employeeId": "",
+          "status": "Working",
+          "statusType": "working"
+        }
+      ],
+      "overviewRows": [
+        {
+          "name": "Toirov B",
+          "days": [
+            "empty",
+            "work",
+            "work",
+            "work"
+          ]
+        },
+        {
+          "name": "O'lmasov Sh",
+          "days": [
+            "empty",
+            "work",
+            "work",
+            "work"
+          ]
+        },
+        {
+          "name": "Turdialiyev I",
+          "days": [
+            "empty",
+            "empty",
+            "work",
+            "work"
+          ]
+        },
+        {
+          "name": "Raxmatulin N",
+          "days": [
+            "empty",
+            "empty",
+            "work",
+            "work"
+          ]
+        },
+        {
+          "name": "Qudratov X",
+          "days": [
+            "empty",
+            "empty",
+            "empty",
+            "rest"
+          ]
+        },
+        {
+          "name": "Ilmurzin A",
+          "days": [
+            "empty",
+            "empty",
+            "empty",
+            "work"
+          ]
+        },
+        {
+          "name": "Rasulov B",
+          "days": [
+            "work",
+            "empty",
+            "empty",
+            "empty"
+          ]
+        },
+        {
+          "name": "Rustamov E",
+          "days": [
+            "rest",
+            "empty",
+            "empty",
+            "empty"
+          ]
+        }
+      ],
+      "reports": [
+        {
+          "label": "Ishlayotganlar",
+          "value": 51
+        },
+        {
+          "label": "Dam olish kuni",
+          "value": 9
+        },
+        {
+          "label": "Zaxira",
+          "value": 3
+        },
+        {
+          "label": "Bugungi smena",
+          "value": 9
+        }
+      ],
+      "notifications": [
+        "Jadval ma'lumotlari yangilandi.",
+        "9 ta dam olish kuni belgilangan.",
+        "3 ta xodim zaxirada."
+      ],
+      "employees": [
+        {
+          "id": 1,
+          "name": "Toirov B",
+          "role": "Rejissyor",
+          "phone": "+998 90 101 22 33",
+          "avatar": "https://randomuser.me/api/portraits/men/32.jpg"
+        },
+        {
+          "id": 2,
+          "name": "O'lmasov Sh",
+          "role": "Operator",
+          "phone": "+998 91 204 15 22",
+          "avatar": "https://randomuser.me/api/portraits/men/46.jpg"
+        },
+        {
+          "id": 3,
+          "name": "Turdialiyev I",
+          "role": "Montajchi",
+          "phone": "+998 93 715 44 80",
+          "avatar": "https://randomuser.me/api/portraits/men/51.jpg"
+        },
+        {
+          "id": 4,
+          "name": "Raxmatulin N",
+          "role": "Muhandis",
+          "phone": "+998 97 620 12 10",
+          "avatar": "https://randomuser.me/api/portraits/men/76.jpg"
+        },
+        {
+          "id": 5,
+          "name": "Qudratov X",
+          "role": "Operator",
+          "phone": "+998 94 811 60 77",
+          "avatar": "https://randomuser.me/api/portraits/men/22.jpg"
+        },
+        {
+          "id": 6,
+          "name": "Ilmurzin A",
+          "role": "Boshlovchi",
+          "phone": "+998 99 230 77 41",
+          "avatar": "https://randomuser.me/api/portraits/men/64.jpg"
+        },
+        {
+          "id": 7,
+          "name": "Rasulov B",
+          "role": "Smena boshlig'i",
+          "phone": "+998 90 441 89 10",
+          "avatar": "https://randomuser.me/api/portraits/men/84.jpg"
+        },
+        {
+          "id": 8,
+          "name": "Rustamov E",
+          "role": "Ovoz rejissyori",
+          "phone": "+998 91 700 20 40",
+          "avatar": "https://randomuser.me/api/portraits/men/12.jpg"
+        },
+        {
+          "id": 9,
+          "name": "Mirjalolov M",
+          "role": "Texnik",
+          "phone": "+998 93 514 11 28",
+          "avatar": "https://randomuser.me/api/portraits/men/71.jpg"
+        },
+        {
+          "id": 10,
+          "name": "Shermuhammedov D",
+          "role": "Operator",
+          "phone": "+998 95 300 15 19",
+          "avatar": "https://randomuser.me/api/portraits/men/60.jpg"
+        },
+        {
+          "id": 11,
+          "name": "Axmedov B",
+          "role": "Muharrir",
+          "phone": "+998 97 611 90 71",
+          "avatar": "https://randomuser.me/api/portraits/men/44.jpg"
+        },
+        {
+          "id": 12,
+          "name": "Umarov J.",
+          "role": "Grafika",
+          "phone": "+998 99 842 45 60",
+          "avatar": "https://randomuser.me/api/portraits/men/18.jpg"
+        },
+        {
+          "id": 13,
+          "name": "Nurmatov B.",
+          "role": "Operator",
+          "phone": "+998 90 677 22 91",
+          "avatar": "https://randomuser.me/api/portraits/men/65.jpg"
+        },
+        {
+          "id": 14,
+          "name": "Azimov E.",
+          "role": "Administrator",
+          "phone": "+998 91 733 58 01",
+          "avatar": "https://randomuser.me/api/portraits/men/25.jpg"
+        },
+        {
+          "id": 15,
+          "name": "Menayev T.",
+          "role": "Texnik yordamchi",
+          "phone": "+998 94 206 71 19",
+          "avatar": "https://randomuser.me/api/portraits/men/37.jpg"
+        }
+      ]
+    },
+    "2026-02-05": {
+      "week": {
+        "start": "2026-02-05",
+        "end": "2026-02-11",
+        "startLabel": "Fev 5",
+        "number": 2,
+        "title": "Hafta 2, 2026",
+        "range": "Fev 5 - Fev 11",
+        "todayLabel": "Dushanba, 5-yanvar",
+        "shortDays": [
+          {
+            "label": "Dush",
+            "date": 5
+          },
+          {
+            "label": "Sey",
+            "date": 6
+          },
+          {
+            "label": "Chor",
+            "date": 7
+          },
+          {
+            "label": "Pay",
+            "date": 8
+          }
+        ],
+        "generatedAt": "15:16",
+        "saved": true
+      },
+      "metrics": {
+        "total": 15,
+        "working": 44,
+        "rest": 9,
+        "backup": 6,
+        "workingToday": 4,
+        "restToday": 2
+      },
+      "groups": [
+        {
+          "id": "0-3 Studiya",
+          "day": "Dushanba",
+          "title": "Dushanba, Fev 5",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 10,
+              "name": "Shermuhammedov D",
+              "role": "Operator",
+              "phone": "+998 95 300 15 19",
+              "avatar": "https://randomuser.me/api/portraits/men/60.jpg",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            },
+            {
+              "id": 11,
+              "name": "Axmedov B",
+              "role": "Muharrir",
+              "phone": "+998 97 611 90 71",
+              "avatar": "https://randomuser.me/api/portraits/men/44.jpg",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 12,
+              "name": "Umarov J.",
+              "role": "Grafika",
+              "phone": "+998 99 842 45 60",
+              "avatar": "https://randomuser.me/api/portraits/men/18.jpg",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            }
+          ]
+        },
+        {
+          "id": "0-35 TJK",
+          "day": "Dushanba",
+          "title": "Dushanba, Fev 5",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 13,
+              "name": "Nurmatov B.",
+              "role": "Operator",
+              "phone": "+998 90 677 22 91",
+              "avatar": "https://randomuser.me/api/portraits/men/65.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Zaxira",
+              "statusType": "backup"
+            },
+            {
+              "id": 14,
+              "name": "Azimov E.",
+              "role": "Administrator",
+              "phone": "+998 91 733 58 01",
+              "avatar": "https://randomuser.me/api/portraits/men/25.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 15,
+              "name": "Menayev T.",
+              "role": "Texnik yordamchi",
+              "phone": "+998 94 206 71 19",
+              "avatar": "https://randomuser.me/api/portraits/men/37.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "0-3 Tongi dastur",
+          "day": "Dushanba",
+          "title": "Dushanba, Fev 5",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 1,
+              "name": "Toirov B",
+              "role": "Rejissyor",
+              "phone": "+998 90 101 22 33",
+              "avatar": "https://randomuser.me/api/portraits/men/32.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Zaxira",
+              "statusType": "backup"
+            },
+            {
+              "id": 2,
+              "name": "O'lmasov Sh",
+              "role": "Operator",
+              "phone": "+998 91 204 15 22",
+              "avatar": "https://randomuser.me/api/portraits/men/46.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "1-3 Studiya",
+          "day": "Seshanba",
+          "title": "Seshanba, Fev 6",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 12,
+              "name": "Umarov J.",
+              "role": "Grafika",
+              "phone": "+998 99 842 45 60",
+              "avatar": "https://randomuser.me/api/portraits/men/18.jpg",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 13,
+              "name": "Nurmatov B.",
+              "role": "Operator",
+              "phone": "+998 90 677 22 91",
+              "avatar": "https://randomuser.me/api/portraits/men/65.jpg",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 14,
+              "name": "Azimov E.",
+              "role": "Administrator",
+              "phone": "+998 91 733 58 01",
+              "avatar": "https://randomuser.me/api/portraits/men/25.jpg",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "1-35 TJK",
+          "day": "Seshanba",
+          "title": "Seshanba, Fev 6",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 15,
+              "name": "Menayev T.",
+              "role": "Texnik yordamchi",
+              "phone": "+998 94 206 71 19",
+              "avatar": "https://randomuser.me/api/portraits/men/37.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 1,
+              "name": "Toirov B",
+              "role": "Rejissyor",
+              "phone": "+998 90 101 22 33",
+              "avatar": "https://randomuser.me/api/portraits/men/32.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "1-3 Tongi dastur",
+          "day": "Seshanba",
+          "title": "Seshanba, Fev 6",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 2,
+              "name": "O'lmasov Sh",
+              "role": "Operator",
+              "phone": "+998 91 204 15 22",
+              "avatar": "https://randomuser.me/api/portraits/men/46.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Zaxira",
+              "statusType": "backup"
+            },
+            {
+              "id": 3,
+              "name": "Turdialiyev I",
+              "role": "Montajchi",
+              "phone": "+998 93 715 44 80",
+              "avatar": "https://randomuser.me/api/portraits/men/51.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 4,
+              "name": "Raxmatulin N",
+              "role": "Muhandis",
+              "phone": "+998 97 620 12 10",
+              "avatar": "https://randomuser.me/api/portraits/men/76.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            }
+          ]
+        },
+        {
+          "id": "2-3 Studiya",
+          "day": "Chorshanba",
+          "title": "Chorshanba, Fev 7",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 14,
+              "name": "Azimov E.",
+              "role": "Administrator",
+              "phone": "+998 91 733 58 01",
+              "avatar": "https://randomuser.me/api/portraits/men/25.jpg",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 15,
+              "name": "Menayev T.",
+              "role": "Texnik yordamchi",
+              "phone": "+998 94 206 71 19",
+              "avatar": "https://randomuser.me/api/portraits/men/37.jpg",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "2-35 TJK",
+          "day": "Chorshanba",
+          "title": "Chorshanba, Fev 7",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 1,
+              "name": "Toirov B",
+              "role": "Rejissyor",
+              "phone": "+998 90 101 22 33",
+              "avatar": "https://randomuser.me/api/portraits/men/32.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 2,
+              "name": "O'lmasov Sh",
+              "role": "Operator",
+              "phone": "+998 91 204 15 22",
+              "avatar": "https://randomuser.me/api/portraits/men/46.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 3,
+              "name": "Turdialiyev I",
+              "role": "Montajchi",
+              "phone": "+998 93 715 44 80",
+              "avatar": "https://randomuser.me/api/portraits/men/51.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            }
+          ]
+        },
+        {
+          "id": "2-3 Tongi dastur",
+          "day": "Chorshanba",
+          "title": "Chorshanba, Fev 7",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 4,
+              "name": "Raxmatulin N",
+              "role": "Muhandis",
+              "phone": "+998 97 620 12 10",
+              "avatar": "https://randomuser.me/api/portraits/men/76.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 5,
+              "name": "Qudratov X",
+              "role": "Operator",
+              "phone": "+998 94 811 60 77",
+              "avatar": "https://randomuser.me/api/portraits/men/22.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 6,
+              "name": "Ilmurzin A",
+              "role": "Boshlovchi",
+              "phone": "+998 99 230 77 41",
+              "avatar": "https://randomuser.me/api/portraits/men/64.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "3-3 Studiya",
+          "day": "Payshanba",
+          "title": "Payshanba, Fev 8",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 1,
+              "name": "Toirov B",
+              "role": "Rejissyor",
+              "phone": "+998 90 101 22 33",
+              "avatar": "https://randomuser.me/api/portraits/men/32.jpg",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Zaxira",
+              "statusType": "backup"
+            },
+            {
+              "id": 2,
+              "name": "O'lmasov Sh",
+              "role": "Operator",
+              "phone": "+998 91 204 15 22",
+              "avatar": "https://randomuser.me/api/portraits/men/46.jpg",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            }
+          ]
+        },
+        {
+          "id": "3-35 TJK",
+          "day": "Payshanba",
+          "title": "Payshanba, Fev 8",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 3,
+              "name": "Turdialiyev I",
+              "role": "Montajchi",
+              "phone": "+998 93 715 44 80",
+              "avatar": "https://randomuser.me/api/portraits/men/51.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 4,
+              "name": "Raxmatulin N",
+              "role": "Muhandis",
+              "phone": "+998 97 620 12 10",
+              "avatar": "https://randomuser.me/api/portraits/men/76.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 5,
+              "name": "Qudratov X",
+              "role": "Operator",
+              "phone": "+998 94 811 60 77",
+              "avatar": "https://randomuser.me/api/portraits/men/22.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "3-3 Tongi dastur",
+          "day": "Payshanba",
+          "title": "Payshanba, Fev 8",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 6,
+              "name": "Ilmurzin A",
+              "role": "Boshlovchi",
+              "phone": "+998 99 230 77 41",
+              "avatar": "https://randomuser.me/api/portraits/men/64.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 7,
+              "name": "Rasulov B",
+              "role": "Smena boshlig'i",
+              "phone": "+998 90 441 89 10",
+              "avatar": "https://randomuser.me/api/portraits/men/84.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 8,
+              "name": "Rustamov E",
+              "role": "Ovoz rejissyori",
+              "phone": "+998 91 700 20 40",
+              "avatar": "https://randomuser.me/api/portraits/men/12.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "4-3 Studiya",
+          "day": "Juma",
+          "title": "Juma, Fev 9",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 2,
+              "name": "O'lmasov Sh",
+              "role": "Operator",
+              "phone": "+998 91 204 15 22",
+              "avatar": "https://randomuser.me/api/portraits/men/46.jpg",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Zaxira",
+              "statusType": "backup"
+            },
+            {
+              "id": 3,
+              "name": "Turdialiyev I",
+              "role": "Montajchi",
+              "phone": "+998 93 715 44 80",
+              "avatar": "https://randomuser.me/api/portraits/men/51.jpg",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 4,
+              "name": "Raxmatulin N",
+              "role": "Muhandis",
+              "phone": "+998 97 620 12 10",
+              "avatar": "https://randomuser.me/api/portraits/men/76.jpg",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "4-35 TJK",
+          "day": "Juma",
+          "title": "Juma, Fev 9",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 5,
+              "name": "Qudratov X",
+              "role": "Operator",
+              "phone": "+998 94 811 60 77",
+              "avatar": "https://randomuser.me/api/portraits/men/22.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 6,
+              "name": "Ilmurzin A",
+              "role": "Boshlovchi",
+              "phone": "+998 99 230 77 41",
+              "avatar": "https://randomuser.me/api/portraits/men/64.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 7,
+              "name": "Rasulov B",
+              "role": "Smena boshlig'i",
+              "phone": "+998 90 441 89 10",
+              "avatar": "https://randomuser.me/api/portraits/men/84.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "4-3 Tongi dastur",
+          "day": "Juma",
+          "title": "Juma, Fev 9",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 8,
+              "name": "Rustamov E",
+              "role": "Ovoz rejissyori",
+              "phone": "+998 91 700 20 40",
+              "avatar": "https://randomuser.me/api/portraits/men/12.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            },
+            {
+              "id": 9,
+              "name": "Mirjalolov M",
+              "role": "Texnik",
+              "phone": "+998 93 514 11 28",
+              "avatar": "https://randomuser.me/api/portraits/men/71.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "EMP-009",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 10,
+              "name": "Shermuhammedov D",
+              "role": "Operator",
+              "phone": "+998 95 300 15 19",
+              "avatar": "https://randomuser.me/api/portraits/men/60.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "5-3 Studiya",
+          "day": "Shanba",
+          "title": "Shanba, Fev 10",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 4,
+              "name": "Raxmatulin N",
+              "role": "Muhandis",
+              "phone": "+998 97 620 12 10",
+              "avatar": "https://randomuser.me/api/portraits/men/76.jpg",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 5,
+              "name": "Qudratov X",
+              "role": "Operator",
+              "phone": "+998 94 811 60 77",
+              "avatar": "https://randomuser.me/api/portraits/men/22.jpg",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 6,
+              "name": "Ilmurzin A",
+              "role": "Boshlovchi",
+              "phone": "+998 99 230 77 41",
+              "avatar": "https://randomuser.me/api/portraits/men/64.jpg",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "5-35 TJK",
+          "day": "Shanba",
+          "title": "Shanba, Fev 10",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 7,
+              "name": "Rasulov B",
+              "role": "Smena boshlig'i",
+              "phone": "+998 90 441 89 10",
+              "avatar": "https://randomuser.me/api/portraits/men/84.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            },
+            {
+              "id": 8,
+              "name": "Rustamov E",
+              "role": "Ovoz rejissyori",
+              "phone": "+998 91 700 20 40",
+              "avatar": "https://randomuser.me/api/portraits/men/12.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 9,
+              "name": "Mirjalolov M",
+              "role": "Texnik",
+              "phone": "+998 93 514 11 28",
+              "avatar": "https://randomuser.me/api/portraits/men/71.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "EMP-009",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "5-3 Tongi dastur",
+          "day": "Shanba",
+          "title": "Shanba, Fev 10",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 10,
+              "name": "Shermuhammedov D",
+              "role": "Operator",
+              "phone": "+998 95 300 15 19",
+              "avatar": "https://randomuser.me/api/portraits/men/60.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 11,
+              "name": "Axmedov B",
+              "role": "Muharrir",
+              "phone": "+998 97 611 90 71",
+              "avatar": "https://randomuser.me/api/portraits/men/44.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 12,
+              "name": "Umarov J.",
+              "role": "Grafika",
+              "phone": "+998 99 842 45 60",
+              "avatar": "https://randomuser.me/api/portraits/men/18.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "6-3 Studiya",
+          "day": "Yakshanba",
+          "title": "Yakshanba, Fev 11",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 6,
+              "name": "Ilmurzin A",
+              "role": "Boshlovchi",
+              "phone": "+998 99 230 77 41",
+              "avatar": "https://randomuser.me/api/portraits/men/64.jpg",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            },
+            {
+              "id": 7,
+              "name": "Rasulov B",
+              "role": "Smena boshlig'i",
+              "phone": "+998 90 441 89 10",
+              "avatar": "https://randomuser.me/api/portraits/men/84.jpg",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 8,
+              "name": "Rustamov E",
+              "role": "Ovoz rejissyori",
+              "phone": "+998 91 700 20 40",
+              "avatar": "https://randomuser.me/api/portraits/men/12.jpg",
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "6-35 TJK",
+          "day": "Yakshanba",
+          "title": "Yakshanba, Fev 11",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 9,
+              "name": "Mirjalolov M",
+              "role": "Texnik",
+              "phone": "+998 93 514 11 28",
+              "avatar": "https://randomuser.me/api/portraits/men/71.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "EMP-009",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 10,
+              "name": "Shermuhammedov D",
+              "role": "Operator",
+              "phone": "+998 95 300 15 19",
+              "avatar": "https://randomuser.me/api/portraits/men/60.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 11,
+              "name": "Axmedov B",
+              "role": "Muharrir",
+              "phone": "+998 97 611 90 71",
+              "avatar": "https://randomuser.me/api/portraits/men/44.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Zaxira",
+              "statusType": "backup"
+            }
+          ]
+        },
+        {
+          "id": "6-3 Tongi dastur",
+          "day": "Yakshanba",
+          "title": "Yakshanba, Fev 11",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 12,
+              "name": "Umarov J.",
+              "role": "Grafika",
+              "phone": "+998 99 842 45 60",
+              "avatar": "https://randomuser.me/api/portraits/men/18.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            },
+            {
+              "id": 13,
+              "name": "Nurmatov B.",
+              "role": "Operator",
+              "phone": "+998 90 677 22 91",
+              "avatar": "https://randomuser.me/api/portraits/men/65.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            },
+            {
+              "id": 14,
+              "name": "Azimov E.",
+              "role": "Administrator",
+              "phone": "+998 91 733 58 01",
+              "avatar": "https://randomuser.me/api/portraits/men/25.jpg",
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Ishlamoqda",
+              "statusType": "working"
+            }
+          ]
+        }
+      ],
+      "studioToday": [
+        {
+          "id": 11,
+          "name": "Axmedov B",
+          "role": "Muharrir",
+          "phone": "+998 97 611 90 71",
+          "avatar": "https://randomuser.me/api/portraits/men/44.jpg",
+          "time": "9:00 - 22:00",
+          "employeeId": "",
+          "status": "Working",
+          "statusType": "working"
+        },
+        {
+          "id": 13,
+          "name": "Nurmatov B.",
+          "role": "Operator",
+          "phone": "+998 90 677 22 91",
+          "avatar": "https://randomuser.me/api/portraits/men/65.jpg",
+          "time": "9:00 - 18:00",
+          "employeeId": "",
+          "status": "Working",
+          "statusType": "backup"
+        },
+        {
+          "id": 14,
+          "name": "Azimov E.",
+          "role": "Administrator",
+          "phone": "+998 91 733 58 01",
+          "avatar": "https://randomuser.me/api/portraits/men/25.jpg",
+          "time": "9:00 - 18:00",
+          "employeeId": "",
+          "status": "Working",
+          "statusType": "working"
+        }
+      ],
+      "overviewRows": [
+        {
+          "name": "Toirov B",
+          "days": [
+            "work",
+            "work",
+            "work",
+            "work"
+          ]
+        },
+        {
+          "name": "O'lmasov Sh",
+          "days": [
+            "work",
+            "work",
+            "work",
+            "rest"
+          ]
+        },
+        {
+          "name": "Turdialiyev I",
+          "days": [
+            "empty",
+            "work",
+            "rest",
+            "work"
+          ]
+        },
+        {
+          "name": "Raxmatulin N",
+          "days": [
+            "empty",
+            "rest",
+            "work",
+            "work"
+          ]
+        },
+        {
+          "name": "Qudratov X",
+          "days": [
+            "empty",
+            "empty",
+            "work",
+            "work"
+          ]
+        },
+        {
+          "name": "Ilmurzin A",
+          "days": [
+            "empty",
+            "empty",
+            "work",
+            "work"
+          ]
+        },
+        {
+          "name": "Rasulov B",
+          "days": [
+            "empty",
+            "empty",
+            "empty",
+            "work"
+          ]
+        },
+        {
+          "name": "Rustamov E",
+          "days": [
+            "empty",
+            "empty",
+            "empty",
+            "work"
+          ]
+        }
+      ],
+      "reports": [
+        {
+          "label": "Ishlayotganlar",
+          "value": 44
+        },
+        {
+          "label": "Dam olish kuni",
+          "value": 9
+        },
+        {
+          "label": "Zaxira",
+          "value": 6
+        },
+        {
+          "label": "Bugungi smena",
+          "value": 8
+        }
+      ],
+      "notifications": [
+        "Jadval ma'lumotlari yangilandi.",
+        "9 ta dam olish kuni belgilangan.",
+        "6 ta xodim zaxirada."
+      ],
+      "employees": [
+        {
+          "id": 1,
+          "name": "Toirov B",
+          "role": "Rejissyor",
+          "phone": "+998 90 101 22 33",
+          "avatar": "https://randomuser.me/api/portraits/men/32.jpg"
+        },
+        {
+          "id": 2,
+          "name": "O'lmasov Sh",
+          "role": "Operator",
+          "phone": "+998 91 204 15 22",
+          "avatar": "https://randomuser.me/api/portraits/men/46.jpg"
+        },
+        {
+          "id": 3,
+          "name": "Turdialiyev I",
+          "role": "Montajchi",
+          "phone": "+998 93 715 44 80",
+          "avatar": "https://randomuser.me/api/portraits/men/51.jpg"
+        },
+        {
+          "id": 4,
+          "name": "Raxmatulin N",
+          "role": "Muhandis",
+          "phone": "+998 97 620 12 10",
+          "avatar": "https://randomuser.me/api/portraits/men/76.jpg"
+        },
+        {
+          "id": 5,
+          "name": "Qudratov X",
+          "role": "Operator",
+          "phone": "+998 94 811 60 77",
+          "avatar": "https://randomuser.me/api/portraits/men/22.jpg"
+        },
+        {
+          "id": 6,
+          "name": "Ilmurzin A",
+          "role": "Boshlovchi",
+          "phone": "+998 99 230 77 41",
+          "avatar": "https://randomuser.me/api/portraits/men/64.jpg"
+        },
+        {
+          "id": 7,
+          "name": "Rasulov B",
+          "role": "Smena boshlig'i",
+          "phone": "+998 90 441 89 10",
+          "avatar": "https://randomuser.me/api/portraits/men/84.jpg"
+        },
+        {
+          "id": 8,
+          "name": "Rustamov E",
+          "role": "Ovoz rejissyori",
+          "phone": "+998 91 700 20 40",
+          "avatar": "https://randomuser.me/api/portraits/men/12.jpg"
+        },
+        {
+          "id": 9,
+          "name": "Mirjalolov M",
+          "role": "Texnik",
+          "phone": "+998 93 514 11 28",
+          "avatar": "https://randomuser.me/api/portraits/men/71.jpg"
+        },
+        {
+          "id": 10,
+          "name": "Shermuhammedov D",
+          "role": "Operator",
+          "phone": "+998 95 300 15 19",
+          "avatar": "https://randomuser.me/api/portraits/men/60.jpg"
+        },
+        {
+          "id": 11,
+          "name": "Axmedov B",
+          "role": "Muharrir",
+          "phone": "+998 97 611 90 71",
+          "avatar": "https://randomuser.me/api/portraits/men/44.jpg"
+        },
+        {
+          "id": 12,
+          "name": "Umarov J.",
+          "role": "Grafika",
+          "phone": "+998 99 842 45 60",
+          "avatar": "https://randomuser.me/api/portraits/men/18.jpg"
+        },
+        {
+          "id": 13,
+          "name": "Nurmatov B.",
+          "role": "Operator",
+          "phone": "+998 90 677 22 91",
+          "avatar": "https://randomuser.me/api/portraits/men/65.jpg"
+        },
+        {
+          "id": 14,
+          "name": "Azimov E.",
+          "role": "Administrator",
+          "phone": "+998 91 733 58 01",
+          "avatar": "https://randomuser.me/api/portraits/men/25.jpg"
+        },
+        {
+          "id": 15,
+          "name": "Menayev T.",
+          "role": "Texnik yordamchi",
+          "phone": "+998 94 206 71 19",
+          "avatar": "https://randomuser.me/api/portraits/men/37.jpg"
+        }
+      ]
+    }
+  }
+}
