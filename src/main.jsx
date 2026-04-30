@@ -318,7 +318,16 @@ function App() {
   const [theme, setTheme] = useState(() => window.localStorage.getItem("theme") || "light");
   const [currentUser, setCurrentUser] = useState(() => readStoredJson("currentUser", null));
   const [navDirection, setNavDirection] = useState("next");
+  const [toasts, setToasts] = useState([]);
   const hasLoadedDashboard = useRef(false);
+
+  const notify = useCallback((message, type = "success") => {
+    const id = Date.now() + Math.random();
+    setToasts((items) => [...items, { id, message, type }]);
+    window.setTimeout(() => {
+      setToasts((items) => items.filter((item) => item.id !== id));
+    }, 3000);
+  }, []);
 
   const loadDashboard = useCallback(async () => {
     if (!hasLoadedDashboard.current) setLoading(true);
@@ -328,6 +337,7 @@ function App() {
       setDashboard(await api(`/api/dashboard?weekStart=${weekStart}`));
     } catch (loadError) {
       setError(loadError.message);
+      notify(loadError.message, "error");
     } finally {
       hasLoadedDashboard.current = true;
       setLoading(false);
@@ -351,12 +361,14 @@ function App() {
     };
     window.localStorage.setItem("currentUser", JSON.stringify(nextUser));
     setCurrentUser(nextUser);
+    notify("Tizimga muvaffaqiyatli kirdingiz");
   }
 
   function handleLogout() {
     window.localStorage.removeItem("currentUser");
     setCurrentUser(null);
     setPage("weekly");
+    notify("Tizimdan chiqildi");
   }
 
   async function createSchedule() {
@@ -370,8 +382,10 @@ function App() {
       });
       setDashboard(nextDashboard);
       setActiveDay("Barcha kunlar");
+      notify("Jadval muvaffaqiyatli yaratildi");
     } catch (generateError) {
       setError(generateError.message);
+      notify(generateError.message, "error");
     } finally {
       setGenerating(false);
     }
@@ -385,8 +399,10 @@ function App() {
     try {
       await api(`/api/schedules/${weekStart}`, { method: "DELETE" });
       await loadDashboard();
+      notify("Haftalik jadval o'chirildi");
     } catch (deleteError) {
       setError(deleteError.message);
+      notify(deleteError.message, "error");
     } finally {
       setGenerating(false);
     }
@@ -403,8 +419,12 @@ function App() {
         await api("/api/employees", { method: "POST", body: JSON.stringify(employee) });
       }
       await loadDashboard();
+      notify(employee.id ? "Xodim ma'lumotlari saqlandi" : "Yangi xodim qo'shildi");
+      return true;
     } catch (saveError) {
       setError(saveError.message);
+      notify(saveError.message, "error");
+      return false;
     } finally {
       setGenerating(false);
     }
@@ -418,8 +438,10 @@ function App() {
     try {
       await api(`/api/employees/${id}`, { method: "DELETE" });
       await loadDashboard();
+      notify("Xodim ro'yxatdan o'chirildi");
     } catch (deleteError) {
       setError(deleteError.message);
+      notify(deleteError.message, "error");
     } finally {
       setGenerating(false);
     }
@@ -433,8 +455,10 @@ function App() {
         method: "PUT",
         body: JSON.stringify({ groupId, personId, statusType })
       }));
+      notify("Xodim statusi yangilandi");
     } catch (statusError) {
       setError(statusError.message);
+      notify(statusError.message, "error");
     }
   }
 
@@ -448,8 +472,10 @@ function App() {
         body: JSON.stringify(payload)
       }));
       setActiveDay("Barcha kunlar");
+      notify("Yangi smena jadvalga qo'shildi");
     } catch (scheduleError) {
       setError(scheduleError.message);
+      notify(scheduleError.message, "error");
     } finally {
       setGenerating(false);
     }
@@ -473,7 +499,12 @@ function App() {
   }, [page]);
 
   if (!currentUser) {
-    return <AuthPage onAuth={handleAuth} theme={theme} onThemeChange={setTheme} />;
+    return (
+      <>
+        <AuthPage onAuth={handleAuth} onNotify={notify} theme={theme} onThemeChange={setTheme} />
+        <ToastViewport items={toasts} />
+      </>
+    );
   }
 
   return (
@@ -525,14 +556,15 @@ function App() {
                 onAddSchedule={addStudioSchedule}
                 onDeleteEmployee={deleteEmployee}
                 onSaveEmployee={saveEmployee}
+                onNotify={notify}
                 onMoveWeek={moveWeek}
                 navDirection={navDirection}
                 onToggleOverview={() => setShowAllOverview((value) => !value)}
               />
             )}
             {page === "monthly" && <MonthlyPage dashboard={dashboard} weekStart={weekStart} />}
-            {page === "documents" && <DocumentsPage employees={dashboard.employees} onSaveEmployee={saveEmployee} />}
-            {page === "shooting" && <ShootingPage />}
+            {page === "documents" && <DocumentsPage employees={dashboard.employees} onNotify={notify} onSaveEmployee={saveEmployee} />}
+            {page === "shooting" && <ShootingPage onNotify={notify} />}
             {page === "reports" && <ReportsPage dashboard={dashboard} />}
             {page === "profile" && (
               <ProfilePage
@@ -550,14 +582,16 @@ function App() {
       </main>
 
       <BottomNav page={page} onPageChange={setPage} />
+      <ToastViewport items={toasts} />
     </div>
   );
 }
 
-function AuthPage({ onAuth, theme, onThemeChange }) {
+function AuthPage({ onAuth, onNotify, theme, onThemeChange }) {
   const [mode, setMode] = useState("login");
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [formError, setFormError] = useState("");
+  const formRef = useRef(null);
 
   function submit(event) {
     event.preventDefault();
@@ -567,16 +601,22 @@ function AuthPage({ onAuth, theme, onThemeChange }) {
 
     if (mode === "register" && name.length < 3) {
       setFormError("Ism familiyani kiriting.");
+      onNotify("Ism familiyani kiriting.", "error");
+      formRef.current?.querySelector("[name='auth-name']")?.focus();
       return;
     }
 
     if (!email || !email.includes("@")) {
       setFormError("Email manzilni to'g'ri kiriting.");
+      onNotify("Email manzilni to'g'ri kiriting.", "error");
+      formRef.current?.querySelector("[name='auth-email']")?.focus();
       return;
     }
 
     if (password.length < 6) {
       setFormError("Parol kamida 6 ta belgidan iborat bo'lishi kerak.");
+      onNotify("Parol kamida 6 ta belgidan iborat bo'lishi kerak.", "error");
+      formRef.current?.querySelector("[name='auth-password']")?.focus();
       return;
     }
 
@@ -604,20 +644,20 @@ function AuthPage({ onAuth, theme, onThemeChange }) {
             setFormError("");
           }}>Register</button>
         </div>
-        <form className="auth-form" onSubmit={submit}>
+        <form ref={formRef} className="auth-form" onSubmit={submit}>
           {mode === "register" && (
             <label>
               Ism familiya
-              <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Administrator" />
+              <input name="auth-name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Administrator" />
             </label>
           )}
           <label>
             Email
-            <input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} placeholder="admin@uz24.local" />
+            <input name="auth-email" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} placeholder="admin@uz24.local" />
           </label>
           <label>
             Parol
-            <input type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} placeholder="Kamida 6 belgi" />
+            <input name="auth-password" type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} placeholder="Kamida 6 belgi" />
           </label>
           {formError && <p className="auth-error">{formError}</p>}
           <button type="submit">
@@ -642,7 +682,7 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
-function ShootingPage() {
+function ShootingPage({ onNotify }) {
   const blankRow = {
     camera: "",
     time: "",
@@ -659,6 +699,7 @@ function ShootingPage() {
   })));
   const [addOpen, setAddOpen] = useState(false);
   const [draftRow, setDraftRow] = useState(blankRow);
+  const addFormRef = useRef(null);
 
   function updateRow(index, field, value) {
     setRows((currentRows) => currentRows.map((row, rowIndex) => (
@@ -668,9 +709,23 @@ function ShootingPage() {
 
   function addRow(event) {
     event.preventDefault();
+    const requiredFields = [
+      ["camera", "Kamera raqamini kiriting."],
+      ["time", "Chiqish vaqtini kiriting."],
+      ["operatorsText", "Operator va texnik xodimni kiriting."],
+      ["topic", "Tadbir joyi va mavzusini kiriting."]
+    ];
+    const invalid = requiredFields.find(([field]) => !String(draftRow[field] || "").trim());
+    if (invalid) {
+      onNotify(invalid[1], "error");
+      addFormRef.current?.querySelector(`[name='${invalid[0]}']`)?.focus();
+      return;
+    }
+
     setRows((currentRows) => [...currentRows, draftRow]);
     setDraftRow(blankRow);
     setAddOpen(false);
+    onNotify("Tasvir jadvaliga yangi qator qo'shildi");
   }
 
   function downloadExcel() {
@@ -703,6 +758,7 @@ function ShootingPage() {
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
+    onNotify("Excel fayl tayyorlandi");
   }
 
   return (
@@ -775,26 +831,26 @@ function ShootingPage() {
 
       {addOpen && (
         <div className="modal-backdrop" role="presentation">
-          <form className="schedule-modal" onSubmit={addRow}>
+          <form ref={addFormRef} className="schedule-modal" onSubmit={addRow}>
             <div className="modal-head">
               <strong>Yangi jadval qo'shish</strong>
               <button type="button" onClick={() => setAddOpen(false)}>×</button>
             </div>
             <label>
               Kamera raqami
-              <input value={draftRow.camera} onChange={(event) => setDraftRow({ ...draftRow, camera: event.target.value })} placeholder="12 / +Avivest" />
+              <input name="camera" value={draftRow.camera} onChange={(event) => setDraftRow({ ...draftRow, camera: event.target.value })} placeholder="12 / +Avivest" />
             </label>
             <label>
               Chiqish vaqti
-              <input value={draftRow.time} onChange={(event) => setDraftRow({ ...draftRow, time: event.target.value })} placeholder="09:00-18:00" />
+              <input name="time" value={draftRow.time} onChange={(event) => setDraftRow({ ...draftRow, time: event.target.value })} placeholder="09:00-18:00" />
             </label>
             <label>
               Operator va texnik xodim
-              <textarea value={draftRow.operatorsText} onChange={(event) => setDraftRow({ ...draftRow, operatorsText: event.target.value })} placeholder="Operator F.I.Sh" />
+              <textarea name="operatorsText" value={draftRow.operatorsText} onChange={(event) => setDraftRow({ ...draftRow, operatorsText: event.target.value })} placeholder="Operator F.I.Sh" />
             </label>
             <label>
               Tadbir joyi va mavzusi
-              <textarea value={draftRow.topic} onChange={(event) => setDraftRow({ ...draftRow, topic: event.target.value })} placeholder="Tadbir haqida ma'lumot" />
+              <textarea name="topic" value={draftRow.topic} onChange={(event) => setDraftRow({ ...draftRow, topic: event.target.value })} placeholder="Tadbir haqida ma'lumot" />
             </label>
             <label>
               Muxbirlar
@@ -1008,7 +1064,7 @@ function WeeklyPage({ activeDay, dashboard, navDirection, onCreate, onDeleteSche
   );
 }
 
-function StudioPage({ dashboard, showAllOverview, navDirection, onAddSchedule, onCreate, onDeleteEmployee, onSaveEmployee, onMoveWeek, onToggleOverview }) {
+function StudioPage({ dashboard, showAllOverview, navDirection, onAddSchedule, onCreate, onDeleteEmployee, onNotify, onSaveEmployee, onMoveWeek, onToggleOverview }) {
   const overviewRows = showAllOverview ? dashboard.overviewRows : dashboard.overviewRows.slice(0, 5);
   const scheduleBlank = {
     day: "Dushanba",
@@ -1023,6 +1079,21 @@ function StudioPage({ dashboard, showAllOverview, navDirection, onAddSchedule, o
 
   function submitSchedule(event) {
     event.preventDefault();
+    if (!scheduleDraft.meta.trim()) {
+      onNotify("Studiya yoki joy nomini kiriting.", "error");
+      event.currentTarget.querySelector("[name='schedule-meta']")?.focus();
+      return;
+    }
+    if (!scheduleDraft.time.trim()) {
+      onNotify("Ish vaqtini kiriting.", "error");
+      event.currentTarget.querySelector("[name='schedule-time']")?.focus();
+      return;
+    }
+    if (!scheduleDraft.employeeIds.some(Boolean)) {
+      onNotify("Kamida bitta xodim tanlang.", "error");
+      event.currentTarget.querySelector("[name='schedule-employee']")?.focus();
+      return;
+    }
     onAddSchedule({
       ...scheduleDraft,
       employeeIds: scheduleDraft.employeeIds.filter(Boolean)
@@ -1058,7 +1129,7 @@ function StudioPage({ dashboard, showAllOverview, navDirection, onAddSchedule, o
         <MetricCard icon={<Coffee size={19} />} value={dashboard.metrics.restToday} label="Bugun damda" tone="orange" />
       </section>
 
-      <EmployeeManager employees={dashboard.employees} onDelete={onDeleteEmployee} onSave={onSaveEmployee} />
+      <EmployeeManager employees={dashboard.employees} onDelete={onDeleteEmployee} onNotify={onNotify} onSave={onSaveEmployee} />
 
       <div className="section-head">
         <h2>Bugungi jadval</h2>
@@ -1118,12 +1189,12 @@ function StudioPage({ dashboard, showAllOverview, navDirection, onAddSchedule, o
             </div>
             <label>
               Studiya / joy
-              <input value={scheduleDraft.meta} onChange={(event) => setScheduleDraft({ ...scheduleDraft, meta: event.target.value })} placeholder="3 Studiya" />
+              <input name="schedule-meta" value={scheduleDraft.meta} onChange={(event) => setScheduleDraft({ ...scheduleDraft, meta: event.target.value })} placeholder="3 Studiya" />
             </label>
             <div className="modal-grid two">
               <label>
                 Ish vaqti
-                <input value={scheduleDraft.time} onChange={(event) => setScheduleDraft({ ...scheduleDraft, time: event.target.value })} placeholder="09:00 - 18:00" />
+                <input name="schedule-time" value={scheduleDraft.time} onChange={(event) => setScheduleDraft({ ...scheduleDraft, time: event.target.value })} placeholder="09:00 - 18:00" />
               </label>
               <label>
                 Status
@@ -1137,7 +1208,7 @@ function StudioPage({ dashboard, showAllOverview, navDirection, onAddSchedule, o
             {[0, 1, 2].map((index) => (
               <label key={index}>
                 Xodim {index + 1}
-                <select value={scheduleDraft.employeeIds[index]} onChange={(event) => {
+                <select name="schedule-employee" value={scheduleDraft.employeeIds[index]} onChange={(event) => {
                   const employeeIds = [...scheduleDraft.employeeIds];
                   employeeIds[index] = event.target.value;
                   setScheduleDraft({ ...scheduleDraft, employeeIds });
@@ -1209,12 +1280,13 @@ function StaffRow({ groupId, person, onStatusChange }) {
   );
 }
 
-function EmployeeManager({ employees, onDelete, onSave }) {
+function EmployeeManager({ employees, onDelete, onNotify, onSave }) {
   const blank = { name: "", role: "", phone: "", telegram: "", department: "operator", address: "", avatar: "", documents: {}, portfolio: [] };
   const [draft, setDraft] = useState(blank);
   const [editingId, setEditingId] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [activeDepartment, setActiveDepartment] = useState("all");
+  const formRef = useRef(null);
   const filteredEmployees = activeDepartment === "all" ? employees : employees.filter((employee) => employee.department === activeDepartment);
 
   function startEdit(employee) {
@@ -1223,12 +1295,37 @@ function EmployeeManager({ employees, onDelete, onSave }) {
     setModalOpen(true);
   }
 
-  function submit(event) {
+  async function submit(event) {
     event.preventDefault();
-    onSave(draft);
+    const requiredFields = [
+      ["name", "F.I.Sh ni kiriting."],
+      ["role", "Lavozimni kiriting."],
+      ["phone", "Telefon raqamini kiriting."]
+    ];
+    const invalid = requiredFields.find(([field]) => !String(draft[field] || "").trim());
+    if (invalid) {
+      onNotify(invalid[1], "error");
+      formRef.current?.querySelector(`[name='${invalid[0]}']`)?.focus();
+      return;
+    }
+
+    const saved = await onSave(draft);
+    if (!saved) return;
     setDraft(blank);
     setEditingId(null);
     setModalOpen(false);
+  }
+
+  async function updateAvatar(file) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      onNotify("Faqat rasm faylini yuklang.", "error");
+      return;
+    }
+
+    const image = await readImageFile(file);
+    setDraft({ ...draft, avatar: image });
+    onNotify("Xodim rasmi tanlandi");
   }
 
   return (
@@ -1268,18 +1365,18 @@ function EmployeeManager({ employees, onDelete, onSave }) {
       </div>
       {modalOpen && (
         <div className="modal-backdrop employee-modal-backdrop" role="presentation">
-          <form className="schedule-modal employee-modal" onSubmit={submit}>
+          <form ref={formRef} className="schedule-modal employee-modal" onSubmit={submit}>
             <div className="modal-head">
               <strong>{editingId ? "Xodimni tahrirlash" : "Yangi xodim qo'shish"}</strong>
               <button type="button" onClick={() => setModalOpen(false)}>×</button>
             </div>
             <label>
               F.I.Sh
-              <input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="F.I.Sh" />
+              <input name="name" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="F.I.Sh" />
             </label>
             <label>
               Lavozim
-              <input value={draft.role} onChange={(event) => setDraft({ ...draft, role: event.target.value })} placeholder="Operator" />
+              <input name="role" value={draft.role} onChange={(event) => setDraft({ ...draft, role: event.target.value })} placeholder="Operator" />
             </label>
             <label>
               Bo'lim
@@ -1291,7 +1388,7 @@ function EmployeeManager({ employees, onDelete, onSave }) {
             </label>
             <label>
               Telefon
-              <input value={draft.phone} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} placeholder="+998 ..." />
+              <input name="phone" value={draft.phone} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} placeholder="+998 ..." />
             </label>
             <label>
               Telegram
@@ -1301,10 +1398,18 @@ function EmployeeManager({ employees, onDelete, onSave }) {
               Yashash manzili
               <textarea value={draft.address || ""} onChange={(event) => setDraft({ ...draft, address: event.target.value })} placeholder="Toshkent shahri, tuman, ko'cha..." />
             </label>
-            <label>
-              Rasm URL
-              <input value={draft.avatar} onChange={(event) => setDraft({ ...draft, avatar: event.target.value })} placeholder="Avtomatik yaratiladi" />
-            </label>
+            <div className="avatar-upload-field">
+              <Avatar person={draft} />
+              <div>
+                <strong>Xodim rasmi</strong>
+                <span>{draft.avatar ? "Rasm tanlangan" : "Rasm yuklanmagan"}</span>
+              </div>
+              <label>
+                <Upload size={15} />
+                Yuklash
+                <input type="file" accept="image/*" onChange={(event) => updateAvatar(event.target.files?.[0])} />
+              </label>
+            </div>
             <button type="submit">
               {editingId ? <Save size={17} /> : <Plus size={17} />}
               {editingId ? "Saqlash" : "Qo'shish"}
@@ -1316,11 +1421,12 @@ function EmployeeManager({ employees, onDelete, onSave }) {
   );
 }
 
-function DocumentsPage({ employees, onSaveEmployee }) {
+function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
   const [selectedId, setSelectedId] = useState(employees[0]?.id || "");
   const selectedEmployee = employees.find((employee) => String(employee.id) === String(selectedId)) || employees[0];
   const [draft, setDraft] = useState(selectedEmployee || null);
   const [saving, setSaving] = useState(false);
+  const formRef = useRef(null);
 
   useEffect(() => {
     const nextEmployee = employees.find((employee) => String(employee.id) === String(selectedId)) || employees[0] || null;
@@ -1331,7 +1437,7 @@ function DocumentsPage({ employees, onSaveEmployee }) {
   async function updateDocument(type, file) {
     if (!file || !draft) return;
     if (!["image/jpeg", "image/jpg"].includes(file.type)) {
-      window.alert("Faqat JPG formatdagi rasm yuklang");
+      onNotify("Faqat JPG formatdagi rasm yuklang.", "error");
       return;
     }
 
@@ -1376,9 +1482,28 @@ function DocumentsPage({ employees, onSaveEmployee }) {
 
   async function submit(event) {
     event.preventDefault();
+    const requiredFields = [
+      ["documents-name", draft.name, "Ism familiyani kiriting."],
+      ["documents-role", draft.role, "Lavozimini kiriting."]
+    ];
+    const invalid = requiredFields.find(([, value]) => !String(value || "").trim());
+    if (invalid) {
+      onNotify(invalid[2], "error");
+      formRef.current?.querySelector(`[name='${invalid[0]}']`)?.focus();
+      return;
+    }
+
+    const invalidPortfolio = (draft.portfolio || []).findIndex((item) => (item.title && !item.url) || (!item.title && item.url));
+    if (invalidPortfolio !== -1) {
+      onNotify("Portfolio uchun syomka nomi va linkini to'liq kiriting.", "error");
+      formRef.current?.querySelector(`[name='portfolio-title-${invalidPortfolio}']`)?.focus();
+      return;
+    }
+
     setSaving(true);
-    await onSaveEmployee(draft);
+    const saved = await onSaveEmployee(draft);
     setSaving(false);
+    if (!saved) return;
   }
 
   if (!draft) return <EmptyCard text="Xodimlar ro'yxati bo'sh" />;
@@ -1398,7 +1523,7 @@ function DocumentsPage({ employees, onSaveEmployee }) {
             ))}
           </select>
         </label>
-        <form className="documents-form" onSubmit={submit}>
+        <form ref={formRef} className="documents-form" onSubmit={submit}>
           <div className="document-profile">
             <Avatar person={draft} />
             <div>
@@ -1408,13 +1533,13 @@ function DocumentsPage({ employees, onSaveEmployee }) {
           </div>
           <label>
             Ism familiya
-            <input value={draft.name || ""} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Abduqodirxo'jayev Izzat" />
+            <input name="documents-name" value={draft.name || ""} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Abduqodirxo'jayev Izzat" />
           </label>
           <label>
             Lavozimi
-            <input value={draft.role || ""} onChange={(event) => setDraft({ ...draft, role: event.target.value })} placeholder="Tasvir yozish operatori" />
+            <input name="documents-role" value={draft.role || ""} onChange={(event) => setDraft({ ...draft, role: event.target.value })} placeholder="Tasvir yozish operatori" />
           </label>
-          <div className="modal-grid two">
+          <div className="documents-field-grid">
             <label>
               Bo'lim
               <select value={draft.department || "operator"} onChange={(event) => setDraft({ ...draft, department: event.target.value })}>
@@ -1432,7 +1557,7 @@ function DocumentsPage({ employees, onSaveEmployee }) {
             Yashash manzili
             <textarea value={draft.address || ""} onChange={(event) => setDraft({ ...draft, address: event.target.value })} placeholder="Yashash manzili" />
           </label>
-          <div className="document-grid">
+          <section className="document-grid" aria-label="Xodim hujjatlari">
             {DOCUMENT_TYPES.map((item) => {
               const image = draft.documents?.[item.id];
               return (
@@ -1457,7 +1582,7 @@ function DocumentsPage({ employees, onSaveEmployee }) {
                 </article>
               );
             })}
-          </div>
+          </section>
           <section className="portfolio-editor">
             <div className="section-head">
               <h2>Portfolio</h2>
@@ -1468,7 +1593,7 @@ function DocumentsPage({ employees, onSaveEmployee }) {
             </div>
             {(draft.portfolio || []).map((item, index) => (
               <article className="portfolio-row" key={`${index}-${item.url}`}>
-                <input value={item.title || ""} onChange={(event) => updatePortfolio(index, "title", event.target.value)} placeholder="Syomka nomi" />
+                <input name={`portfolio-title-${index}`} value={item.title || ""} onChange={(event) => updatePortfolio(index, "title", event.target.value)} placeholder="Syomka nomi" />
                 <input value={item.url || ""} onChange={(event) => updatePortfolio(index, "url", event.target.value)} placeholder="Video yoki efir linki" />
                 <input type="date" value={item.date || ""} onChange={(event) => updatePortfolio(index, "date", event.target.value)} />
                 <button type="button" aria-label="Portfolio linkni o'chirish" onClick={() => removePortfolioItem(index)}>
@@ -1676,7 +1801,7 @@ function MetricCard({ icon, value, label, tone }) {
 function Avatar({ person }) {
   return (
     <span className="avatar">
-      <img src={person.avatar} alt={person.name} />
+      {person.avatar ? <img src={person.avatar} alt={person.name} /> : <User size={20} />}
     </span>
   );
 }
@@ -1741,6 +1866,21 @@ function LoadingScreen() {
     <div className="loading-screen" role="status" aria-live="polite">
       <strong>Yaratilmoqda...</strong>
     </div>
+  );
+}
+
+function ToastViewport({ items }) {
+  if (!items.length) return null;
+
+  return (
+    <section className="toast-stack" aria-live="polite" aria-label="Xabarlar">
+      {items.map((item) => (
+        <article className={`toast ${item.type || "success"}`} key={item.id}>
+          <span>{item.type === "error" ? "!" : <Check size={14} />}</span>
+          <p>{item.message}</p>
+        </article>
+      ))}
+    </section>
   );
 }
 

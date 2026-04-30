@@ -555,11 +555,13 @@ button:active {
 }
 
 .avatar {
-  display: block;
+  display: grid;
+  place-items: center;
   width: 42px;
   height: 42px;
   overflow: hidden;
   border-radius: 50%;
+  color: var(--text-muted);
   background: #e5e7eb;
 }
 
@@ -980,6 +982,7 @@ button:active {
 .shooting-table-wrap {
   overflow-x: auto;
   padding: 0;
+  scrollbar-width: thin;
 }
 
 .shooting-table {
@@ -1021,6 +1024,7 @@ button:active {
 .shooting-table input:focus,
 .shooting-table textarea:focus {
   outline: 2px solid #2563eb;
+  outline-offset: -2px;
   background: #ffffff;
 }
 
@@ -1522,6 +1526,55 @@ button:active {
   background: #eef2f7;
 }
 
+.avatar-upload-field {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.avatar-upload-field strong,
+.avatar-upload-field span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.avatar-upload-field strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.avatar-upload-field span {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.avatar-upload-field label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 11px;
+  border-radius: 8px;
+  color: #ffffff;
+  background: var(--primary);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.avatar-upload-field input {
+  display: none;
+}
+
 .documents-page {
   display: grid;
   gap: 14px;
@@ -1530,7 +1583,7 @@ button:active {
 .documents-card {
   display: grid;
   gap: 13px;
-  padding: 16px;
+  padding: 14px;
 }
 
 .documents-card .section-head {
@@ -1565,8 +1618,14 @@ button:active {
 }
 
 .documents-form textarea {
-  min-height: 72px;
+  min-height: 112px;
   resize: vertical;
+}
+
+.documents-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .document-profile {
@@ -1601,16 +1660,16 @@ button:active {
 
 .document-grid {
   display: grid;
-  gap: 10px;
+  gap: 11px;
 }
 
 .document-upload {
   display: grid;
-  grid-template-columns: 74px minmax(0, 1fr) auto auto;
+  grid-template-columns: 70px minmax(0, 1fr) 108px;
   align-items: center;
-  gap: 10px;
-  min-height: 86px;
-  padding: 9px;
+  gap: 12px;
+  min-height: 92px;
+  padding: 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-soft);
@@ -1619,8 +1678,8 @@ button:active {
 .document-preview {
   display: grid;
   place-items: center;
-  width: 74px;
-  height: 64px;
+  width: 70px;
+  height: 70px;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 7px;
@@ -1634,7 +1693,7 @@ button:active {
   object-fit: cover;
 }
 
-.document-upload-button,
+.documents-form .document-upload-button,
 .document-remove-button,
 .documents-save-button {
   display: inline-flex;
@@ -1646,19 +1705,39 @@ button:active {
   font-weight: 800;
 }
 
-.document-upload-button {
+.documents-form .document-upload-button {
+  width: 100%;
+  min-height: 44px;
   padding: 0 10px;
   color: #ffffff;
   background: var(--primary);
   cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  white-space: nowrap;
 }
 
-.document-upload-button input {
+.documents-form .document-upload-button svg {
+  flex: 0 0 auto;
+  color: currentColor;
+}
+
+.documents-form .document-upload-button span {
+  display: inline;
+  margin: 0;
+  overflow: visible;
+  color: currentColor;
+  font-size: 13px;
+}
+
+.documents-form .document-upload-button input {
   display: none;
 }
 
 .document-remove-button {
+  grid-column: 3;
   width: 38px;
+  justify-self: end;
   color: var(--danger);
   background: var(--danger-soft);
 }
@@ -1738,6 +1817,10 @@ button:active {
   border-radius: 7px;
   color: var(--danger);
   background: var(--danger-soft);
+}
+
+.portfolio-row button svg {
+  margin: 0 auto;
 }
 
 .portfolio-empty {
@@ -2093,6 +2176,75 @@ button:active {
   color: #3328ff;
   font-size: 34px;
   line-height: 1;
+}
+
+.toast-stack {
+  position: fixed;
+  right: max(14px, calc(50% - 215px + 14px));
+  bottom: 84px;
+  z-index: 120;
+  display: grid;
+  gap: 8px;
+  width: min(360px, calc(100vw - 28px));
+  pointer-events: none;
+}
+
+.toast {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid rgba(22, 163, 74, 0.22);
+  border-radius: 10px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(16px);
+  animation: toastIn 0.2s ease both;
+}
+
+.toast > span {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  color: #ffffff;
+  background: var(--success);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.toast.error {
+  border-color: rgba(220, 38, 38, 0.26);
+}
+
+.toast.error > span {
+  background: var(--danger);
+}
+
+.toast p {
+  margin: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.32;
+  text-overflow: ellipsis;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .bottom-nav {
@@ -2491,6 +2643,30 @@ button:active {
 @media (max-width: 360px) {
   .content {
     padding-inline: 14px;
+  }
+
+  .documents-field-grid,
+  .portfolio-row {
+    grid-template-columns: 1fr;
+  }
+
+  .document-upload {
+    grid-template-columns: 58px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .document-preview {
+    width: 58px;
+    height: 58px;
+  }
+
+  .documents-form .document-upload-button {
+    grid-column: 1 / -1;
+  }
+
+  .document-remove-button {
+    grid-column: 1 / -1;
+    width: 100%;
   }
 
   .staff-row {
