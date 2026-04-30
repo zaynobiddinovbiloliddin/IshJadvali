@@ -12,18 +12,23 @@ import {
   Coffee,
   Edit3,
   FileText,
+  FileImage,
   Info,
   LogIn,
   LogOut,
   Menu,
   Moon,
+  Phone,
+  PlayCircle,
   Plus,
   RefreshCcw,
   Save,
+  Send,
   Settings,
   ShieldCheck,
   Sun,
   Trash2,
+  Upload,
   User,
   UserCheck,
   UsersRound,
@@ -44,6 +49,18 @@ const OPERATOR_NAMES = [
   "SOLIBOYEV I.", "AZIMOV E.", "RUSTAMOV E.", "SOLIBOYEV Y.", "UMAROV J."
 ];
 const SHIFT_LABELS = ["09:00-18:00", "09:00-22:00", "18:00-09:00", "Dam"];
+const DOCUMENT_TYPES = [
+  { id: "photo3x4", label: "3x4 rasm", shortLabel: "3x4" },
+  { id: "passportUz", label: "Pasport UZ", shortLabel: "UZ" },
+  { id: "passportForeign", label: "Zagran pasport", shortLabel: "Zagran" },
+  { id: "certificate", label: "Guvohnoma", shortLabel: "Guvohnoma" }
+];
+const DEPARTMENTS = [
+  { id: "pull", label: "Pull xizmati", shortLabel: "Pull" },
+  { id: "operator", label: "Oddiy operatorlar", shortLabel: "Operator" },
+  { id: "dron", label: "Dron bo'limi", shortLabel: "Dron" },
+  { id: "tjk", label: "TJK guruhi", shortLabel: "TJK" }
+];
 const SHOOTING_SCHEDULE = [
   {
     camera: "1\n(914)",
@@ -257,6 +274,36 @@ function readStoredJson(key, fallback) {
   }
 }
 
+function readImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("Rasmni o'qib bo'lmadi"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function countEmployeeDocuments(employee) {
+  const docs = employee.documents || {};
+  return DOCUMENT_TYPES.filter((item) => docs[item.id]).length;
+}
+
+function departmentMeta(id) {
+  return DEPARTMENTS.find((department) => department.id === id) || DEPARTMENTS[1];
+}
+
+function cleanPhone(value) {
+  const phone = String(value || "").replace(/[^\d+]/g, "");
+  return phone || "";
+}
+
+function telegramHref(value) {
+  const telegram = String(value || "").trim();
+  if (!telegram) return "";
+  if (telegram.startsWith("http")) return telegram;
+  return `https://t.me/${telegram.replace(/^@/, "")}`;
+}
+
 function App() {
   const [page, setPage] = useState("weekly");
   const [weekStart, setWeekStart] = useState("2026-01-29");
@@ -417,6 +464,7 @@ function App() {
 
   const title = useMemo(() => {
     if (page === "studio") return "Studiyo jadvali";
+    if (page === "documents") return "Hujjatlar";
     if (page === "monthly") return "Oylik grafik";
     if (page === "shooting") return "Tasvir jadvali";
     if (page === "reports") return "Hisobotlar";
@@ -483,6 +531,7 @@ function App() {
               />
             )}
             {page === "monthly" && <MonthlyPage dashboard={dashboard} weekStart={weekStart} />}
+            {page === "documents" && <DocumentsPage employees={dashboard.employees} onSaveEmployee={saveEmployee} />}
             {page === "shooting" && <ShootingPage />}
             {page === "reports" && <ReportsPage dashboard={dashboard} />}
             {page === "profile" && (
@@ -507,10 +556,31 @@ function App() {
 
 function AuthPage({ onAuth, theme, onThemeChange }) {
   const [mode, setMode] = useState("login");
-  const [form, setForm] = useState({ name: "Administrator", email: "admin@uz24.local", password: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [formError, setFormError] = useState("");
 
   function submit(event) {
     event.preventDefault();
+    const email = form.email.trim();
+    const password = form.password.trim();
+    const name = form.name.trim();
+
+    if (mode === "register" && name.length < 3) {
+      setFormError("Ism familiyani kiriting.");
+      return;
+    }
+
+    if (!email || !email.includes("@")) {
+      setFormError("Email manzilni to'g'ri kiriting.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setFormError("Parol kamida 6 ta belgidan iborat bo'lishi kerak.");
+      return;
+    }
+
+    setFormError("");
     onAuth(form);
   }
 
@@ -525,8 +595,14 @@ function AuthPage({ onAuth, theme, onThemeChange }) {
           </div>
         </div>
         <div className="auth-tabs">
-          <button className={mode === "login" ? "active" : ""} type="button" onClick={() => setMode("login")}>Login</button>
-          <button className={mode === "register" ? "active" : ""} type="button" onClick={() => setMode("register")}>Register</button>
+          <button className={mode === "login" ? "active" : ""} type="button" onClick={() => {
+            setMode("login");
+            setFormError("");
+          }}>Login</button>
+          <button className={mode === "register" ? "active" : ""} type="button" onClick={() => {
+            setMode("register");
+            setFormError("");
+          }}>Register</button>
         </div>
         <form className="auth-form" onSubmit={submit}>
           {mode === "register" && (
@@ -543,6 +619,7 @@ function AuthPage({ onAuth, theme, onThemeChange }) {
             Parol
             <input type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} placeholder="Kamida 6 belgi" />
           </label>
+          {formError && <p className="auth-error">{formError}</p>}
           <button type="submit">
             <LogIn size={17} />
             {mode === "login" ? "Kirish" : "Ro'yxatdan o'tish"}
@@ -1104,13 +1181,18 @@ function StudioGroup({ group, onStatusChange }) {
 }
 
 function StaffRow({ groupId, person, onStatusChange }) {
+  const department = departmentMeta(person.department);
+  const phone = cleanPhone(person.phone);
+  const telegram = telegramHref(person.telegram);
+
   return (
-    <article className="staff-row">
+    <article className={`staff-row department-${department.id}`}>
       <Avatar person={person} />
       <div>
         <strong>{person.name}</strong>
-        <span>{person.employeeId ? `ID: ${person.employeeId}` : `Ish vaqti - ${person.time}`}</span>
+        <span>{department.label} • {person.employeeId ? `ID: ${person.employeeId}` : person.time}</span>
       </div>
+      <ContactActions phone={phone} telegram={telegram} />
       {onStatusChange ? (
         <select className={`status-select ${person.statusType}`} value={person.statusType} onChange={(event) => onStatusChange(groupId, person.id, event.target.value)} aria-label={`${person.name} statusi`}>
           <option value="working">Ishlamoqda</option>
@@ -1128,10 +1210,12 @@ function StaffRow({ groupId, person, onStatusChange }) {
 }
 
 function EmployeeManager({ employees, onDelete, onSave }) {
-  const blank = { name: "", role: "", phone: "", avatar: "" };
+  const blank = { name: "", role: "", phone: "", telegram: "", department: "operator", address: "", avatar: "", documents: {}, portfolio: [] };
   const [draft, setDraft] = useState(blank);
   const [editingId, setEditingId] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [activeDepartment, setActiveDepartment] = useState("all");
+  const filteredEmployees = activeDepartment === "all" ? employees : employees.filter((employee) => employee.department === activeDepartment);
 
   function startEdit(employee) {
     setEditingId(employee.id);
@@ -1161,13 +1245,21 @@ function EmployeeManager({ employees, onDelete, onSave }) {
         <Plus size={18} />
         Yangi xodim qo'shish
       </button>
+      <div className="department-tabs">
+        <button className={activeDepartment === "all" ? "active" : ""} type="button" onClick={() => setActiveDepartment("all")}>Hammasi</button>
+        {DEPARTMENTS.map((department) => (
+          <button className={activeDepartment === department.id ? "active" : ""} type="button" key={department.id} onClick={() => setActiveDepartment(department.id)}>
+            {department.shortLabel}
+          </button>
+        ))}
+      </div>
       <div className="employee-list">
-        {employees.map((employee) => (
-          <article className="employee-row" key={employee.id}>
+        {filteredEmployees.map((employee) => (
+          <article className={`employee-row department-${employee.department || "operator"}`} key={employee.id}>
             <Avatar person={employee} />
             <div>
               <strong>{employee.name}</strong>
-              <span>{employee.role} • {employee.phone}</span>
+              <span>{departmentMeta(employee.department).label} • {employee.phone}</span>
             </div>
             <button type="button" aria-label="Tahrirlash" onClick={() => startEdit(employee)}><Edit3 size={16} /></button>
             <button type="button" aria-label="O'chirish" onClick={() => onDelete(employee.id)}><Trash2 size={16} /></button>
@@ -1190,8 +1282,24 @@ function EmployeeManager({ employees, onDelete, onSave }) {
               <input value={draft.role} onChange={(event) => setDraft({ ...draft, role: event.target.value })} placeholder="Operator" />
             </label>
             <label>
+              Bo'lim
+              <select value={draft.department || "operator"} onChange={(event) => setDraft({ ...draft, department: event.target.value })}>
+                {DEPARTMENTS.map((department) => (
+                  <option key={department.id} value={department.id}>{department.label}</option>
+                ))}
+              </select>
+            </label>
+            <label>
               Telefon
               <input value={draft.phone} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} placeholder="+998 ..." />
+            </label>
+            <label>
+              Telegram
+              <input value={draft.telegram || ""} onChange={(event) => setDraft({ ...draft, telegram: event.target.value })} placeholder="@username yoki link" />
+            </label>
+            <label>
+              Yashash manzili
+              <textarea value={draft.address || ""} onChange={(event) => setDraft({ ...draft, address: event.target.value })} placeholder="Toshkent shahri, tuman, ko'cha..." />
             </label>
             <label>
               Rasm URL
@@ -1208,14 +1316,226 @@ function EmployeeManager({ employees, onDelete, onSave }) {
   );
 }
 
-function CompactStaffCard({ person }) {
+function DocumentsPage({ employees, onSaveEmployee }) {
+  const [selectedId, setSelectedId] = useState(employees[0]?.id || "");
+  const selectedEmployee = employees.find((employee) => String(employee.id) === String(selectedId)) || employees[0];
+  const [draft, setDraft] = useState(selectedEmployee || null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const nextEmployee = employees.find((employee) => String(employee.id) === String(selectedId)) || employees[0] || null;
+    setDraft(nextEmployee);
+    if (nextEmployee && String(nextEmployee.id) !== String(selectedId)) setSelectedId(nextEmployee.id);
+  }, [employees, selectedId]);
+
+  async function updateDocument(type, file) {
+    if (!file || !draft) return;
+    if (!["image/jpeg", "image/jpg"].includes(file.type)) {
+      window.alert("Faqat JPG formatdagi rasm yuklang");
+      return;
+    }
+
+    const image = await readImageFile(file);
+    setDraft({
+      ...draft,
+      documents: {
+        ...(draft.documents || {}),
+        [type]: image
+      }
+    });
+  }
+
+  function removeDocument(type) {
+    const nextDocuments = { ...(draft.documents || {}) };
+    delete nextDocuments[type];
+    setDraft({ ...draft, documents: nextDocuments });
+  }
+
+  function updatePortfolio(index, field, value) {
+    const portfolio = [...(draft.portfolio || [])];
+    portfolio[index] = { ...(portfolio[index] || {}), [field]: value };
+    setDraft({ ...draft, portfolio });
+  }
+
+  function addPortfolioItem() {
+    setDraft({
+      ...draft,
+      portfolio: [
+        ...(draft.portfolio || []),
+        { title: "", url: "", date: new Date().toISOString().slice(0, 10) }
+      ]
+    });
+  }
+
+  function removePortfolioItem(index) {
+    setDraft({
+      ...draft,
+      portfolio: (draft.portfolio || []).filter((_, itemIndex) => itemIndex !== index)
+    });
+  }
+
+  async function submit(event) {
+    event.preventDefault();
+    setSaving(true);
+    await onSaveEmployee(draft);
+    setSaving(false);
+  }
+
+  if (!draft) return <EmptyCard text="Xodimlar ro'yxati bo'sh" />;
+
   return (
-    <article className="compact-staff">
+    <section className="documents-page">
+      <section className="documents-card">
+        <div className="section-head">
+          <h2>Xodim hujjatlari</h2>
+          <span>{countEmployeeDocuments(draft)} / {DOCUMENT_TYPES.length}</span>
+        </div>
+        <label className="document-select">
+          Xodim
+          <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
+            {employees.map((employee) => (
+              <option key={employee.id} value={employee.id}>{employee.name}</option>
+            ))}
+          </select>
+        </label>
+        <form className="documents-form" onSubmit={submit}>
+          <div className="document-profile">
+            <Avatar person={draft} />
+            <div>
+              <strong>{draft.name}</strong>
+              <span>{draft.role}</span>
+            </div>
+          </div>
+          <label>
+            Ism familiya
+            <input value={draft.name || ""} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Abduqodirxo'jayev Izzat" />
+          </label>
+          <label>
+            Lavozimi
+            <input value={draft.role || ""} onChange={(event) => setDraft({ ...draft, role: event.target.value })} placeholder="Tasvir yozish operatori" />
+          </label>
+          <div className="modal-grid two">
+            <label>
+              Bo'lim
+              <select value={draft.department || "operator"} onChange={(event) => setDraft({ ...draft, department: event.target.value })}>
+                {DEPARTMENTS.map((department) => (
+                  <option key={department.id} value={department.id}>{department.label}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Telegram
+              <input value={draft.telegram || ""} onChange={(event) => setDraft({ ...draft, telegram: event.target.value })} placeholder="@username" />
+            </label>
+          </div>
+          <label>
+            Yashash manzili
+            <textarea value={draft.address || ""} onChange={(event) => setDraft({ ...draft, address: event.target.value })} placeholder="Yashash manzili" />
+          </label>
+          <div className="document-grid">
+            {DOCUMENT_TYPES.map((item) => {
+              const image = draft.documents?.[item.id];
+              return (
+                <article className="document-upload" key={item.id}>
+                  <div className="document-preview">
+                    {image ? <img src={image} alt={item.label} /> : <FileImage size={28} />}
+                  </div>
+                  <div>
+                    <strong>{item.label}</strong>
+                    <span>{image ? "JPG yuklangan" : "JPG tanlanmagan"}</span>
+                  </div>
+                  <label className="document-upload-button">
+                    <Upload size={15} />
+                    <span>Yuklash</span>
+                    <input type="file" accept="image/jpeg,.jpg,.jpeg" onChange={(event) => updateDocument(item.id, event.target.files?.[0])} />
+                  </label>
+                  {image && (
+                    <button className="document-remove-button" type="button" onClick={() => removeDocument(item.id)}>
+                      <Trash2 size={15} />
+                    </button>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+          <section className="portfolio-editor">
+            <div className="section-head">
+              <h2>Portfolio</h2>
+              <button type="button" onClick={addPortfolioItem}>
+                <Plus size={15} />
+                Link
+              </button>
+            </div>
+            {(draft.portfolio || []).map((item, index) => (
+              <article className="portfolio-row" key={`${index}-${item.url}`}>
+                <input value={item.title || ""} onChange={(event) => updatePortfolio(index, "title", event.target.value)} placeholder="Syomka nomi" />
+                <input value={item.url || ""} onChange={(event) => updatePortfolio(index, "url", event.target.value)} placeholder="Video yoki efir linki" />
+                <input type="date" value={item.date || ""} onChange={(event) => updatePortfolio(index, "date", event.target.value)} />
+                <button type="button" aria-label="Portfolio linkni o'chirish" onClick={() => removePortfolioItem(index)}>
+                  <Trash2 size={15} />
+                </button>
+              </article>
+            ))}
+            {!(draft.portfolio || []).length && <p className="portfolio-empty">Efirga ketgan syomka linklarini shu yerda yig'ib borasiz.</p>}
+          </section>
+          <button className="documents-save-button" type="submit" disabled={saving}>
+            <Save size={17} />
+            {saving ? "Saqlanmoqda..." : "Hujjatlarni saqlash"}
+          </button>
+        </form>
+      </section>
+
+      <section className="documents-summary">
+        {employees.map((employee) => (
+          <button className={`${String(employee.id) === String(draft.id) ? "active" : ""} department-${employee.department || "operator"}`} key={employee.id} type="button" onClick={() => setSelectedId(employee.id)}>
+            <Avatar person={employee} />
+            <div>
+              <strong>{employee.name}</strong>
+              <span>{departmentMeta(employee.department).label} • {countEmployeeDocuments(employee)} hujjat • {(employee.portfolio || []).length} video</span>
+            </div>
+          </button>
+        ))}
+      </section>
+    </section>
+  );
+}
+
+function ContactActions({ phone, telegram }) {
+  return (
+    <div className="contact-actions">
+      {phone && (
+        <a href={`tel:${phone}`} aria-label="Telefon qilish">
+          <Phone size={15} />
+        </a>
+      )}
+      {telegram && (
+        <a href={telegram} target="_blank" rel="noreferrer" aria-label="Telegramda yozish">
+          <Send size={15} />
+        </a>
+      )}
+    </div>
+  );
+}
+
+function CompactStaffCard({ person }) {
+  const department = departmentMeta(person.department);
+  const phone = cleanPhone(person.phone);
+  const telegram = telegramHref(person.telegram);
+  const portfolioUrl = person.portfolio?.find((item) => item.url)?.url;
+
+  return (
+    <article className={`compact-staff department-${department.id}`}>
       <Avatar person={person} />
       <div>
         <strong>{person.name}</strong>
-        <span>Ish vaqti - {person.time}</span>
+        <span>{department.label} • {person.phone}</span>
       </div>
+      <ContactActions phone={phone} telegram={telegram} />
+      {portfolioUrl && (
+        <a className="portfolio-action" href={portfolioUrl} target="_blank" rel="noreferrer" aria-label="Portfolio linkini ochish">
+          <PlayCircle size={16} />
+        </a>
+      )}
       <em>{person.status}</em>
     </article>
   );
@@ -1367,17 +1687,19 @@ function EmptyCard({ text }) {
 
 function MenuPanel({ onClose, onPageChange }) {
   const links = [
-    ["weekly", "Jadval"],
-    ["studio", "Jamoa"],
-    ["monthly", "Oylik grafik"],
-    ["shooting", "Tasvir jadvali"],
-    ["reports", "Hisobotlar"],
-    ["profile", "Profil"]
+    ["weekly", "Ish jadvali", CalendarDays],
+    ["studio", "Jamoa va bo'limlar", UsersRound],
+    ["documents", "Hujjatlar", FileImage],
+    ["monthly", "Oylik grafik", Clock3],
+    ["shooting", "Tasvir jadvali", FileText],
+    ["reports", "Hisobotlar", ChartColumn],
+    ["profile", "Profil", User]
   ];
 
   return (
     <aside className="floating-panel menu-panel">
-      {links.map(([id, label]) => (
+      <strong>Bo'limlar</strong>
+      {links.map(([id, label, Icon]) => (
         <button
           key={id}
           type="button"
@@ -1386,6 +1708,7 @@ function MenuPanel({ onClose, onPageChange }) {
             onClose();
           }}
         >
+          <Icon size={17} />
           {label}
         </button>
       ))}
@@ -1425,9 +1748,7 @@ function BottomNav({ page, onPageChange }) {
   const items = [
     { id: "weekly", label: "Jadval", icon: CalendarDays },
     { id: "studio", label: "Jamoa", icon: UsersRound },
-    { id: "monthly", label: "Oy", icon: Clock3 },
-    { id: "shooting", label: "Tasvir", icon: FileText },
-    { id: "reports", label: "Hisobotlar", icon: ChartColumn },
+    { id: "documents", label: "Hujjat", icon: FileImage },
     { id: "profile", label: "Profil", icon: User }
   ];
 

@@ -8,6 +8,12 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const PORT = Number(process.env.PORT || 3001);
 const DATA_DIR = process.env.VERCEL ? "/tmp/ish-jadvali" : join(__dirname, "data");
 const DB_FILE = join(DATA_DIR, "mock-db.json");
+const departments = [
+  { id: "pull", name: "Pull xizmati" },
+  { id: "operator", name: "Oddiy operatorlar" },
+  { id: "dron", name: "Dron bo'limi" },
+  { id: "tjk", name: "TJK guruhi" }
+];
 
 const initialEmployees = [
   ["Abdug'afforov A.", "Operator va texnik xodim"],
@@ -79,6 +85,9 @@ const initialEmployees = [
   name,
   role,
   phone: "+998 90 000 00 00",
+  telegram: "",
+  department: inferDepartment({ id: index + 1, name, role }),
+  portfolio: [],
   avatar: `https://i.pravatar.cc/160?u=${encodeURIComponent(name)}`
 }));
 
@@ -98,14 +107,51 @@ async function loadDb() {
   try {
     const raw = await readFile(DB_FILE, "utf8");
     const parsed = JSON.parse(raw);
+    const employees = Array.isArray(parsed.employees) && parsed.employees.length ? parsed.employees : initialEmployees;
     return {
       generation: Number(parsed.generation || 0),
-      employees: Array.isArray(parsed.employees) && parsed.employees.length ? parsed.employees : initialEmployees,
+      employees: employees.map(normalizeEmployee),
       schedules: parsed.schedules && typeof parsed.schedules === "object" ? parsed.schedules : {}
     };
   } catch {
-    return { generation: 0, employees: initialEmployees, schedules: {} };
+    return { generation: 0, employees: initialEmployees.map(normalizeEmployee), schedules: {} };
   }
+}
+
+function inferDepartment(employee) {
+  const text = `${employee.name || ""} ${employee.role || ""}`.toLowerCase();
+  if (text.includes("dron")) return "dron";
+  if (text.includes("rej") || text.includes("tjk")) return "tjk";
+  if (Number(employee.id) <= 25) return "pull";
+  return "operator";
+}
+
+function normalizeDepartment(value) {
+  return departments.some((department) => department.id === value) ? value : "operator";
+}
+
+function cleanPortfolio(portfolio) {
+  if (!Array.isArray(portfolio)) return [];
+  return portfolio
+    .map((item) => ({
+      title: String(item?.title || "").trim(),
+      url: String(item?.url || "").trim(),
+      date: String(item?.date || "").trim()
+    }))
+    .filter((item) => item.title || item.url)
+    .slice(0, 100);
+}
+
+function normalizeEmployee(employee) {
+  return {
+    ...employee,
+    phone: employee.phone || "+998 90 000 00 00",
+    telegram: employee.telegram || "",
+    department: normalizeDepartment(employee.department || inferDepartment(employee)),
+    address: employee.address || "",
+    documents: cleanDocuments(employee.documents),
+    portfolio: cleanPortfolio(employee.portfolio)
+  };
 }
 
 async function saveDb() {
@@ -139,12 +185,17 @@ function pickEmployee(index) {
   return db.employees[index % db.employees.length];
 }
 
+function scheduleEmployee(employee) {
+  const { documents, ...publicEmployee } = employee;
+  return publicEmployee;
+}
+
 function buildPerson(employee, studio, dayIndex, offset, seed) {
   const rest = (employee.id + dayIndex + seed) % 7 === 0;
   const backup = (employee.id + offset + seed) % 11 === 0;
 
   return {
-    ...employee,
+    ...scheduleEmployee(employee),
     time: studio.time,
     employeeId: employee.id === 9 ? "EMP-009" : "",
     status: rest ? "Damda" : backup ? "Zaxira" : "Ishlamoqda",
@@ -247,16 +298,41 @@ function createAvatar(name, id) {
   return `https://i.pravatar.cc/160?u=${encodeURIComponent(name || `employee-${id}`)}`;
 }
 
+function cleanDocuments(documents) {
+  if (!documents || typeof documents !== "object") return {};
+  return ["photo3x4", "passportUz", "passportForeign", "certificate"].reduce((result, key) => {
+    if (typeof documents[key] === "string" && documents[key].startsWith("data:image/")) {
+      result[key] = documents[key];
+    }
+    return result;
+  }, {});
+}
+
+function cleanEmployeePayload(payload, existing = {}) {
+  return normalizeEmployee({
+    ...existing,
+    id: payload.id ?? existing.id,
+    name: payload.name?.trim() || existing.name,
+    role: payload.role?.trim() || existing.role || "Operator",
+    phone: payload.phone?.trim() || existing.phone || "+998 90 000 00 00",
+    telegram: payload.telegram?.trim() || "",
+    department: normalizeDepartment(payload.department || existing.department || inferDepartment(payload)),
+    address: payload.address?.trim() ?? existing.address ?? "",
+    avatar: payload.avatar?.trim() || existing.avatar,
+    documents: payload.documents || existing.documents,
+    portfolio: payload.portfolio || existing.portfolio
+  });
+}
+
 async function createEmployee(payload) {
   if (!payload.name?.trim()) throw new Error("Xodim ismi kiritilmadi");
+  const id = nextEmployeeId();
 
-  const employee = {
-    id: nextEmployeeId(),
-    name: payload.name.trim(),
-    role: payload.role?.trim() || "Operator",
-    phone: payload.phone?.trim() || "+998 90 000 00 00",
-    avatar: payload.avatar?.trim() || createAvatar(payload.name, nextEmployeeId())
-  };
+  const employee = cleanEmployeePayload({
+    ...payload,
+    id,
+    avatar: payload.avatar?.trim() || createAvatar(payload.name, id)
+  });
 
   db.employees.push(employee);
   await saveDb();
@@ -267,20 +343,14 @@ async function updateEmployee(id, payload) {
   const index = db.employees.findIndex((employee) => String(employee.id) === String(id));
   if (index === -1) throw new Error("Xodim topilmadi");
 
-  db.employees[index] = {
-    ...db.employees[index],
-    name: payload.name?.trim() || db.employees[index].name,
-    role: payload.role?.trim() || db.employees[index].role,
-    phone: payload.phone?.trim() || db.employees[index].phone,
-    avatar: payload.avatar?.trim() || db.employees[index].avatar
-  };
+  db.employees[index] = cleanEmployeePayload(payload, db.employees[index]);
 
   for (const schedule of Object.values(db.schedules)) {
     schedule.employees = db.employees;
     schedule.groups = schedule.groups.map((group) => ({
       ...group,
       people: group.people.map((person) => (
-        String(person.id) === String(id) ? { ...person, ...db.employees[index], time: person.time, employeeId: person.employeeId, status: person.status, statusType: person.statusType } : person
+        String(person.id) === String(id) ? { ...person, ...scheduleEmployee(db.employees[index]), time: person.time, employeeId: person.employeeId, status: person.status, statusType: person.statusType } : person
       ))
     }));
     refreshScheduleDerivedData(schedule);
@@ -311,6 +381,14 @@ async function deleteEmployee(id) {
 }
 
 function refreshScheduleDerivedData(schedule) {
+  schedule.groups = schedule.groups.map((group) => ({
+    ...group,
+    people: group.people.map((person) => {
+      const employee = db.employees.find((item) => String(item.id) === String(person.id));
+      return employee ? { ...person, ...scheduleEmployee(employee), time: person.time, employeeId: person.employeeId, status: person.status, statusType: person.statusType } : person;
+    })
+  }));
+
   const allPeople = schedule.groups.flatMap((group) => group.people);
   const todayGroups = schedule.groups.filter((group) => group.day === "Dushanba");
   const todayPeople = todayGroups.flatMap((group) => group.people);
@@ -444,7 +522,7 @@ async function addScheduleGroup(weekStartValue, payload) {
     meta,
     tone: payload.tone === "blue" ? "blue" : "purple",
     people: selectedEmployees.map((employee) => ({
-      ...employee,
+      ...scheduleEmployee(employee),
       time,
       employeeId: "",
       status: statusMap[statusType],
