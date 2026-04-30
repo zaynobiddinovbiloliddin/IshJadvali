@@ -10,22 +10,77 @@ const DATA_DIR = process.env.VERCEL ? "/tmp/ish-jadvali" : join(__dirname, "data
 const DB_FILE = join(DATA_DIR, "mock-db.json");
 
 const initialEmployees = [
-  { id: 1, name: "Toirov B", role: "Rejissyor", phone: "+998 90 101 22 33", avatar: "https://randomuser.me/api/portraits/men/32.jpg" },
-  { id: 2, name: "O'lmasov Sh", role: "Operator", phone: "+998 91 204 15 22", avatar: "https://randomuser.me/api/portraits/men/46.jpg" },
-  { id: 3, name: "Turdialiyev I", role: "Montajchi", phone: "+998 93 715 44 80", avatar: "https://randomuser.me/api/portraits/men/51.jpg" },
-  { id: 4, name: "Raxmatulin N", role: "Muhandis", phone: "+998 97 620 12 10", avatar: "https://randomuser.me/api/portraits/men/76.jpg" },
-  { id: 5, name: "Qudratov X", role: "Operator", phone: "+998 94 811 60 77", avatar: "https://randomuser.me/api/portraits/men/22.jpg" },
-  { id: 6, name: "Ilmurzin A", role: "Boshlovchi", phone: "+998 99 230 77 41", avatar: "https://randomuser.me/api/portraits/men/64.jpg" },
-  { id: 7, name: "Rasulov B", role: "Smena boshlig'i", phone: "+998 90 441 89 10", avatar: "https://randomuser.me/api/portraits/men/84.jpg" },
-  { id: 8, name: "Rustamov E", role: "Ovoz rejissyori", phone: "+998 91 700 20 40", avatar: "https://randomuser.me/api/portraits/men/12.jpg" },
-  { id: 9, name: "Mirjalolov M", role: "Texnik", phone: "+998 93 514 11 28", avatar: "https://randomuser.me/api/portraits/men/71.jpg" },
-  { id: 10, name: "Shermuhammedov D", role: "Operator", phone: "+998 95 300 15 19", avatar: "https://randomuser.me/api/portraits/men/60.jpg" },
-  { id: 11, name: "Axmedov B", role: "Muharrir", phone: "+998 97 611 90 71", avatar: "https://randomuser.me/api/portraits/men/44.jpg" },
-  { id: 12, name: "Umarov J.", role: "Grafika", phone: "+998 99 842 45 60", avatar: "https://randomuser.me/api/portraits/men/18.jpg" },
-  { id: 13, name: "Nurmatov B.", role: "Operator", phone: "+998 90 677 22 91", avatar: "https://randomuser.me/api/portraits/men/65.jpg" },
-  { id: 14, name: "Azimov E.", role: "Administrator", phone: "+998 91 733 58 01", avatar: "https://randomuser.me/api/portraits/men/25.jpg" },
-  { id: 15, name: "Menayev T.", role: "Texnik yordamchi", phone: "+998 94 206 71 19", avatar: "https://randomuser.me/api/portraits/men/37.jpg" }
-];
+  ["Abdug'afforov A.", "Operator va texnik xodim"],
+  ["JO'RAYEV S.", "Operator / muxbir"],
+  ["Shermuhammedov D.", "Operator va texnik xodim"],
+  ["BOSITXONOV B.", "Operator va texnik xodim"],
+  ["QUDRATOV X.", "Operator va texnik xodim"],
+  ["TO'XTASINOV M.", "Operator va texnik xodim"],
+  ["FAYZIYEV F.", "Operator va texnik xodim"],
+  ["SATTOROV I.", "Operator va texnik xodim"],
+  ["Saidnasimov S.", "Operator va texnik xodim"],
+  ["ZAMONOV I.", "Operator va texnik xodim"],
+  ["ILMURZIN A.", "Operator va texnik xodim"],
+  ["RASULOV B./dron", "Operator / dron"],
+  ["Turdialiyev I./dron", "Operator / dron"],
+  ["MENAYEV T.", "Operator va texnik xodim"],
+  ["MAXMUDOV J.", "Operator va texnik xodim"],
+  ["Ulug'murodov U.", "Operator va texnik xodim"],
+  ["Eshonxo'jayev F.", "Operator va texnik xodim"],
+  ["RUSTAMOV I.", "Operator va texnik xodim"],
+  ["ZIKRILLAYEV A.", "Operator va texnik xodim"],
+  ["HAMIDOV D.", "Operator va texnik xodim"],
+  ["NURMATOV B.", "Operator va texnik xodim"],
+  ["LUTFULLAYEV S.", "Operator va texnik xodim"],
+  ["XAYDAROV X.", "Operator va texnik xodim"],
+  ["KOMILOV M.", "Operator va texnik xodim"],
+  ["XOLIQULOV S.", "Operator va texnik xodim"],
+  ["Abdurahmonov D.", "Operator va texnik xodim"],
+  ["TOIROV B.", "Operator va texnik xodim"],
+  ["ZAXIDOV M.", "Operator va texnik xodim"],
+  ["Abdusattorov A.", "Operator va texnik xodim"],
+  ["RAHMONOV S.", "Operator va texnik xodim"],
+  ["SOLIBOYEV I.", "Operator va texnik xodim"],
+  ["AZIMOV E.", "Operator va texnik xodim"],
+  ["RUSTAMOV E.", "Operator va texnik xodim"],
+  ["SOLIBOYEV Y.", "Operator va texnik xodim"],
+  ["UMAROV J.", "Operator va texnik xodim"],
+  ["IBROHIMOV A.", "Muxbir"],
+  ["O'TAYEVA S.", "Muxbir"],
+  ["SHUKUROVA R.", "Muxbir"],
+  ["HAYITOV D.", "Muxbir"],
+  ["QURBONOV D.", "Muxbir"],
+  ["JOVLIYEV G'.", "Muxbir"],
+  ["HAMROYEVA O.", "Muxbir"],
+  ["SOATOV J.", "Muxbir"],
+  ["QALANDAROVA M.", "Muxbir"],
+  ["NIZAMUDINOVA K.", "Muxbir"],
+  ["Xudoyberdiyeva O.", "Muxbir"],
+  ["AXMADOVA G.", "Muxbir"],
+  ["RO'ZIMURODOV J.", "Muxbir"],
+  ["YUNUSOVA M.", "Muxbir"],
+  ["ESHBOYEV I.", "Muxbir"],
+  ["ZARIPXAN K.", "Muxbir"],
+  ["MIRSADIQOVA A.", "Muxbir"],
+  ["MATYOQUBOVA I.", "Muxbir"],
+  ["MARDONOV J.", "Muxbir"],
+  ["QUDRATOVA M.", "Muxbir"],
+  ["AKTAMOVA N.", "Muxbir"],
+  ["QODIROV I./rej.", "Rejissyor"],
+  ["QODIROV X.", "Muxbir"],
+  ["IMINOVA M.", "Muxbir"],
+  ["QOSIMOV M./rej.", "Rejissyor"],
+  ["CHORIYEV SH.", "Muxbir"],
+  ["Mambetsharipova N.", "Muxbir"],
+  ["QIYOSOVA A.", "Muxbir"],
+  ["REYIMOVA D.", "Muxbir"]
+].map(([name, role], index) => ({
+  id: index + 1,
+  name,
+  role,
+  phone: "+998 90 000 00 00",
+  avatar: `https://i.pravatar.cc/160?u=${encodeURIComponent(name)}`
+}));
 
 const studios = [
   { name: "3 Studiya", tone: "purple", time: "9:00 - 22:00" },
@@ -159,7 +214,7 @@ function buildDashboard(weekStartValue, options = {}) {
       saved: Boolean(options.saved)
     },
     metrics: {
-      total: 40,
+      total: db.employees.length,
       working,
       rest,
       backup,
@@ -189,10 +244,7 @@ function nextEmployeeId() {
 }
 
 function createAvatar(name, id) {
-  const genderPath = id % 5 === 0 ? "women" : "men";
-  const imageId = 10 + ((id * 7) % 80);
-  if (name) return `https://randomuser.me/api/portraits/${genderPath}/${imageId}.jpg`;
-  return `https://randomuser.me/api/portraits/men/${imageId}.jpg`;
+  return `https://i.pravatar.cc/160?u=${encodeURIComponent(name || `employee-${id}`)}`;
 }
 
 async function createEmployee(payload) {
@@ -362,12 +414,59 @@ async function updatePersonStatus(weekStartValue, payload) {
   return schedule;
 }
 
+async function addScheduleGroup(weekStartValue, payload) {
+  const key = getScheduleKey(weekStartValue);
+  if (!db.schedules[key]) db.schedules[key] = buildDashboard(key, { saved: true });
+
+  const schedule = db.schedules[key];
+  const day = dayNames.includes(payload.day) ? payload.day : dayNames[0];
+  const dayIndex = dayNames.indexOf(day);
+  const date = addDays(getWeekStart(key), dayIndex);
+  const selectedEmployees = (Array.isArray(payload.employeeIds) ? payload.employeeIds : [])
+    .map((id) => db.employees.find((employee) => String(employee.id) === String(id)))
+    .filter(Boolean);
+
+  if (!selectedEmployees.length) throw new Error("Kamida bitta xodim tanlang");
+
+  const statusMap = {
+    working: "Ishlamoqda",
+    rest: "Damda",
+    backup: "Zaxira"
+  };
+  const statusType = statusMap[payload.statusType] ? payload.statusType : "working";
+  const time = payload.time?.trim() || "09:00 - 18:00";
+  const meta = payload.meta?.trim() || "Yangi studiya";
+
+  const group = {
+    id: `custom-${Date.now()}`,
+    day,
+    title: `${day}, ${formatDate(date)}`,
+    meta,
+    tone: payload.tone === "blue" ? "blue" : "purple",
+    people: selectedEmployees.map((employee) => ({
+      ...employee,
+      time,
+      employeeId: "",
+      status: statusMap[statusType],
+      statusType
+    }))
+  };
+
+  schedule.groups = [group, ...schedule.groups];
+  schedule.week.saved = true;
+  schedule.week.generatedAt = new Date().toLocaleString("uz-UZ", { hour: "2-digit", minute: "2-digit" });
+  schedule.employees = db.employees;
+  refreshScheduleDerivedData(schedule);
+  await saveDb();
+  return schedule;
+}
+
 function sendJson(response, status, payload) {
   response.writeHead(status, {
     "Content-Type": "application/json",
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Allow-Methods": "GET,POST,OPTIONS"
+    "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
   });
   response.end(JSON.stringify(payload));
 }
@@ -458,6 +557,11 @@ export async function handleRequest(request, response) {
 
     if (scheduleMatch && request.method === "DELETE") {
       return sendJson(response, 200, await deleteSchedule(scheduleMatch[1]));
+    }
+
+    const groupMatch = url.pathname.match(/^\/api\/schedules\/(\d{4}-\d{2}-\d{2})\/groups$/);
+    if (groupMatch && request.method === "POST") {
+      return sendJson(response, 201, await addScheduleGroup(groupMatch[1], await readBody(request)));
     }
 
     const statusMatch = url.pathname.match(/^\/api\/schedules\/(\d{4}-\d{2}-\d{2})\/status$/);
