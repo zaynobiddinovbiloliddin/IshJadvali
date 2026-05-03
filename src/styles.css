@@ -574,9 +574,9 @@ button:active {
 
 .staff-row.department-tjk,
 .compact-staff.department-tjk {
-  border-color: #ddd6fe;
-  border-left-color: #7c3aed;
-  background: #f5f3ff;
+  border-color: #bfdbfe;
+  border-left-color: #2563eb;
+  background: #eff6ff;
 }
 
 .contact-actions {
@@ -619,7 +619,7 @@ button:active {
   display: block;
   overflow: hidden;
   color: #172033;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -631,7 +631,8 @@ button:active {
   margin-top: 2px;
   color: #4b5563;
   font-size: 13px;
-  white-space: nowrap;
+  line-height: 1.25;
+  white-space: normal;
 }
 
 .status-pill {
@@ -974,21 +975,62 @@ button:active {
 
 .compact-staff {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) auto auto 62px;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
-  min-height: 63px;
-  padding: 9px 10px 9px 15px;
-  border-left: 4px solid #58c695;
+  gap: 11px;
+  min-height: 76px;
+  padding: 12px;
+  border: 1px solid #dbeafe;
+  border-left: 4px solid #2563eb;
   border-radius: 7px;
-  background: #f1fbf8;
+  background: #eff6ff;
+}
+
+.compact-staff .avatar {
+  width: 48px;
+  height: 48px;
+}
+
+.compact-staff .contact-actions {
+  grid-column: 3;
+  grid-row: 1;
+  align-self: start;
 }
 
 .compact-staff em {
-  color: #ffffff;
-  font-size: 11px;
+  grid-column: 2 / 4;
+  justify-self: start;
+  min-height: 24px;
+  margin-top: 2px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  color: #166534;
+  background: #dcfce7;
+  font-size: 12px;
+  font-weight: 800;
   font-style: normal;
-  text-align: right;
+  line-height: 1.1;
+  text-align: left;
+}
+
+.compact-staff em.rest {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.compact-staff em.trip {
+  color: #713f12;
+  background: #fef3c7;
+}
+
+.compact-staff em.tjk {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.compact-staff em.backup {
+  color: #374151;
+  background: #e5e7eb;
 }
 
 .overview-card {
@@ -1728,26 +1770,27 @@ button:active {
 
 .department-tabs {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 6px;
-  padding: 4px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-muted);
 }
 
 .department-tabs button {
-  min-height: 34px;
+  min-height: 36px;
   border-radius: 6px;
   color: var(--text-muted);
   background: transparent;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
 }
 
 .department-tabs button.active {
   color: var(--text);
   background: var(--surface);
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 }
 
 .employee-list {

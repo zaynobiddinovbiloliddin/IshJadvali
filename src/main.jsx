@@ -1851,7 +1851,7 @@ function CompactStaffCard({ person }) {
           <PlayCircle size={16} />
         </a>
       )}
-      <em>{person.status}</em>
+      <em className={person.statusType}>{person.status}</em>
     </article>
   );
 }
