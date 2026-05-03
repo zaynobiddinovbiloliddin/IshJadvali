@@ -46,7 +46,7 @@ const STATUS_OPTIONS = [
   { id: "tjk", code: "T", label: "TJK ishda", metric: "working" },
   { id: "backup", code: "Z", label: "Zaxira", metric: "working" },
   { id: "vacation", code: "M", label: "Mehnat ta'tili", metric: "rest" },
-  { id: "otpiska", code: "O", label: "Otpiska", metric: "rest" }
+  { id: "sick", code: "B", label: "Balnishniy", metric: "rest" }
 ];
 const STATUS_META = Object.fromEntries(STATUS_OPTIONS.map((status) => [status.id, status]));
 const OPERATOR_NAMES = [
@@ -60,12 +60,15 @@ const OPERATOR_NAMES = [
 ];
 const SHIFT_LABELS = ["09:00-18:00", "09:00-22:00", "18:00-09:00", "Dam"];
 const MONTHLY_STATUS_OPTIONS = {
-  work: { label: "K", shift: "Kundalik ish", hours: 9 },
+  work: { label: "I", shift: "Ish kuni", hours: 9 },
   rest: { label: "D", shift: "Dam", hours: 0 },
+  trip: { label: "K", shift: "Komandirovka", hours: 9 },
   tjk: { label: "T", shift: "TJK guruhi", hours: 9 },
-  studio: { label: "S", shift: "Studiyada", hours: 9 }
+  studio: { label: "S", shift: "Studiyada", hours: 9 },
+  vacation: { label: "O", shift: "Otpusk", hours: 0 },
+  sick: { label: "B", shift: "Balnishniy", hours: 0 }
 };
-const MONTHLY_STATUS_SEQUENCE = ["work", "rest", "tjk", "studio"];
+const MONTHLY_STATUS_SEQUENCE = ["work", "studio", "trip", "tjk", "rest", "vacation", "sick"];
 const DEPARTMENTS = [
   { id: "pull", label: "Pull xizmati", shortLabel: "Pull" },
   { id: "operator", label: "Oddiy operatorlar", shortLabel: "Operator" },
@@ -952,8 +955,11 @@ function MonthlyPage({ dashboard, weekStart }) {
     operators.forEach((operator) => {
       matrix[operator.id] = monthInfo.days.map((day) => {
         if ((operator.id + day) % 7 === 0) return "rest";
-        if ((operator.id * 2 + day) % 11 === 0) return "tjk";
-        if ((operator.id * 3 + day) % 13 === 0) return "studio";
+        if ((operator.id * 7 + day) % 29 === 0) return "vacation";
+        if ((operator.id * 5 + day) % 23 === 0) return "sick";
+        if ((operator.id * 3 + day) % 17 === 0) return "trip";
+        if ((operator.id * 2 + day) % 13 === 0) return "tjk";
+        if ((operator.id * 3 + day) % 11 === 0) return "studio";
         return "work";
       });
     });
@@ -973,14 +979,17 @@ function MonthlyPage({ dashboard, weekStart }) {
     return {
       work: values.filter((value) => value === "work").length,
       rest: values.filter((value) => value === "rest").length,
+      trip: values.filter((value) => value === "trip").length,
       tjk: values.filter((value) => value === "tjk").length,
       studio: values.filter((value) => value === "studio").length,
+      vacation: values.filter((value) => value === "vacation").length,
+      sick: values.filter((value) => value === "sick").length,
       hours: values.reduce((sum, value) => sum + (MONTHLY_STATUS_OPTIONS[value]?.hours || 0), 0)
     };
   }, [matrix]);
 
   function getShift(operatorId, day, status) {
-    if (status === "rest" || status === "tjk" || status === "studio") {
+    if (status !== "work") {
       return MONTHLY_STATUS_OPTIONS[status].shift;
     }
     return SHIFT_LABELS[(operatorId + day) % 3];
@@ -1013,29 +1022,38 @@ function MonthlyPage({ dashboard, weekStart }) {
         </div>
         <div className="monthly-counts">
           <span><b>{totals.work}</b> ish</span>
+          <span><b>{totals.trip}</b> K</span>
           <span><b>{totals.tjk}</b> TJK</span>
           <span><b>{totals.studio}</b> studiya</span>
           <span><b>{totals.rest}</b> dam</span>
+          <span><b>{totals.vacation}</b> otpusk</span>
+          <span><b>{totals.sick}</b> baln.</span>
           <span><b>{totals.hours}</b> soat</span>
         </div>
       </div>
 
       <div className="monthly-table-wrap" role="region" aria-label="Oylik operatorlar grafigi">
-        <div className="monthly-table" style={{ gridTemplateColumns: `132px repeat(${monthInfo.days.length}, 34px) 58px 58px 58px 58px 72px` }}>
+        <div className="monthly-table" style={{ gridTemplateColumns: `132px repeat(${monthInfo.days.length}, 34px) 48px 48px 48px 48px 48px 48px 48px 72px` }}>
           <div className="month-sticky month-header">Operator</div>
           {monthInfo.days.map((day) => <div className="month-header day" key={day}>{day}</div>)}
+          <div className="month-header summary">I</div>
           <div className="month-header summary">K</div>
           <div className="month-header summary">T</div>
           <div className="month-header summary">S</div>
           <div className="month-header summary">Dam</div>
+          <div className="month-header summary">O</div>
+          <div className="month-header summary">B</div>
           <div className="month-header summary">Soat</div>
 
           {operators.map((operator) => {
             const days = matrix[operator.id] || [];
             const workCount = days.filter((value) => value === "work").length;
             const restCount = days.filter((value) => value === "rest").length;
+            const tripCount = days.filter((value) => value === "trip").length;
             const tjkCount = days.filter((value) => value === "tjk").length;
             const studioCount = days.filter((value) => value === "studio").length;
+            const vacationCount = days.filter((value) => value === "vacation").length;
+            const sickCount = days.filter((value) => value === "sick").length;
             const hourCount = days.reduce((sum, value) => sum + (MONTHLY_STATUS_OPTIONS[value]?.hours || 0), 0);
 
             return (
@@ -1049,13 +1067,16 @@ function MonthlyPage({ dashboard, weekStart }) {
                     title={`${operator.name}, ${monthInfo.days[index]}-${MONTH_NAMES[new Date(`${weekStart}T00:00:00`).getMonth()]}`}
                     onClick={() => toggleCell(operator, index)}
                   >
-                    {MONTHLY_STATUS_OPTIONS[value]?.label || "K"}
+                    {MONTHLY_STATUS_OPTIONS[value]?.label || "I"}
                   </button>
                 ))}
                 <div className="month-total work">{workCount}</div>
+                <div className="month-total trip">{tripCount}</div>
                 <div className="month-total tjk">{tjkCount}</div>
                 <div className="month-total studio">{studioCount}</div>
                 <div className="month-total rest">{restCount}</div>
+                <div className="month-total vacation">{vacationCount}</div>
+                <div className="month-total sick">{sickCount}</div>
                 <div className="month-total hours">{hourCount}</div>
               </React.Fragment>
             );
@@ -1076,10 +1097,13 @@ function MonthlyPage({ dashboard, weekStart }) {
       </div>
 
       <section className="legend-card compact">
-        <LegendItem tone="work" label="Ko'k katak - ishlagan kun" />
+        <LegendItem tone="work" label="Yashil katak - ishlagan kun" />
+        <LegendItem tone="trip" label="Sariq katak - komandirovka" />
         <LegendItem tone="rest" label="Qizil katak - dam kuni" />
-        <LegendItem tone="tjk" label="Sariq katak - TJK guruhi" />
-        <LegendItem tone="studio" label="Yashil katak - studiyada" />
+        <LegendItem tone="tjk" label="Ko'k katak - TJK guruhi" />
+        <LegendItem tone="studio" label="To'q yashil katak - studiyada" />
+        <LegendItem tone="vacation" label="Kulrang katak - otpusk" />
+        <LegendItem tone="sick" label="Binafsha katak - balnishniy" />
       </section>
     </section>
   );
@@ -1862,7 +1886,7 @@ function WeeklyOverview({ rows, days }) {
           <strong>{row.name}</strong>
           {row.days.map((value, index) => (
             <span className={`cell ${value}`} key={`${row.name}-${index}`}>
-              {value === "work" ? <Check size={16} /> : ["rest", "vacation", "otpiska"].includes(value) ? "x" : value === "tjk" ? "T" : null}
+              {value === "work" ? <Check size={16} /> : ["rest", "vacation", "sick"].includes(value) ? "x" : value === "tjk" ? "T" : null}
             </span>
           ))}
         </div>
@@ -1879,7 +1903,7 @@ function ReportsPage({ dashboard }) {
   const statusRows = useMemo(() => STATUS_OPTIONS.map((status) => ({
     ...status,
     people: allPeople.filter((person) => person.statusType === status.id)
-  })).filter((status) => status.people.length || ["working", "rest", "trip", "vacation", "otpiska"].includes(status.id)), [allPeople]);
+  })).filter((status) => status.people.length || ["working", "rest", "trip", "vacation", "sick"].includes(status.id)), [allPeople]);
   const dayRows = useMemo(() => DAY_TABS.filter((day) => day !== "Barcha kunlar").map((day) => {
     const people = allPeople.filter((person) => person.day === day);
     return {
@@ -2118,7 +2142,7 @@ function LegendItem({ tone, label }) {
   return (
     <div className="legend-item">
       <span className={`legend-mark ${tone}`}>
-        {tone === "work" ? <Check size={15} /> : tone === "rest" ? "x" : tone === "tjk" ? "T" : tone === "studio" ? "S" : null}
+        {tone === "work" ? <Check size={15} /> : tone === "rest" ? "x" : tone === "trip" ? "K" : tone === "tjk" ? "T" : tone === "studio" ? "S" : tone === "vacation" ? "O" : tone === "sick" ? "B" : null}
       </span>
       <p>{label}</p>
     </div>

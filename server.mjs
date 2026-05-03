@@ -21,7 +21,7 @@ const statusMap = {
   trip: "Komandirovka",
   tjk: "TJK ishda",
   vacation: "Mehnat ta'tili",
-  otpiska: "Otpiska"
+  sick: "Balnishniy"
 };
 const statusMetricMap = {
   working: "working",
@@ -29,7 +29,7 @@ const statusMetricMap = {
   tjk: "working",
   rest: "rest",
   vacation: "rest",
-  otpiska: "rest",
+  sick: "rest",
   trip: "away"
 };
 
@@ -343,7 +343,7 @@ function createOverviewRows(groups) {
       const groupForEmployee = groups.find((group) => group.day === dayNames[dayIndex] && group.people.some((person) => person.id === employee.id));
       if (!groupForEmployee) return "empty";
       const person = groupForEmployee.people.find((item) => item.id === employee.id);
-      if (["rest", "trip", "tjk", "vacation", "otpiska"].includes(person.statusType)) return person.statusType;
+      if (["rest", "trip", "tjk", "vacation", "sick"].includes(person.statusType)) return person.statusType;
       return "work";
     });
 
@@ -368,7 +368,7 @@ function buildDashboard(weekStartValue, options = {}) {
   const trip = allPeople.filter((person) => person.statusType === "trip").length;
   const tjk = allPeople.filter((person) => person.statusType === "tjk").length;
   const vacation = allPeople.filter((person) => person.statusType === "vacation").length;
-  const otpiska = allPeople.filter((person) => person.statusType === "otpiska").length;
+  const sick = allPeople.filter((person) => person.statusType === "sick").length;
 
   return {
     week: {
@@ -391,7 +391,7 @@ function buildDashboard(weekStartValue, options = {}) {
       trip,
       tjk,
       vacation,
-      otpiska,
+      sick,
       workingToday: countByMetric(todayPeople, "working"),
       restToday: countByMetric(todayPeople, "rest"),
       tripToday: todayPeople.filter((person) => person.statusType === "trip").length,
@@ -407,7 +407,7 @@ function buildDashboard(weekStartValue, options = {}) {
       { label: "TJK guruhi", value: tjk },
       { label: "Zaxira", value: backup },
       { label: "Mehnat ta'tili", value: vacation },
-      { label: "Otpiska", value: otpiska },
+      { label: "Balnishniy", value: sick },
       { label: "Bugungi smena", value: todayPeople.length }
     ],
     notifications: [
@@ -416,7 +416,7 @@ function buildDashboard(weekStartValue, options = {}) {
       `${trip} ta komandirovkada.`,
       `${tjk} ta TJK guruhida.`,
       `${vacation} ta mehnat ta'tilida.`,
-      `${otpiska} ta otpiska.`,
+      `${sick} ta balnishniy.`,
       `${backup} ta xodim zaxirada.`
     ],
     employees: publicEmployees(),
@@ -562,7 +562,7 @@ function refreshScheduleDerivedData(schedule) {
   const trip = allPeople.filter((person) => person.statusType === "trip").length;
   const tjk = allPeople.filter((person) => person.statusType === "tjk").length;
   const vacation = allPeople.filter((person) => person.statusType === "vacation").length;
-  const otpiska = allPeople.filter((person) => person.statusType === "otpiska").length;
+  const sick = allPeople.filter((person) => person.statusType === "sick").length;
 
   schedule.metrics = {
     ...schedule.metrics,
@@ -573,7 +573,7 @@ function refreshScheduleDerivedData(schedule) {
     trip,
     tjk,
     vacation,
-    otpiska,
+    sick,
     workingToday: countByMetric(todayPeople, "working"),
     restToday: countByMetric(todayPeople, "rest"),
     tripToday: todayPeople.filter((person) => person.statusType === "trip").length,
@@ -588,7 +588,7 @@ function refreshScheduleDerivedData(schedule) {
     { label: "TJK guruhi", value: tjk },
     { label: "Zaxira", value: backup },
     { label: "Mehnat ta'tili", value: vacation },
-    { label: "Otpiska", value: otpiska },
+    { label: "Balnishniy", value: sick },
     { label: "Bugungi smena", value: todayPeople.length }
   ];
   schedule.notifications = [
@@ -597,7 +597,7 @@ function refreshScheduleDerivedData(schedule) {
     `${trip} ta komandirovkada.`,
     `${tjk} ta TJK guruhida.`,
     `${vacation} ta mehnat ta'tilida.`,
-    `${otpiska} ta otpiska.`,
+    `${sick} ta balnishniy.`,
     `${backup} ta xodim zaxirada.`
   ];
 }

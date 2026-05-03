@@ -636,7 +636,7 @@ button.metric-card {
 
 .people-list-row.rest em,
 .people-list-row.vacation em,
-.people-list-row.otpiska em {
+.people-list-row.sick em {
   color: #991b1b;
   background: #fee2e2;
 }
@@ -877,10 +877,14 @@ button.metric-card {
   background: #fee2e2;
 }
 
-.status-select.vacation,
-.status-select.otpiska {
+.status-select.vacation {
   color: #991b1b;
   background: #fee2e2;
+}
+
+.status-select.sick {
+  color: #5b21b6;
+  background: #ede9fe;
 }
 
 .status-select.backup {
@@ -1328,6 +1332,19 @@ button.metric-card {
 .legend-mark.tjk {
   color: #ffffff;
   background: #3b82f6;
+}
+
+.legend-mark.studio {
+  background: #047857;
+}
+
+.legend-mark.vacation {
+  color: #374151;
+  background: #e5e7eb;
+}
+
+.legend-mark.sick {
+  background: #8b5cf6;
 }
 
 .legend-item p {
@@ -1841,6 +1858,21 @@ button.metric-card {
   background: #facc15;
 }
 
+.month-cell.studio {
+  color: #ffffff;
+  background: #047857;
+}
+
+.month-cell.vacation {
+  color: #374151;
+  background: #e5e7eb;
+}
+
+.month-cell.sick {
+  color: #ffffff;
+  background: #8b5cf6;
+}
+
 .month-cell:focus-visible {
   outline: 2px solid #111827;
   outline-offset: -2px;
@@ -1871,8 +1903,17 @@ button.metric-card {
   color: #a16207;
 }
 
+.month-total.studio {
+  color: #047857;
+}
+
+.month-total.vacation,
 .month-total.empty {
   color: #6b7280;
+}
+
+.month-total.sick {
+  color: #7c3aed;
 }
 
 .month-total.hours {
@@ -3222,21 +3263,29 @@ button.metric-card {
 .status-select.rest,
 .status-pill.rest,
 .status-select.vacation,
-.status-pill.vacation,
-.status-select.otpiska,
-.status-pill.otpiska {
+.status-pill.vacation {
   color: #991b1b !important;
   background: #fee2e2;
+}
+
+.status-select.sick,
+.status-pill.sick {
+  color: #5b21b6 !important;
+  background: #ede9fe;
 }
 
 :root[data-theme="dark"] .status-select.rest,
 :root[data-theme="dark"] .status-pill.rest,
 :root[data-theme="dark"] .status-select.vacation,
-:root[data-theme="dark"] .status-pill.vacation,
-:root[data-theme="dark"] .status-select.otpiska,
-:root[data-theme="dark"] .status-pill.otpiska {
+:root[data-theme="dark"] .status-pill.vacation {
   color: #fecaca !important;
   background: rgba(239, 68, 68, 0.22);
+}
+
+:root[data-theme="dark"] .status-select.sick,
+:root[data-theme="dark"] .status-pill.sick {
+  color: #ddd6fe !important;
+  background: rgba(139, 92, 246, 0.24);
 }
 
 .status-select.trip,
