@@ -19,7 +19,18 @@ const statusMap = {
   rest: "Damda",
   backup: "Zaxira",
   trip: "Komandirovka",
-  tjk: "TJK ishda"
+  tjk: "TJK ishda",
+  vacation: "Mehnat ta'tili",
+  otpiska: "Otpiska"
+};
+const statusMetricMap = {
+  working: "working",
+  backup: "working",
+  tjk: "working",
+  rest: "rest",
+  vacation: "rest",
+  otpiska: "rest",
+  trip: "away"
 };
 
 const initialEmployees = [
@@ -200,8 +211,16 @@ function pickEmployee(index) {
 }
 
 function scheduleEmployee(employee) {
-  const { documents, ...publicEmployee } = employee;
+  const { address, documents, ...publicEmployee } = employee;
   return publicEmployee;
+}
+
+function publicEmployees() {
+  return db.employees.map(scheduleEmployee);
+}
+
+function countByMetric(people, metric) {
+  return people.filter((person) => statusMetricMap[person.statusType] === metric).length;
 }
 
 function normalizeAttendanceRecord(record) {
@@ -324,7 +343,7 @@ function createOverviewRows(groups) {
       const groupForEmployee = groups.find((group) => group.day === dayNames[dayIndex] && group.people.some((person) => person.id === employee.id));
       if (!groupForEmployee) return "empty";
       const person = groupForEmployee.people.find((item) => item.id === employee.id);
-      if (person.statusType === "rest" || person.statusType === "trip" || person.statusType === "tjk") return person.statusType;
+      if (["rest", "trip", "tjk", "vacation", "otpiska"].includes(person.statusType)) return person.statusType;
       return "work";
     });
 
@@ -341,13 +360,15 @@ function buildDashboard(weekStartValue, options = {}) {
   const allPeople = groups.flatMap((group) => group.people);
   const todayGroups = groups.filter((group) => group.day === "Dushanba");
   const todayPeople = todayGroups.flatMap((group) => group.people);
-  const studioToday = todayPeople.filter((person) => person.statusType !== "rest").slice(0, 3).map((person) => ({ ...person, status: "Working" }));
+  const studioToday = todayPeople.filter((person) => statusMetricMap[person.statusType] !== "rest").slice(0, 3).map((person) => ({ ...person, status: "Working" }));
 
-  const working = allPeople.filter((person) => person.statusType === "working").length;
-  const rest = allPeople.filter((person) => person.statusType === "rest").length;
+  const working = countByMetric(allPeople, "working");
+  const rest = countByMetric(allPeople, "rest");
   const backup = allPeople.filter((person) => person.statusType === "backup").length;
   const trip = allPeople.filter((person) => person.statusType === "trip").length;
   const tjk = allPeople.filter((person) => person.statusType === "tjk").length;
+  const vacation = allPeople.filter((person) => person.statusType === "vacation").length;
+  const otpiska = allPeople.filter((person) => person.statusType === "otpiska").length;
 
   return {
     week: {
@@ -369,8 +390,10 @@ function buildDashboard(weekStartValue, options = {}) {
       backup,
       trip,
       tjk,
-      workingToday: todayPeople.filter((person) => person.statusType === "working").length,
-      restToday: todayPeople.filter((person) => person.statusType === "rest").length,
+      vacation,
+      otpiska,
+      workingToday: countByMetric(todayPeople, "working"),
+      restToday: countByMetric(todayPeople, "rest"),
       tripToday: todayPeople.filter((person) => person.statusType === "trip").length,
       tjkToday: todayPeople.filter((person) => person.statusType === "tjk").length
     },
@@ -383,6 +406,8 @@ function buildDashboard(weekStartValue, options = {}) {
       { label: "Komandirovka", value: trip },
       { label: "TJK guruhi", value: tjk },
       { label: "Zaxira", value: backup },
+      { label: "Mehnat ta'tili", value: vacation },
+      { label: "Otpiska", value: otpiska },
       { label: "Bugungi smena", value: todayPeople.length }
     ],
     notifications: [
@@ -390,9 +415,11 @@ function buildDashboard(weekStartValue, options = {}) {
       `${rest} ta dam olish kuni belgilangan.`,
       `${trip} ta komandirovkada.`,
       `${tjk} ta TJK guruhida.`,
+      `${vacation} ta mehnat ta'tilida.`,
+      `${otpiska} ta otpiska.`,
       `${backup} ta xodim zaxirada.`
     ],
-    employees: db.employees,
+    employees: publicEmployees(),
     attendance: buildAttendanceSummary()
   };
 }
@@ -424,9 +451,9 @@ function cleanEmployeePayload(payload, existing = {}) {
     phone: payload.phone?.trim() || existing.phone || "+998 90 000 00 00",
     telegram: payload.telegram?.trim() || "",
     department: normalizeDepartment(payload.department || existing.department || inferDepartment(payload)),
-    address: payload.address?.trim() ?? existing.address ?? "",
+    address: "",
     avatar: payload.avatar?.trim() || existing.avatar,
-    documents: payload.documents || existing.documents,
+    documents: {},
     portfolio: payload.portfolio || existing.portfolio
   });
 }
@@ -443,7 +470,7 @@ async function createEmployee(payload) {
 
   db.employees.push(employee);
   await saveDb();
-  return employee;
+  return scheduleEmployee(employee);
 }
 
 async function updateEmployee(id, payload) {
@@ -453,7 +480,7 @@ async function updateEmployee(id, payload) {
   db.employees[index] = cleanEmployeePayload(payload, db.employees[index]);
 
   for (const schedule of Object.values(db.schedules)) {
-    schedule.employees = db.employees;
+    schedule.employees = publicEmployees();
     schedule.groups = schedule.groups.map((group) => ({
       ...group,
       people: group.people.map((person) => (
@@ -464,7 +491,7 @@ async function updateEmployee(id, payload) {
   }
 
   await saveDb();
-  return db.employees[index];
+  return scheduleEmployee(db.employees[index]);
 }
 
 async function deleteEmployee(id) {
@@ -480,7 +507,7 @@ async function deleteEmployee(id) {
       ...group,
       people: group.people.filter((person) => String(person.id) !== String(id))
     }));
-    schedule.employees = db.employees;
+    schedule.employees = publicEmployees();
     refreshScheduleDerivedData(schedule);
   }
 
@@ -529,11 +556,13 @@ function refreshScheduleDerivedData(schedule) {
   const allPeople = schedule.groups.flatMap((group) => group.people);
   const todayGroups = schedule.groups.filter((group) => group.day === "Dushanba");
   const todayPeople = todayGroups.flatMap((group) => group.people);
-  const working = allPeople.filter((person) => person.statusType === "working").length;
-  const rest = allPeople.filter((person) => person.statusType === "rest").length;
+  const working = countByMetric(allPeople, "working");
+  const rest = countByMetric(allPeople, "rest");
   const backup = allPeople.filter((person) => person.statusType === "backup").length;
   const trip = allPeople.filter((person) => person.statusType === "trip").length;
   const tjk = allPeople.filter((person) => person.statusType === "tjk").length;
+  const vacation = allPeople.filter((person) => person.statusType === "vacation").length;
+  const otpiska = allPeople.filter((person) => person.statusType === "otpiska").length;
 
   schedule.metrics = {
     ...schedule.metrics,
@@ -543,12 +572,14 @@ function refreshScheduleDerivedData(schedule) {
     backup,
     trip,
     tjk,
-    workingToday: todayPeople.filter((person) => person.statusType === "working").length,
-    restToday: todayPeople.filter((person) => person.statusType === "rest").length,
+    vacation,
+    otpiska,
+    workingToday: countByMetric(todayPeople, "working"),
+    restToday: countByMetric(todayPeople, "rest"),
     tripToday: todayPeople.filter((person) => person.statusType === "trip").length,
     tjkToday: todayPeople.filter((person) => person.statusType === "tjk").length
   };
-  schedule.studioToday = todayPeople.filter((person) => person.statusType !== "rest").slice(0, 3).map((person) => ({ ...person, status: "Working" }));
+  schedule.studioToday = todayPeople.filter((person) => statusMetricMap[person.statusType] !== "rest").slice(0, 3).map((person) => ({ ...person, status: "Working" }));
   schedule.overviewRows = createOverviewRows(schedule.groups);
   schedule.reports = [
     { label: "Ishlayotganlar", value: working },
@@ -556,6 +587,8 @@ function refreshScheduleDerivedData(schedule) {
     { label: "Komandirovka", value: trip },
     { label: "TJK guruhi", value: tjk },
     { label: "Zaxira", value: backup },
+    { label: "Mehnat ta'tili", value: vacation },
+    { label: "Otpiska", value: otpiska },
     { label: "Bugungi smena", value: todayPeople.length }
   ];
   schedule.notifications = [
@@ -563,6 +596,8 @@ function refreshScheduleDerivedData(schedule) {
     `${rest} ta dam olish kuni belgilangan.`,
     `${trip} ta komandirovkada.`,
     `${tjk} ta TJK guruhida.`,
+    `${vacation} ta mehnat ta'tilida.`,
+    `${otpiska} ta otpiska.`,
     `${backup} ta xodim zaxirada.`
   ];
 }
@@ -574,7 +609,7 @@ function getScheduleKey(weekStartValue) {
 function getDashboard(weekStartValue) {
   const key = getScheduleKey(weekStartValue);
   if (db.schedules[key]) {
-    db.schedules[key].employees = db.employees;
+    db.schedules[key].employees = publicEmployees();
     refreshScheduleDerivedData(db.schedules[key]);
     return db.schedules[key];
   }
@@ -670,7 +705,7 @@ async function addScheduleGroup(weekStartValue, payload) {
   schedule.groups = [group, ...schedule.groups];
   schedule.week.saved = true;
   schedule.week.generatedAt = new Date().toLocaleString("uz-UZ", { hour: "2-digit", minute: "2-digit" });
-  schedule.employees = db.employees;
+  schedule.employees = publicEmployees();
   refreshScheduleDerivedData(schedule);
   await saveDb();
   return schedule;
@@ -733,7 +768,7 @@ export async function handleRequest(request, response) {
     }
 
     if (request.method === "GET" && url.pathname === "/api/employees") {
-      return sendJson(response, 200, { employees: db.employees });
+      return sendJson(response, 200, { employees: publicEmployees() });
     }
 
     if (request.method === "POST" && url.pathname === "/api/employees") {
