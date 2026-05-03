@@ -1112,6 +1112,7 @@ function MonthlyPage({ dashboard, weekStart }) {
 function WeeklyPage({ activeDay, dashboard, navDirection, onCreate, onDeleteSchedule, onDayChange, onMoveWeek, onStatusChange }) {
   const [openMetric, setOpenMetric] = useState("");
   const [openGroups, setOpenGroups] = useState(() => new Set());
+  const [selectedPerson, setSelectedPerson] = useState(null);
   const filteredGroups = useMemo(() => {
     if (activeDay === "Barcha kunlar") return dashboard.groups;
     return dashboard.groups.filter((group) => group.day === activeDay);
@@ -1186,9 +1187,11 @@ function WeeklyPage({ activeDay, dashboard, navDirection, onCreate, onDeleteSche
         {filteredGroups.length ? filteredGroups.map((group) => (
           <StudioGroup
             key={group.id}
+            dashboard={dashboard}
             group={group}
             open={openGroups.has(group.id)}
             onToggle={() => toggleGroup(group.id)}
+            onPersonOpen={setSelectedPerson}
             onStatusChange={onStatusChange}
           />
         )) : <EmptyCard text="Bu kunga jadval kiritilmagan" />}
@@ -1203,6 +1206,14 @@ function WeeklyPage({ activeDay, dashboard, navDirection, onCreate, onDeleteSche
           <Trash2 size={17} />
           Joriy jadvalni o'chirish
         </button>
+      )}
+
+      {selectedPerson && (
+        <PersonProfileSheet
+          dashboard={dashboard}
+          person={selectedPerson}
+          onClose={() => setSelectedPerson(null)}
+        />
       )}
     </>
   );
@@ -1458,7 +1469,7 @@ function AttendancePanel({ attendance = {}, employees, onScan }) {
   );
 }
 
-function StudioGroup({ group, open = true, onToggle, onStatusChange }) {
+function StudioGroup({ dashboard, group, open = true, onToggle, onPersonOpen, onStatusChange }) {
   return (
     <article className="group-card">
       <button className={`group-head ${group.tone}`} type="button" onClick={onToggle} aria-expanded={open}>
@@ -1469,7 +1480,7 @@ function StudioGroup({ group, open = true, onToggle, onStatusChange }) {
       {open && (
         <div className="group-people">
           {group.people.map((person) => (
-            <StaffRow key={person.id} groupId={group.id} person={person} onStatusChange={onStatusChange} />
+            <StaffRow key={person.id} dashboard={dashboard} groupId={group.id} person={person} onPersonOpen={onPersonOpen} onStatusChange={onStatusChange} />
           ))}
         </div>
       )}
@@ -1477,21 +1488,22 @@ function StudioGroup({ group, open = true, onToggle, onStatusChange }) {
   );
 }
 
-function StaffRow({ groupId, person, onStatusChange }) {
+function StaffRow({ dashboard, groupId, person, onPersonOpen, onStatusChange }) {
   const department = departmentMeta(person.department);
   const phone = cleanPhone(person.phone);
   const telegram = telegramHref(person.telegram);
+  const personStats = getPersonStats(dashboard, person);
 
   return (
     <article className={`staff-row department-${department.id}`}>
       <Avatar person={person} />
-      <div>
+      <button className="staff-main" type="button" onClick={() => onPersonOpen?.(person)}>
         <strong>{person.name}</strong>
-        <span>{department.label} • {person.employeeId ? `ID: ${person.employeeId}` : person.time}</span>
-      </div>
+        <span>{department.label} • {personStats.shoots} syomka • KPI {personStats.kpi}%</span>
+      </button>
       <ContactActions phone={phone} telegram={telegram} />
       {onStatusChange ? (
-        <select className={`status-select ${person.statusType}`} value={person.statusType} onChange={(event) => onStatusChange(groupId, person.id, event.target.value)} aria-label={`${person.name} statusi`}>
+        <select className={`status-select ${person.statusType}`} value={person.statusType} onClick={(event) => event.stopPropagation()} onChange={(event) => onStatusChange(groupId, person.id, event.target.value)} aria-label={`${person.name} statusi`}>
           {STATUS_OPTIONS.map((status) => (
             <option key={status.id} value={status.id}>{status.code} - {status.label}</option>
           ))}
@@ -1503,6 +1515,78 @@ function StaffRow({ groupId, person, onStatusChange }) {
         </span>
       )}
     </article>
+  );
+}
+
+function getPersonStats(dashboard, person) {
+  const assignments = dashboard.groups.flatMap((group) => group.people.map((item) => ({ ...item, groupTitle: group.title, groupMeta: group.meta, day: group.day }))).filter((item) => String(item.id) === String(person.id));
+  const working = assignments.filter((item) => STATUS_META[item.statusType]?.metric === "working").length;
+  const rest = assignments.filter((item) => STATUS_META[item.statusType]?.metric === "rest").length;
+  const away = assignments.filter((item) => STATUS_META[item.statusType]?.metric === "away").length;
+  const portfolioCount = person.portfolio?.filter((item) => item.url)?.length || 0;
+  const kpi = Math.max(0, Math.min(100, 55 + working * 7 + away * 4 + portfolioCount * 3 - rest * 5));
+  return { assignments, shoots: assignments.length, working, rest, away, portfolioCount, kpi };
+}
+
+function PersonProfileSheet({ dashboard, person, onClose }) {
+  const department = departmentMeta(person.department);
+  const phone = cleanPhone(person.phone);
+  const telegram = telegramHref(person.telegram);
+  const stats = getPersonStats(dashboard, person);
+
+  return (
+    <div className="person-sheet-backdrop" role="presentation" onClick={onClose}>
+      <section className="person-sheet" role="dialog" aria-modal="true" aria-label={`${person.name} kartasi`} onClick={(event) => event.stopPropagation()}>
+        <div className="people-list-grip" />
+        <div className="person-sheet-head">
+          <Avatar person={person} />
+          <div>
+            <strong>{person.name}</strong>
+            <span>{department.label}</span>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Kartani yopish">×</button>
+        </div>
+
+        <div className="person-kpi">
+          <div>
+            <span>Samaradorlik</span>
+            <strong>{stats.kpi}%</strong>
+          </div>
+          <i><b style={{ width: `${stats.kpi}%` }} /></i>
+        </div>
+
+        <div className="person-stats-grid">
+          <div><strong>{stats.shoots}</strong><span>Ushbu oy syomka</span></div>
+          <div><strong>{stats.working}</strong><span>Ishda</span></div>
+          <div><strong>{stats.rest}</strong><span>Dam/ta'til</span></div>
+        </div>
+
+        <div className="person-contact-grid">
+          <a className={!phone ? "disabled" : ""} href={phone ? `tel:${phone}` : undefined}>
+            <Phone size={16} />
+            <span>{person.phone || "Telefon yo'q"}</span>
+          </a>
+          <a className={!telegram ? "disabled" : ""} href={telegram || undefined} target="_blank" rel="noreferrer">
+            <Send size={16} />
+            <span>{person.telegram || "Telegram yo'q"}</span>
+          </a>
+        </div>
+
+        <div className="person-assignments">
+          <strong>Yaqin syomkalar</strong>
+          {stats.assignments.slice(0, 4).map((item) => (
+            <article key={`${item.groupTitle}-${item.id}-${item.statusType}`}>
+              <div>
+                <span>{item.groupTitle}</span>
+                <em>{item.groupMeta}</em>
+              </div>
+              <b>{STATUS_META[item.statusType]?.code || "I"}</b>
+            </article>
+          ))}
+          {!stats.assignments.length && <p>Jadvalda biriktirilgan syomka yo'q.</p>}
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -2080,7 +2164,7 @@ function ReportDrillRow({ label, value, hint, onClick }) {
 function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThemeChange }) {
   const [notify, setNotify] = useState(true);
   const operators = dashboard.employees.filter((employee) => employee.role.includes("Operator")).length;
-  const reporters = dashboard.employees.filter((employee) => employee.role.includes("Muxbir")).length;
+  const tjkCount = dashboard.metrics.tjk || 0;
 
   return (
     <section className="profile-page">
@@ -2103,8 +2187,8 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
           <span>Operator</span>
         </article>
         <article>
-          <strong>{reporters}</strong>
-          <span>Muxbir</span>
+          <strong>{tjkCount}</strong>
+          <span>TJK</span>
         </article>
       </section>
 
