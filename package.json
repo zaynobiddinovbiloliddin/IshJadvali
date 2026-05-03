@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
+    "dev": "node scripts/dev.mjs",
+    "frontend": "vite --host 0.0.0.0",
+    "backend": "node server.mjs",
     "api": "node server.mjs",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",

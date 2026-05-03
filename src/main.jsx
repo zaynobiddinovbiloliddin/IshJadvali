@@ -50,12 +50,27 @@ const OPERATOR_NAMES = [
 ];
 const SHIFT_LABELS = ["09:00-18:00", "09:00-22:00", "18:00-09:00", "Dam"];
 const MONTHLY_STATUS_OPTIONS = {
-  work: { label: "K", shift: "Kundalik ish", hours: 9 },
+  work: { label: "I", shift: "Ishlagan kun", hours: 9 },
   rest: { label: "D", shift: "Dam", hours: 0 },
+  trip: { label: "K", shift: "Komandirovka", hours: 9 },
   tjk: { label: "T", shift: "TJK guruhi", hours: 9 },
-  studio: { label: "S", shift: "Studiyada", hours: 9 }
+  empty: { label: "", shift: "Belgilanmagan", hours: 0 }
 };
-const MONTHLY_STATUS_SEQUENCE = ["work", "rest", "tjk", "studio"];
+const MONTHLY_STATUS_SEQUENCE = ["work", "rest", "trip", "tjk", "empty"];
+const SCHEDULE_STATUS_OPTIONS = [
+  { value: "working", label: "Ishlamoqda", mark: "I" },
+  { value: "rest", label: "Damda", mark: "D" },
+  { value: "trip", label: "Komandirovka", mark: "K" },
+  { value: "tjk", label: "TJK guruhi", mark: "T" },
+  { value: "backup", label: "Zaxira", mark: "Z" }
+];
+const WEEKLY_STATUS_MARKS = {
+  work: "I",
+  rest: "D",
+  trip: "K",
+  tjk: "T",
+  empty: ""
+};
 const DOCUMENT_TYPES = [
   { id: "photo3x4", label: "3x4 rasm", shortLabel: "3x4" },
   { id: "passportUz", label: "Pasport UZ", shortLabel: "UZ" },
@@ -953,8 +968,9 @@ function MonthlyPage({ dashboard, weekStart }) {
     operators.forEach((operator) => {
       matrix[operator.id] = monthInfo.days.map((day) => {
         if ((operator.id + day) % 7 === 0) return "rest";
-        if ((operator.id * 2 + day) % 11 === 0) return "tjk";
-        if ((operator.id * 3 + day) % 13 === 0) return "studio";
+        if ((operator.id * 2 + day) % 11 === 0) return "empty";
+        if ((operator.id * 3 + day) % 13 === 0) return "trip";
+        if ((operator.id * 5 + day) % 17 === 0) return "tjk";
         return "work";
       });
     });
@@ -974,14 +990,15 @@ function MonthlyPage({ dashboard, weekStart }) {
     return {
       work: values.filter((value) => value === "work").length,
       rest: values.filter((value) => value === "rest").length,
+      trip: values.filter((value) => value === "trip").length,
       tjk: values.filter((value) => value === "tjk").length,
-      studio: values.filter((value) => value === "studio").length,
+      empty: values.filter((value) => value === "empty").length,
       hours: values.reduce((sum, value) => sum + (MONTHLY_STATUS_OPTIONS[value]?.hours || 0), 0)
     };
   }, [matrix]);
 
   function getShift(operatorId, day, status) {
-    if (status === "rest" || status === "tjk" || status === "studio") {
+    if (status === "rest" || status === "trip" || status === "tjk" || status === "empty") {
       return MONTHLY_STATUS_OPTIONS[status].shift;
     }
     return SHIFT_LABELS[(operatorId + day) % 3];
@@ -1013,30 +1030,33 @@ function MonthlyPage({ dashboard, weekStart }) {
           <p>{operators.length} operator uchun oylik ish grafigi</p>
         </div>
         <div className="monthly-counts">
-          <span><b>{totals.work}</b> ish</span>
-          <span><b>{totals.tjk}</b> TJK</span>
-          <span><b>{totals.studio}</b> studiya</span>
-          <span><b>{totals.rest}</b> dam</span>
+          <span><b>{totals.work}</b> I</span>
+          <span><b>{totals.rest}</b> D</span>
+          <span><b>{totals.trip}</b> K</span>
+          <span><b>{totals.tjk}</b> T</span>
+          <span><b>{totals.empty}</b> belgilanmagan</span>
           <span><b>{totals.hours}</b> soat</span>
         </div>
       </div>
 
       <div className="monthly-table-wrap" role="region" aria-label="Oylik operatorlar grafigi">
-        <div className="monthly-table" style={{ gridTemplateColumns: `132px repeat(${monthInfo.days.length}, 34px) 58px 58px 58px 58px 72px` }}>
+        <div className="monthly-table" style={{ gridTemplateColumns: `132px repeat(${monthInfo.days.length}, 34px) 48px 48px 48px 48px 58px 72px` }}>
           <div className="month-sticky month-header">Operator</div>
           {monthInfo.days.map((day) => <div className="month-header day" key={day}>{day}</div>)}
+          <div className="month-header summary">I</div>
+          <div className="month-header summary">D</div>
           <div className="month-header summary">K</div>
           <div className="month-header summary">T</div>
-          <div className="month-header summary">S</div>
-          <div className="month-header summary">Dam</div>
+          <div className="month-header summary">-</div>
           <div className="month-header summary">Soat</div>
 
           {operators.map((operator) => {
             const days = matrix[operator.id] || [];
             const workCount = days.filter((value) => value === "work").length;
             const restCount = days.filter((value) => value === "rest").length;
+            const tripCount = days.filter((value) => value === "trip").length;
             const tjkCount = days.filter((value) => value === "tjk").length;
-            const studioCount = days.filter((value) => value === "studio").length;
+            const emptyCount = days.filter((value) => value === "empty").length;
             const hourCount = days.reduce((sum, value) => sum + (MONTHLY_STATUS_OPTIONS[value]?.hours || 0), 0);
 
             return (
@@ -1050,13 +1070,14 @@ function MonthlyPage({ dashboard, weekStart }) {
                     title={`${operator.name}, ${monthInfo.days[index]}-${MONTH_NAMES[new Date(`${weekStart}T00:00:00`).getMonth()]}`}
                     onClick={() => toggleCell(operator, index)}
                   >
-                    {MONTHLY_STATUS_OPTIONS[value]?.label || "K"}
+                    {MONTHLY_STATUS_OPTIONS[value]?.label ?? ""}
                   </button>
                 ))}
                 <div className="month-total work">{workCount}</div>
-                <div className="month-total tjk">{tjkCount}</div>
-                <div className="month-total studio">{studioCount}</div>
                 <div className="month-total rest">{restCount}</div>
+                <div className="month-total trip">{tripCount}</div>
+                <div className="month-total tjk">{tjkCount}</div>
+                <div className="month-total empty">{emptyCount}</div>
                 <div className="month-total hours">{hourCount}</div>
               </React.Fragment>
             );
@@ -1077,10 +1098,11 @@ function MonthlyPage({ dashboard, weekStart }) {
       </div>
 
       <section className="legend-card compact">
-        <LegendItem tone="work" label="Ko'k katak - ishlagan kun" />
-        <LegendItem tone="rest" label="Qizil katak - dam kuni" />
-        <LegendItem tone="tjk" label="Sariq katak - TJK guruhi" />
-        <LegendItem tone="studio" label="Yashil katak - studiyada" />
+        <LegendItem tone="work" label="I - ko'k katak, ishlagan kun" />
+        <LegendItem tone="rest" label="D - qizil katak, dam kuni" />
+        <LegendItem tone="trip" label="K - yashil katak, komandirovka" />
+        <LegendItem tone="tjk" label="T - sariq katak, TJK guruhi" />
+        <LegendItem tone="empty" label="Kulrang katak - belgilanmagan" />
       </section>
     </section>
   );
@@ -1206,6 +1228,8 @@ function StudioPage({ dashboard, showAllOverview, navDirection, onAddSchedule, o
         <MetricCard icon={<UsersRound size={20} />} value={dashboard.metrics.total} label="Xodimlar" tone="purple" />
         <MetricCard icon={<BriefcaseBusiness size={19} />} value={dashboard.metrics.workingToday} label="Ishlayotgan" tone="green" />
         <MetricCard icon={<Coffee size={19} />} value={dashboard.metrics.restToday} label="Bugun damda" tone="orange" />
+        <MetricCard icon={<BriefcaseBusiness size={19} />} value={dashboard.metrics.tripToday || 0} label="Komandirovka" tone="green" />
+        <MetricCard icon={<UsersRound size={19} />} value={dashboard.metrics.tjkToday || 0} label="TJK" tone="yellow" />
       </section>
 
       <AttendancePanel attendance={dashboard.attendance} employees={dashboard.employees} onScan={onScanAttendance} />
@@ -1230,8 +1254,10 @@ function StudioPage({ dashboard, showAllOverview, navDirection, onAddSchedule, o
 
       <section className="legend-card">
         <h3>Belgilar izohi</h3>
-        <LegendItem tone="work" label="Ish smenasi" />
-        <LegendItem tone="rest" label="Dam olish kuni" />
+        <LegendItem tone="work" label="I - ish smenasi" />
+        <LegendItem tone="rest" label="D - dam olish kuni" />
+        <LegendItem tone="trip" label="K - komandirovka" />
+        <LegendItem tone="tjk" label="T - TJK guruhi" />
         <LegendItem tone="empty" label="Jadvalga kiritilmagan" />
       </section>
 
@@ -1280,9 +1306,7 @@ function StudioPage({ dashboard, showAllOverview, navDirection, onAddSchedule, o
               <label>
                 Status
                 <select value={scheduleDraft.statusType} onChange={(event) => setScheduleDraft({ ...scheduleDraft, statusType: event.target.value })}>
-                  <option value="working">Ishlamoqda</option>
-                  <option value="rest">Damda</option>
-                  <option value="backup">Zaxira</option>
+                  {SCHEDULE_STATUS_OPTIONS.map((status) => <option key={status.value} value={status.value}>{status.mark} - {status.label}</option>)}
                 </select>
               </label>
             </div>
@@ -1423,9 +1447,7 @@ function StaffRow({ groupId, person, onStatusChange }) {
       <ContactActions phone={phone} telegram={telegram} />
       {onStatusChange ? (
         <select className={`status-select ${person.statusType}`} value={person.statusType} onChange={(event) => onStatusChange(groupId, person.id, event.target.value)} aria-label={`${person.name} statusi`}>
-          <option value="working">Ishlamoqda</option>
-          <option value="rest">Damda</option>
-          <option value="backup">Zaxira</option>
+          {SCHEDULE_STATUS_OPTIONS.map((status) => <option key={status.value} value={status.value}>{status.mark} - {status.label}</option>)}
         </select>
       ) : (
         <span className={`status-pill ${person.statusType}`}>
@@ -1848,7 +1870,7 @@ function WeeklyOverview({ rows, days }) {
           <strong>{row.name}</strong>
           {row.days.map((value, index) => (
             <span className={`cell ${value}`} key={`${row.name}-${index}`}>
-              {value === "work" ? <Check size={16} /> : value === "rest" ? "x" : null}
+              {WEEKLY_STATUS_MARKS[value] || ""}
             </span>
           ))}
         </div>
@@ -1951,7 +1973,7 @@ function LegendItem({ tone, label }) {
   return (
     <div className="legend-item">
       <span className={`legend-mark ${tone}`}>
-        {tone === "work" ? <Check size={15} /> : tone === "rest" ? "x" : tone === "tjk" ? "T" : tone === "studio" ? "S" : null}
+        {tone === "work" ? "I" : tone === "rest" ? "D" : tone === "trip" ? "K" : tone === "tjk" ? "T" : null}
       </span>
       <p>{label}</p>
     </div>

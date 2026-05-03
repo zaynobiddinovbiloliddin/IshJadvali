@@ -14,6 +14,13 @@ const departments = [
   { id: "dron", name: "Dron bo'limi" },
   { id: "tjk", name: "TJK guruhi" }
 ];
+const statusMap = {
+  working: "Ishlamoqda",
+  rest: "Damda",
+  backup: "Zaxira",
+  trip: "Komandirovka",
+  tjk: "TJK guruhi"
+};
 
 const initialEmployees = [
   ["Abdug'afforov A.", "Operator va texnik xodim"],
@@ -278,13 +285,16 @@ function buildAttendanceSummary() {
 function buildPerson(employee, studio, dayIndex, offset, seed) {
   const rest = (employee.id + dayIndex + seed) % 7 === 0;
   const backup = (employee.id + offset + seed) % 11 === 0;
+  const trip = (employee.id + dayIndex + offset + seed) % 13 === 0;
+  const tjk = studio.name.toLowerCase().includes("tjk") || (employee.department === "tjk" && (employee.id + dayIndex + seed) % 5 === 0);
+  const statusType = rest ? "rest" : tjk ? "tjk" : trip ? "trip" : backup ? "backup" : "working";
 
   return {
     ...scheduleEmployee(employee),
     time: studio.time,
     employeeId: employee.id === 9 ? "EMP-009" : "",
-    status: rest ? "Damda" : backup ? "Zaxira" : "Ishlamoqda",
-    statusType: rest ? "rest" : backup ? "backup" : "working"
+    status: statusMap[statusType],
+    statusType
   };
 }
 
@@ -314,7 +324,8 @@ function createOverviewRows(groups) {
       const groupForEmployee = groups.find((group) => group.day === dayNames[dayIndex] && group.people.some((person) => person.id === employee.id));
       if (!groupForEmployee) return "empty";
       const person = groupForEmployee.people.find((item) => item.id === employee.id);
-      return person.statusType === "rest" ? "rest" : "work";
+      if (person.statusType === "rest" || person.statusType === "trip" || person.statusType === "tjk") return person.statusType;
+      return "work";
     });
 
     return { name: employee.name, days };
@@ -335,6 +346,8 @@ function buildDashboard(weekStartValue, options = {}) {
   const working = allPeople.filter((person) => person.statusType === "working").length;
   const rest = allPeople.filter((person) => person.statusType === "rest").length;
   const backup = allPeople.filter((person) => person.statusType === "backup").length;
+  const trip = allPeople.filter((person) => person.statusType === "trip").length;
+  const tjk = allPeople.filter((person) => person.statusType === "tjk").length;
 
   return {
     week: {
@@ -354,8 +367,12 @@ function buildDashboard(weekStartValue, options = {}) {
       working,
       rest,
       backup,
+      trip,
+      tjk,
       workingToday: todayPeople.filter((person) => person.statusType === "working").length,
-      restToday: todayPeople.filter((person) => person.statusType === "rest").length
+      restToday: todayPeople.filter((person) => person.statusType === "rest").length,
+      tripToday: todayPeople.filter((person) => person.statusType === "trip").length,
+      tjkToday: todayPeople.filter((person) => person.statusType === "tjk").length
     },
     groups,
     studioToday,
@@ -363,12 +380,16 @@ function buildDashboard(weekStartValue, options = {}) {
     reports: [
       { label: "Ishlayotganlar", value: working },
       { label: "Dam olish kuni", value: rest },
+      { label: "Komandirovka", value: trip },
+      { label: "TJK guruhi", value: tjk },
       { label: "Zaxira", value: backup },
       { label: "Bugungi smena", value: todayPeople.length }
     ],
     notifications: [
       "Yangi smena jadvali tayyor.",
       `${rest} ta dam olish kuni belgilangan.`,
+      `${trip} ta komandirovkada.`,
+      `${tjk} ta TJK guruhida.`,
       `${backup} ta xodim zaxirada.`
     ],
     employees: db.employees,
@@ -511,6 +532,8 @@ function refreshScheduleDerivedData(schedule) {
   const working = allPeople.filter((person) => person.statusType === "working").length;
   const rest = allPeople.filter((person) => person.statusType === "rest").length;
   const backup = allPeople.filter((person) => person.statusType === "backup").length;
+  const trip = allPeople.filter((person) => person.statusType === "trip").length;
+  const tjk = allPeople.filter((person) => person.statusType === "tjk").length;
 
   schedule.metrics = {
     ...schedule.metrics,
@@ -518,20 +541,28 @@ function refreshScheduleDerivedData(schedule) {
     working,
     rest,
     backup,
+    trip,
+    tjk,
     workingToday: todayPeople.filter((person) => person.statusType === "working").length,
-    restToday: todayPeople.filter((person) => person.statusType === "rest").length
+    restToday: todayPeople.filter((person) => person.statusType === "rest").length,
+    tripToday: todayPeople.filter((person) => person.statusType === "trip").length,
+    tjkToday: todayPeople.filter((person) => person.statusType === "tjk").length
   };
   schedule.studioToday = todayPeople.filter((person) => person.statusType !== "rest").slice(0, 3).map((person) => ({ ...person, status: "Working" }));
   schedule.overviewRows = createOverviewRows(schedule.groups);
   schedule.reports = [
     { label: "Ishlayotganlar", value: working },
     { label: "Dam olish kuni", value: rest },
+    { label: "Komandirovka", value: trip },
+    { label: "TJK guruhi", value: tjk },
     { label: "Zaxira", value: backup },
     { label: "Bugungi smena", value: todayPeople.length }
   ];
   schedule.notifications = [
     "Jadval ma'lumotlari yangilandi.",
     `${rest} ta dam olish kuni belgilangan.`,
+    `${trip} ta komandirovkada.`,
+    `${tjk} ta TJK guruhida.`,
     `${backup} ta xodim zaxirada.`
   ];
 }
@@ -575,12 +606,7 @@ async function deleteSchedule(weekStartValue) {
 async function updatePersonStatus(weekStartValue, payload) {
   const key = getScheduleKey(weekStartValue);
   if (!db.schedules[key]) db.schedules[key] = buildDashboard(key, { saved: true });
-
-  const statusMap = {
-    working: "Ishlamoqda",
-    rest: "Damda",
-    backup: "Zaxira"
-  };
+  const statusType = statusMap[payload.statusType] ? payload.statusType : "working";
 
   const schedule = db.schedules[key];
   let updated = false;
@@ -594,8 +620,8 @@ async function updatePersonStatus(weekStartValue, payload) {
         updated = true;
         return {
           ...person,
-          statusType: payload.statusType,
-          status: statusMap[payload.statusType] || "Ishlamoqda"
+          statusType,
+          status: statusMap[statusType]
         };
       })
     };
@@ -622,11 +648,6 @@ async function addScheduleGroup(weekStartValue, payload) {
 
   if (!selectedEmployees.length) throw new Error("Kamida bitta xodim tanlang");
 
-  const statusMap = {
-    working: "Ishlamoqda",
-    rest: "Damda",
-    backup: "Zaxira"
-  };
   const statusType = statusMap[payload.statusType] ? payload.statusType : "working";
   const time = payload.time?.trim() || "09:00 - 18:00";
   const meta = payload.meta?.trim() || "Yangi studiya";
@@ -779,7 +800,8 @@ export async function handleRequest(request, response) {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const server = createServer(handleRequest);
-  server.listen(PORT, () => {
-    console.log(`Backend ready: http://localhost:${PORT}`);
+  const HOST = process.env.HOST || "0.0.0.0";
+  server.listen(PORT, HOST, () => {
+    console.log(`Backend ready: http://${HOST}:${PORT}`);
   });
 }
