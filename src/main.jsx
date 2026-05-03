@@ -4,6 +4,7 @@ import {
   Bell,
   BriefcaseBusiness,
   CalendarDays,
+  Car,
   ChartColumn,
   Check,
   ChevronDown,
@@ -37,7 +38,8 @@ import {
 import "./styles.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
-const DAY_TABS = ["Barcha kunlar", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"];
+const DAY_TABS = ["Barcha kunlar", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba", "Yakshanba"];
+const DAY_NAMES = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba", "Yakshanba"];
 const MONTH_NAMES = ["Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun", "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr"];
 const STATUS_OPTIONS = [
   { id: "working", code: "S", label: "Studiyada", metric: "working" },
@@ -71,10 +73,18 @@ const MONTHLY_STATUS_OPTIONS = {
 const MONTHLY_STATUS_SEQUENCE = ["work", "studio", "trip", "tjk", "rest", "vacation", "sick"];
 const DEPARTMENTS = [
   { id: "pull", label: "Pull xizmati", shortLabel: "Pull" },
-  { id: "operator", label: "Oddiy operatorlar", shortLabel: "Operator" },
+  { id: "operator", label: "Operatorlar", shortLabel: "Operator" },
   { id: "dron", label: "Dron bo'limi", shortLabel: "Dron" },
   { id: "tjk", label: "TJK guruhi", shortLabel: "TJK" }
 ];
+const CONTACT_BOOK_DEFAULTS = {
+  reporters: [
+    { id: "reporter-1", name: "Sarvar Raximov", phone: "+998 90 302 55 92", note: "Muxbir" }
+  ],
+  drivers: [
+    { id: "driver-1", name: "Haydovchi", phone: "+998 90 406 15 78", vehicle: "142 Caddy", note: "Moshina egasi almashsa shu yerdan tahrirlanadi" }
+  ]
+};
 const SHOOTING_SCHEDULE = [
   {
     camera: "1\n(914)",
@@ -280,6 +290,26 @@ function addDays(dateText, amount) {
   return `${year}-${month}-${day}`;
 }
 
+function toInputDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getCurrentWeekStartInput() {
+  const today = new Date();
+  const weekStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const mondayOffset = (weekStart.getDay() + 6) % 7;
+  weekStart.setDate(weekStart.getDate() - mondayOffset);
+  return toInputDate(weekStart);
+}
+
+function parseInputDate(value) {
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? new Date() : date;
+}
+
 function readStoredJson(key, fallback) {
   try {
     const stored = window.localStorage.getItem(key);
@@ -333,9 +363,84 @@ function formatDateTime(value) {
   }).format(date);
 }
 
+function normalizeName(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9\u0400-\u04ff']/gi, "");
+}
+
+function downloadHtmlFile(html, filename, type = "application/msword;charset=utf-8") {
+  const blob = new Blob([html], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function findShootingAssignment(operatorName) {
+  const target = normalizeName(operatorName);
+  return SHOOTING_SCHEDULE.find((row) => (
+    row.operators.some((name) => normalizeName(name) === target)
+    || row.operators.some((name) => normalizeName(name).includes(target) || target.includes(normalizeName(name)))
+  ));
+}
+
+function monthlyStatusForEmployee(employee, date) {
+  if (!employee) return "rest";
+  const day = date.getDate();
+  const id = Number(employee.id) || 1;
+  if ((id + day) % 7 === 0) return "rest";
+  if ((id * 7 + day) % 29 === 0) return "vacation";
+  if ((id * 5 + day) % 23 === 0) return "sick";
+  if ((id * 3 + day) % 17 === 0) return "trip";
+  if ((id * 2 + day) % 13 === 0) return "tjk";
+  if ((id * 3 + day) % 11 === 0) return "studio";
+  return "work";
+}
+
+function buildPersonalAssignment(employee, dateText, dashboard) {
+  const date = parseInputDate(dateText);
+  const dayIndex = Math.floor((date.getTime() - parseInputDate(dashboard.week.start).getTime()) / 86400000);
+  const weekGroup = dayIndex >= 0 && dayIndex < 7
+    ? dashboard.groups.find((group) => group.day === DAY_NAMES[dayIndex] && group.people.some((person) => String(person.id) === String(employee?.id)))
+    : null;
+  const weekPerson = weekGroup?.people.find((person) => String(person.id) === String(employee?.id));
+
+  if (weekGroup && weekPerson) {
+    const shoot = findShootingAssignment(weekPerson.name);
+    return {
+      dateText,
+      status: weekPerson.statusType,
+      statusLabel: STATUS_META[weekPerson.statusType]?.label || weekPerson.status,
+      place: weekGroup.meta,
+      time: weekPerson.time,
+      camera: shoot?.camera || "",
+      topic: shoot?.topic || `${weekGroup.meta} bo'yicha smena`,
+      source: "Haftalik jadval"
+    };
+  }
+
+  const status = monthlyStatusForEmployee(employee, date);
+  const shoot = findShootingAssignment(employee?.name);
+  const isActive = ["work", "studio", "trip", "tjk"].includes(status);
+  const fallbackPlace = status === "tjk" ? "TJK guruhi" : status === "studio" ? "Studiya" : status === "trip" ? "Komandirovka" : isActive ? "Ish smenasi" : "Dam";
+  return {
+    dateText,
+    status,
+    statusLabel: MONTHLY_STATUS_OPTIONS[status]?.shift || "Dam",
+    place: fallbackPlace,
+    time: isActive ? (shoot?.time || "09:00 - 18:00") : "Ish belgilanmagan",
+    camera: isActive ? (shoot?.camera || "") : "",
+    topic: isActive ? (shoot?.topic || "Kunlik ish vazifasi jadvalda belgilanadi") : "Bu kunda ishga chiqmaydi",
+    source: "Oylik kalendar"
+  };
+}
+
 function App() {
   const [page, setPage] = useState("weekly");
-  const [weekStart, setWeekStart] = useState("2026-01-29");
+  const [weekStart, setWeekStart] = useState(getCurrentWeekStartInput);
   const [activeDay, setActiveDay] = useState("Barcha kunlar");
   const [dashboard, setDashboard] = useState(emptyDashboard);
   const [loading, setLoading] = useState(true);
@@ -386,11 +491,50 @@ function App() {
     const nextUser = {
       name: user.name.trim() || "Administrator",
       email: user.email.trim() || "admin@uz24.local",
-      role: "Jadval administratori"
+      role: "Jadval administratori",
+      phone: "",
+      department: "",
+      note: "",
+      avatar: ""
     };
     window.localStorage.setItem("currentUser", JSON.stringify(nextUser));
     setCurrentUser(nextUser);
     notify("Tizimga muvaffaqiyatli kirdingiz");
+  }
+
+  async function saveProfile(profile) {
+    const nextUser = {
+      ...currentUser,
+      name: String(profile.name || "").trim() || currentUser.name,
+      email: String(profile.email || "").trim() || currentUser.email,
+      role: String(profile.role || "").trim() || currentUser.role,
+      phone: String(profile.phone || "").trim(),
+      department: String(profile.department || "").trim(),
+      note: String(profile.note || "").trim(),
+      avatar: profile.avatar || "",
+      employeeId: profile.employeeId || currentUser.employeeId || ""
+    };
+    window.localStorage.setItem("currentUser", JSON.stringify(nextUser));
+    setCurrentUser(nextUser);
+    if (nextUser.employeeId) {
+      const linkedEmployee = dashboard.employees.find((employee) => String(employee.id) === String(nextUser.employeeId));
+      if (linkedEmployee) {
+        try {
+          await api(`/api/employees/${linkedEmployee.id}`, {
+            method: "PUT",
+            body: JSON.stringify({
+              ...linkedEmployee,
+              phone: nextUser.phone || linkedEmployee.phone,
+              avatar: nextUser.avatar || linkedEmployee.avatar
+            })
+          });
+          await loadDashboard();
+        } catch (profileError) {
+          notify(profileError.message, "error");
+        }
+      }
+    }
+    notify("Profil ma'lumotlari saqlandi");
   }
 
   function handleLogout() {
@@ -635,6 +779,7 @@ function App() {
                 theme={theme}
                 onLogout={handleLogout}
                 onRefresh={loadDashboard}
+                onSaveProfile={saveProfile}
                 onThemeChange={setTheme}
               />
             )}
@@ -758,9 +903,14 @@ function ShootingPage({ onNotify }) {
     operatorsText: row.operators.join("\n"),
     reportersText: row.reporters.join("\n")
   })));
+  const [contacts, setContacts] = useState(() => readStoredJson("shootingContacts", CONTACT_BOOK_DEFAULTS));
   const [addOpen, setAddOpen] = useState(false);
   const [draftRow, setDraftRow] = useState(blankRow);
   const addFormRef = useRef(null);
+
+  useEffect(() => {
+    window.localStorage.setItem("shootingContacts", JSON.stringify(contacts));
+  }, [contacts]);
 
   function updateRow(index, field, value) {
     setRows((currentRows) => currentRows.map((row, rowIndex) => (
@@ -789,6 +939,38 @@ function ShootingPage({ onNotify }) {
     onNotify("Tasvir jadvaliga yangi qator qo'shildi");
   }
 
+  function updateContact(type, id, field, value) {
+    setContacts((current) => ({
+      ...current,
+      [type]: (current[type] || []).map((item) => (item.id === id ? { ...item, [field]: value } : item))
+    }));
+  }
+
+  function addContact(type) {
+    const prefix = type === "drivers" ? "driver" : "reporter";
+    setContacts((current) => ({
+      ...current,
+      [type]: [
+        ...(current[type] || []),
+        {
+          id: `${prefix}-${Date.now()}`,
+          name: type === "drivers" ? "Yangi haydovchi" : "Yangi muxbir",
+          phone: "+998 ",
+          vehicle: type === "drivers" ? "" : undefined,
+          note: ""
+        }
+      ]
+    }));
+    onNotify(type === "drivers" ? "Haydovchi kontakti qo'shildi" : "Muxbir kontakti qo'shildi");
+  }
+
+  function removeContact(type, id) {
+    setContacts((current) => ({
+      ...current,
+      [type]: (current[type] || []).filter((item) => item.id !== id)
+    }));
+  }
+
   function downloadExcel() {
     const body = rows.map((row) => `
       <tr><td colspan="3"><b>Kerakli jihoz va texnika:</b></td><td colspan="2"><b>${escapeHtml(row.equipment)}</b></td></tr>
@@ -810,15 +992,7 @@ function ShootingPage({ onNotify }) {
       </table>
       </body></html>
     `;
-    const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "tasvirga-olish-jadvali-29-aprel-2026.xls";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+    downloadHtmlFile(html, "tasvirga-olish-jadvali-29-aprel-2026.xls", "application/vnd.ms-excel;charset=utf-8");
     onNotify("Excel fayl tayyorlandi");
   }
 
@@ -889,6 +1063,8 @@ function ShootingPage({ onNotify }) {
           </table>
         </div>
       </article>
+
+      <ContactBook contacts={contacts} onAdd={addContact} onRemove={removeContact} onUpdate={updateContact} />
 
       {addOpen && (
         <div className="modal-backdrop" role="presentation">
@@ -968,6 +1144,7 @@ function MonthlyPage({ dashboard, weekStart }) {
 
   const [matrix, setMatrix] = useState(initialMatrix);
   const [selectedCell, setSelectedCell] = useState(null);
+  const [exportDayIndex, setExportDayIndex] = useState(0);
 
   useEffect(() => {
     setMatrix(initialMatrix);
@@ -1013,12 +1190,62 @@ function MonthlyPage({ dashboard, weekStart }) {
     });
   }
 
+  function exportWorkPlan() {
+    const day = monthInfo.days[exportDayIndex] || 1;
+    const activeStatuses = new Set(["work", "studio", "trip", "tjk"]);
+    const rows = operators
+      .map((operator) => {
+        const status = matrix[operator.id]?.[exportDayIndex] || "work";
+        const assignment = findShootingAssignment(operator.name);
+        return {
+          operator,
+          status,
+          shift: getShift(operator.id, day, status),
+          assignment
+        };
+      })
+      .filter((row) => activeStatuses.has(row.status));
+
+    const body = rows.map((row, index) => `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${escapeHtml(row.operator.name)}</td>
+        <td>${escapeHtml(MONTHLY_STATUS_OPTIONS[row.status]?.shift || row.shift)}</td>
+        <td>${escapeHtml(row.assignment?.camera || "").replaceAll("\n", "<br>")}</td>
+        <td>${escapeHtml(row.assignment?.time || row.shift).replaceAll("\n", "<br>")}</td>
+        <td>${escapeHtml(row.assignment?.topic || "").replaceAll("\n", "<br>")}</td>
+      </tr>
+    `).join("");
+    const html = `
+      <html><head><meta charset="UTF-8">
+      <style>body{font-family:Arial,sans-serif}table{width:100%;border-collapse:collapse}td,th{border:1px solid #111;padding:6px;font-size:12px;vertical-align:top}th{background:#e5e7eb}</style>
+      </head><body>
+      <h2>${escapeHtml(monthInfo.title)}, ${day}-kun ish grafigi</h2>
+      <p>Dam, otpusk va balnishniy statusidagi xodimlar chiqarilmadi.</p>
+      <table>
+        <tr><th>#</th><th>F.I.Sh</th><th>Status</th><th>Kamera / avto</th><th>Vaqt</th><th>Syomka / izoh</th></tr>
+        ${body || "<tr><td colspan='6'>Bu kunda ishdagi xodim topilmadi</td></tr>"}
+      </table>
+      </body></html>
+    `;
+    downloadHtmlFile(html, `ish-grafigi-${day}-${monthInfo.title}.doc`);
+  }
+
   return (
     <section className="monthly-page">
       <div className="monthly-head">
         <div>
           <h2>{monthInfo.title}</h2>
           <p>{operators.length} operator uchun oylik ish grafigi</p>
+        </div>
+        <div className="monthly-export">
+          <select value={exportDayIndex} onChange={(event) => setExportDayIndex(Number(event.target.value))} aria-label="Word uchun kun">
+            {monthInfo.days.map((day, index) => <option key={day} value={index}>{day}-kun</option>)}
+          </select>
+          <button type="button" onClick={exportWorkPlan}>
+            <FileText size={16} />
+            Word
+          </button>
         </div>
         <div className="monthly-counts">
           <span><b>{totals.work}</b> ish</span>
@@ -1118,6 +1345,15 @@ function WeeklyPage({ activeDay, dashboard, navDirection, onCreate, onDeleteSche
     return dashboard.groups.filter((group) => group.day === activeDay);
   }, [activeDay, dashboard.groups]);
   const visiblePeople = useMemo(() => filteredGroups.flatMap((group) => group.people.map((person) => ({ ...person, groupTitle: group.title, groupMeta: group.meta }))), [filteredGroups]);
+  const groupedByDate = useMemo(() => {
+    const map = new Map();
+    for (const group of filteredGroups) {
+      const key = group.title;
+      if (!map.has(key)) map.set(key, { id: key, title: group.title, day: group.day, groups: [] });
+      map.get(key).groups.push(group);
+    }
+    return [...map.values()];
+  }, [filteredGroups]);
   const dayMetrics = useMemo(() => {
     const working = visiblePeople.filter((person) => STATUS_META[person.statusType]?.metric === "working").length;
     const rest = visiblePeople.filter((person) => STATUS_META[person.statusType]?.metric === "rest").length;
@@ -1131,8 +1367,8 @@ function WeeklyPage({ activeDay, dashboard, navDirection, onCreate, onDeleteSche
 
   useEffect(() => {
     setOpenMetric("");
-    setOpenGroups(new Set());
-  }, [activeDay, dashboard.week.start]);
+    setOpenGroups(new Set(filteredGroups.map((group) => group.id)));
+  }, [activeDay, dashboard.week.start, filteredGroups]);
 
   function toggleGroup(groupId) {
     setOpenGroups((current) => {
@@ -1147,7 +1383,16 @@ function WeeklyPage({ activeDay, dashboard, navDirection, onCreate, onDeleteSche
     <>
       <section className="hero-block">
         <h2>Haftalik jadval</h2>
-        <p>Hafta kuni {dashboard.week.startLabel}</p>
+        <p>Bugun {dashboard.week.todayLabel} • {dashboard.week.range}</p>
+      </section>
+
+      <section className="week-insight">
+        <div>
+          <span>Bugungi smena</span>
+          <strong>{dashboard.metrics.workingToday || 0} ishda</strong>
+          <p>{dashboard.metrics.tjkToday || 0} TJK • {dashboard.metrics.tripToday || 0} komandirovka • {dashboard.metrics.restToday || 0} damda</p>
+        </div>
+        <CalendarDays size={28} />
       </section>
 
       <div className="week-nav">
@@ -1184,15 +1429,15 @@ function WeeklyPage({ activeDay, dashboard, navDirection, onCreate, onDeleteSche
       </div>
 
       <section className="schedule-groups">
-        {filteredGroups.length ? filteredGroups.map((group) => (
-          <StudioGroup
-            key={group.id}
+        {groupedByDate.length ? groupedByDate.map((dayGroup) => (
+          <DateScheduleGroup
+            key={dayGroup.id}
             dashboard={dashboard}
-            group={group}
-            open={openGroups.has(group.id)}
-            onToggle={() => toggleGroup(group.id)}
+            dayGroup={dayGroup}
+            openGroups={openGroups}
             onPersonOpen={setSelectedPerson}
             onStatusChange={onStatusChange}
+            onToggle={toggleGroup}
           />
         )) : <EmptyCard text="Bu kunga jadval kiritilmagan" />}
       </section>
@@ -1216,6 +1461,30 @@ function WeeklyPage({ activeDay, dashboard, navDirection, onCreate, onDeleteSche
         />
       )}
     </>
+  );
+}
+
+function DateScheduleGroup({ dashboard, dayGroup, openGroups, onPersonOpen, onStatusChange, onToggle }) {
+  return (
+    <article className="date-group-card">
+      <header className="date-group-head">
+        <strong>{dayGroup.title}</strong>
+        <span>{dayGroup.groups.length} ta joy</span>
+      </header>
+      <div className="date-group-sections">
+        {dayGroup.groups.map((group) => (
+          <StudioGroup
+            key={group.id}
+            dashboard={dashboard}
+            group={group}
+            open={openGroups.has(group.id)}
+            onToggle={() => onToggle(group.id)}
+            onPersonOpen={onPersonOpen}
+            onStatusChange={onStatusChange}
+          />
+        ))}
+      </div>
+    </article>
   );
 }
 
@@ -1334,7 +1603,6 @@ function StudioPage({ dashboard, showAllOverview, navDirection, onAddSchedule, o
                 Kun
                 <select value={scheduleDraft.day} onChange={(event) => setScheduleDraft({ ...scheduleDraft, day: event.target.value })}>
                   {DAY_TABS.filter((day) => day !== "Barcha kunlar").map((day) => <option key={day} value={day}>{day}</option>)}
-                  <option value="Yakshanba">Yakshanba</option>
                 </select>
               </label>
               <label>
@@ -1514,6 +1782,63 @@ function StaffRow({ dashboard, groupId, person, onPersonOpen, onStatusChange }) 
           {person.status}
         </span>
       )}
+    </article>
+  );
+}
+
+function ContactBook({ contacts, onAdd, onRemove, onUpdate }) {
+  return (
+    <section className="contact-book">
+      <ContactSection
+        icon={<User size={17} />}
+        title="Muxbirlar"
+        type="reporters"
+        items={contacts.reporters || []}
+        onAdd={onAdd}
+        onRemove={onRemove}
+        onUpdate={onUpdate}
+      />
+      <ContactSection
+        icon={<Car size={17} />}
+        title="Haydovchilar"
+        type="drivers"
+        items={contacts.drivers || []}
+        onAdd={onAdd}
+        onRemove={onRemove}
+        onUpdate={onUpdate}
+      />
+    </section>
+  );
+}
+
+function ContactSection({ icon, title, type, items, onAdd, onRemove, onUpdate }) {
+  return (
+    <article className="contact-section">
+      <div className="contact-section-head">
+        <div>
+          <span>{icon}</span>
+          <strong>{title}</strong>
+        </div>
+        <button type="button" onClick={() => onAdd(type)}>
+          <Plus size={15} />
+          Qo'shish
+        </button>
+      </div>
+      <div className="contact-edit-list">
+        {items.map((item) => (
+          <div className="contact-edit-row" key={item.id}>
+            <input value={item.name || ""} onChange={(event) => onUpdate(type, item.id, "name", event.target.value)} placeholder={type === "drivers" ? "Haydovchi ismi" : "Muxbir ismi"} />
+            {type === "drivers" && (
+              <input value={item.vehicle || ""} onChange={(event) => onUpdate(type, item.id, "vehicle", event.target.value)} placeholder="142 Caddy" />
+            )}
+            <input value={item.phone || ""} onChange={(event) => onUpdate(type, item.id, "phone", event.target.value)} placeholder="+998 ..." />
+            <input value={item.note || ""} onChange={(event) => onUpdate(type, item.id, "note", event.target.value)} placeholder="Izoh" />
+            <button type="button" aria-label="Kontaktni o'chirish" onClick={() => onRemove(type, item.id)}>
+              <Trash2 size={15} />
+            </button>
+          </div>
+        ))}
+      </div>
     </article>
   );
 }
@@ -1766,6 +2091,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
   const selectedEmployee = employees.find((employee) => String(employee.id) === String(selectedId)) || employees[0];
   const [draft, setDraft] = useState(selectedEmployee || null);
   const [saving, setSaving] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
   const formRef = useRef(null);
 
   useEffect(() => {
@@ -1824,6 +2150,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
     const saved = await onSaveEmployee(draft);
     setSaving(false);
     if (!saved) return;
+    setEditorOpen(false);
   }
 
   if (!draft) return <EmptyCard text="Xodimlar ro'yxati bo'sh" />;
@@ -1837,72 +2164,88 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
         </div>
         <label className="document-select">
           Xodim
-          <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
+          <select value={selectedId} onChange={(event) => {
+            setSelectedId(event.target.value);
+            setEditorOpen(false);
+          }}>
             {employees.map((employee) => (
               <option key={employee.id} value={employee.id}>{employee.name}</option>
             ))}
           </select>
         </label>
-        <form ref={formRef} className="documents-form" onSubmit={submit}>
-          <div className="document-profile">
-            <Avatar person={draft} />
-            <div>
-              <strong>{draft.name}</strong>
-              <span>{draft.role}</span>
-            </div>
+        <button className="document-profile document-profile-button" type="button" onClick={() => setEditorOpen((value) => !value)}>
+          <Avatar person={draft} />
+          <div>
+            <strong>{draft.name}</strong>
+            <span>{draft.role} • {departmentMeta(draft.department).label}</span>
           </div>
-          <label>
-            Ism familiya
-            <input name="documents-name" value={draft.name || ""} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Abduqodirxo'jayev Izzat" />
-          </label>
-          <label>
-            Lavozimi
-            <input name="documents-role" value={draft.role || ""} onChange={(event) => setDraft({ ...draft, role: event.target.value })} placeholder="Tasvir yozish operatori" />
-          </label>
-          <div className="documents-field-grid">
+          <em>{editorOpen ? "Yopish" : "Tahrirlash"}</em>
+        </button>
+        {editorOpen && (
+          <form ref={formRef} className="documents-form" onSubmit={submit}>
+            <div className="document-profile">
+              <Avatar person={draft} />
+              <div>
+                <strong>{draft.name}</strong>
+                <span>{draft.role}</span>
+              </div>
+            </div>
             <label>
-              Bo'lim
-              <select value={draft.department || "operator"} onChange={(event) => setDraft({ ...draft, department: event.target.value })}>
-                {DEPARTMENTS.map((department) => (
-                  <option key={department.id} value={department.id}>{department.label}</option>
-                ))}
-              </select>
+              Ism familiya
+              <input name="documents-name" value={draft.name || ""} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Abduqodirxo'jayev Izzat" />
             </label>
             <label>
-              Telegram
-              <input name="documents-telegram" value={draft.telegram || ""} onChange={(event) => setDraft({ ...draft, telegram: event.target.value })} placeholder="@username" />
+              Lavozimi
+              <input name="documents-role" value={draft.role || ""} onChange={(event) => setDraft({ ...draft, role: event.target.value })} placeholder="Tasvir yozish operatori" />
             </label>
-          </div>
-          <section className="portfolio-editor">
-            <div className="section-head">
-              <h2>Portfolio</h2>
-              <button type="button" onClick={addPortfolioItem}>
-                <Plus size={15} />
-                Link
-              </button>
+            <div className="documents-field-grid">
+              <label>
+                Bo'lim
+                <select value={draft.department || "operator"} onChange={(event) => setDraft({ ...draft, department: event.target.value })}>
+                  {DEPARTMENTS.map((department) => (
+                    <option key={department.id} value={department.id}>{department.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Telegram
+                <input name="documents-telegram" value={draft.telegram || ""} onChange={(event) => setDraft({ ...draft, telegram: event.target.value })} placeholder="@username" />
+              </label>
             </div>
-            {(draft.portfolio || []).map((item, index) => (
-              <article className="portfolio-row" key={`${index}-${item.url}`}>
-                <input name={`portfolio-title-${index}`} value={item.title || ""} onChange={(event) => updatePortfolio(index, "title", event.target.value)} placeholder="Syomka nomi" />
-                <input name={`portfolio-url-${index}`} value={item.url || ""} onChange={(event) => updatePortfolio(index, "url", event.target.value)} placeholder="Video yoki efir linki" />
-                <input type="date" value={item.date || ""} onChange={(event) => updatePortfolio(index, "date", event.target.value)} />
-                <button type="button" aria-label="Portfolio linkni o'chirish" onClick={() => removePortfolioItem(index)}>
-                  <Trash2 size={15} />
+            <section className="portfolio-editor">
+              <div className="section-head">
+                <h2>Portfolio</h2>
+                <button type="button" onClick={addPortfolioItem}>
+                  <Plus size={15} />
+                  Link
                 </button>
-              </article>
-            ))}
-            {!(draft.portfolio || []).length && <p className="portfolio-empty">Efirga ketgan syomka linklarini shu yerda yig'ib borasiz.</p>}
-          </section>
-          <button className="documents-save-button" type="submit" disabled={saving}>
-            <Save size={17} />
-            {saving ? "Saqlanmoqda..." : "Ma'lumotlarni saqlash"}
-          </button>
-        </form>
+              </div>
+              {(draft.portfolio || []).map((item, index) => (
+                <article className="portfolio-row" key={`${index}-${item.url}`}>
+                  <input name={`portfolio-title-${index}`} value={item.title || ""} onChange={(event) => updatePortfolio(index, "title", event.target.value)} placeholder="Syomka nomi" />
+                  <input name={`portfolio-url-${index}`} value={item.url || ""} onChange={(event) => updatePortfolio(index, "url", event.target.value)} placeholder="Video yoki efir linki" />
+                  <input type="date" value={item.date || ""} onChange={(event) => updatePortfolio(index, "date", event.target.value)} />
+                  <button type="button" aria-label="Portfolio linkni o'chirish" onClick={() => removePortfolioItem(index)}>
+                    <Trash2 size={15} />
+                  </button>
+                </article>
+              ))}
+              {!(draft.portfolio || []).length && <p className="portfolio-empty">Efirga ketgan syomka linklarini shu yerda yig'ib borasiz.</p>}
+            </section>
+            <button className="documents-save-button" type="submit" disabled={saving}>
+              <Save size={17} />
+              {saving ? "Saqlanmoqda..." : "Ma'lumotlarni saqlash"}
+            </button>
+          </form>
+        )}
       </section>
 
       <section className="documents-summary">
         {employees.map((employee) => (
-          <button className={`${String(employee.id) === String(draft.id) ? "active" : ""} department-${employee.department || "operator"}`} key={employee.id} type="button" onClick={() => setSelectedId(employee.id)}>
+          <button className={`${String(employee.id) === String(draft.id) ? "active" : ""} department-${employee.department || "operator"}`} key={employee.id} type="button" onClick={() => {
+            setSelectedId(employee.id);
+            setEditorOpen(true);
+          }}>
             <Avatar person={employee} />
             <div>
               <strong>{employee.name}</strong>
@@ -2161,21 +2504,179 @@ function ReportDrillRow({ label, value, hint, onClick }) {
   );
 }
 
-function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThemeChange }) {
+function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onSaveProfile, onThemeChange }) {
   const [notify, setNotify] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(currentUser);
+  const todayText = toInputDate(new Date());
+  const [selectedDate, setSelectedDate] = useState(todayText);
   const operators = dashboard.employees.filter((employee) => employee.role.includes("Operator")).length;
   const tjkCount = dashboard.metrics.tjk || 0;
+  const matchedEmployee = useMemo(() => {
+    const saved = dashboard.employees.find((employee) => String(employee.id) === String(currentUser.employeeId));
+    if (saved) return saved;
+    const target = normalizeName(currentUser.name);
+    return dashboard.employees.find((employee) => normalizeName(employee.name) === target) || dashboard.employees[0] || null;
+  }, [currentUser.employeeId, currentUser.name, dashboard.employees]);
+  const activeEmployee = dashboard.employees.find((employee) => String(employee.id) === String(draft.employeeId || matchedEmployee?.id)) || matchedEmployee;
+  const calendarInfo = useMemo(() => {
+    const base = new Date();
+    const first = new Date(base.getFullYear(), base.getMonth(), 1);
+    const daysInMonth = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+    const leading = (first.getDay() + 6) % 7;
+    const days = Array.from({ length: leading }, () => null).concat(
+      Array.from({ length: daysInMonth }, (_, index) => {
+        const date = new Date(base.getFullYear(), base.getMonth(), index + 1);
+        const dateText = toInputDate(date);
+        return {
+          dateText,
+          day: index + 1,
+          isToday: dateText === todayText,
+          assignment: buildPersonalAssignment(activeEmployee, dateText, dashboard)
+        };
+      })
+    );
+    return { title: `${MONTH_NAMES[base.getMonth()]} ${base.getFullYear()}`, days };
+  }, [activeEmployee, dashboard, todayText]);
+  const todayAssignment = useMemo(() => buildPersonalAssignment(activeEmployee, todayText, dashboard), [activeEmployee, dashboard, todayText]);
+  const selectedAssignment = useMemo(() => buildPersonalAssignment(activeEmployee, selectedDate, dashboard), [activeEmployee, dashboard, selectedDate]);
+
+  useEffect(() => {
+    setDraft({ ...currentUser, employeeId: currentUser.employeeId || matchedEmployee?.id || "" });
+  }, [currentUser, matchedEmployee]);
+
+  async function updateProfileAvatar(file) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return;
+    const image = await readImageFile(file);
+    setDraft((current) => ({ ...current, avatar: image }));
+  }
+
+  async function submitProfile(event) {
+    event.preventDefault();
+    await onSaveProfile(draft);
+    setEditing(false);
+  }
 
   return (
     <section className="profile-page">
       <div className="profile-hero">
-        <span className="profile-avatar large"><User size={38} /></span>
+        <span className="profile-avatar large">
+          {currentUser.avatar ? <img src={currentUser.avatar} alt={currentUser.name} /> : <User size={38} />}
+        </span>
         <div>
           <strong>{currentUser.name}</strong>
           <p>{currentUser.role}</p>
           <em>{currentUser.email}</em>
+          {(currentUser.phone || currentUser.department) && <small>{[currentUser.phone, currentUser.department].filter(Boolean).join(" • ")}</small>}
         </div>
       </div>
+
+      <section className="profile-edit-card">
+        <div className="section-head">
+          <h2>Profilni tahrirlash</h2>
+          <button type="button" onClick={() => setEditing((value) => !value)}>{editing ? "Yopish" : "Tahrirlash"}</button>
+        </div>
+        {editing && (
+          <form className="profile-edit-form" onSubmit={submitProfile}>
+            <div className="avatar-upload-field profile-avatar-upload">
+              <div className="avatar-upload-preview">
+                {draft.avatar ? <img src={draft.avatar} alt="Profil rasmi" /> : <User size={28} />}
+              </div>
+              <div>
+                <strong>Profil rasmi</strong>
+                <span>{draft.avatar ? "Rasm tanlangan" : "Rasm yuklanmagan"}</span>
+              </div>
+              <label>
+                <Upload size={15} />
+                Yuklash
+                <input type="file" accept="image/*" onChange={(event) => updateProfileAvatar(event.target.files?.[0])} />
+              </label>
+            </div>
+            <label>
+              Ism familiya
+              <input value={draft.name || ""} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Ism familiya" />
+            </label>
+            <label>
+              Email
+              <input type="email" value={draft.email || ""} onChange={(event) => setDraft({ ...draft, email: event.target.value })} placeholder="email@domain.uz" />
+            </label>
+            <label>
+              Lavozim
+              <input value={draft.role || ""} onChange={(event) => setDraft({ ...draft, role: event.target.value })} placeholder="Lavozim" />
+            </label>
+            <label>
+              Telefon
+              <input value={draft.phone || ""} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} placeholder="+998 ..." />
+            </label>
+            <label>
+              Bo'lim
+              <input value={draft.department || ""} onChange={(event) => setDraft({ ...draft, department: event.target.value })} placeholder="Bo'lim nomi" />
+            </label>
+            <label>
+              Mening xodim kartam
+              <select value={draft.employeeId || activeEmployee?.id || ""} onChange={(event) => setDraft({ ...draft, employeeId: event.target.value })}>
+                <option value="">Tanlanmagan</option>
+                {dashboard.employees.map((employee) => (
+                  <option key={employee.id} value={employee.id}>{employee.name} - {departmentMeta(employee.department).shortLabel}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Qo'shimcha
+              <textarea value={draft.note || ""} onChange={(event) => setDraft({ ...draft, note: event.target.value })} placeholder="Kerakli ma'lumotlar" />
+            </label>
+            <button type="submit">
+              <Save size={17} />
+              Saqlash
+            </button>
+          </form>
+        )}
+      </section>
+
+      <section className={`profile-today-banner ${todayAssignment.status}`}>
+        <div>
+          <span>Bugungi vazifa</span>
+          <strong>{todayAssignment.place}</strong>
+          <p>{todayAssignment.time} • {todayAssignment.statusLabel}</p>
+        </div>
+        <em>{todayAssignment.camera || todayAssignment.source}</em>
+      </section>
+
+      <section className="profile-calendar-card">
+        <div className="section-head">
+          <h2>Mening oylik kalendarim</h2>
+          <span>{calendarInfo.title}</span>
+        </div>
+        <div className="profile-calendar-weekdays">
+          {["Du", "Se", "Cho", "Pa", "Ju", "Sha", "Ya"].map((day) => <span key={day}>{day}</span>)}
+        </div>
+        <div className="profile-calendar-grid">
+          {calendarInfo.days.map((day, index) => day ? (
+            <button
+              className={`${day.assignment.status} ${day.isToday ? "today" : ""} ${selectedDate === day.dateText ? "selected" : ""}`}
+              type="button"
+              key={day.dateText}
+              onClick={() => setSelectedDate(day.dateText)}
+            >
+              <strong>{day.day}</strong>
+              <span>{MONTHLY_STATUS_OPTIONS[day.assignment.status]?.label || STATUS_META[day.assignment.status]?.code || "I"}</span>
+            </button>
+          ) : <i key={`empty-${index}`} />)}
+        </div>
+        <article className={`profile-day-detail ${selectedAssignment.status}`}>
+          <div>
+            <span>{selectedDate}</span>
+            <strong>{selectedAssignment.place}</strong>
+            <p>{selectedAssignment.topic}</p>
+          </div>
+          <dl>
+            <div><dt>Vaqt</dt><dd>{selectedAssignment.time}</dd></div>
+            <div><dt>Status</dt><dd>{selectedAssignment.statusLabel}</dd></div>
+            {selectedAssignment.camera && <div><dt>Kamera</dt><dd>{selectedAssignment.camera}</dd></div>}
+          </dl>
+        </article>
+      </section>
 
       <section className="profile-stats">
         <article>

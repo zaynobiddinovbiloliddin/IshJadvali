@@ -10,7 +10,7 @@ const DATA_DIR = process.env.VERCEL ? "/tmp/ish-jadvali" : join(__dirname, "data
 const DB_FILE = join(DATA_DIR, "mock-db.json");
 const departments = [
   { id: "pull", name: "Pull xizmati" },
-  { id: "operator", name: "Oddiy operatorlar" },
+  { id: "operator", name: "Operatorlar" },
   { id: "dron", name: "Dron bo'limi" },
   { id: "tjk", name: "TJK guruhi" }
 ];
@@ -116,7 +116,7 @@ const studios = [
 ];
 
 const dayNames = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba", "Yakshanba"];
-const shortDayNames = ["Dush", "Sey", "Chor", "Pay"];
+const shortDayNames = ["Dush", "Sey", "Chor", "Pay", "Jum", "Shan", "Yak"];
 const monthShort = ["Yan", "Fev", "Mar", "Apr", "May", "Iyn", "Iyl", "Avg", "Sen", "Okt", "Noy", "Dek"];
 
 let db = await loadDb();
@@ -202,8 +202,12 @@ function formatInputMonth(date) {
 }
 
 function getWeekStart(value) {
-  const date = value ? new Date(`${value}T00:00:00`) : new Date("2026-01-29T00:00:00");
-  return Number.isNaN(date.getTime()) ? new Date("2026-01-29T00:00:00") : date;
+  const date = value ? new Date(`${value}T00:00:00`) : new Date();
+  const safeDate = Number.isNaN(date.getTime()) ? new Date() : date;
+  safeDate.setHours(0, 0, 0, 0);
+  const mondayOffset = (safeDate.getDay() + 6) % 7;
+  safeDate.setDate(safeDate.getDate() - mondayOffset);
+  return safeDate;
 }
 
 function pickEmployee(index) {
@@ -339,7 +343,7 @@ function createGroups(weekStart, seed) {
 
 function createOverviewRows(groups) {
   return db.employees.slice(0, 8).map((employee) => {
-    const days = [0, 1, 2, 3].map((dayIndex) => {
+    const days = [0, 1, 2, 3, 4, 5, 6].map((dayIndex) => {
       const groupForEmployee = groups.find((group) => group.day === dayNames[dayIndex] && group.people.some((person) => person.id === employee.id));
       if (!groupForEmployee) return "empty";
       const person = groupForEmployee.people.find((item) => item.id === employee.id);
@@ -378,8 +382,8 @@ function buildDashboard(weekStartValue, options = {}) {
       number: Math.max(1, Math.ceil((weekStart.getDate() + seed) / 7)),
       title: `Hafta ${Math.max(1, Math.ceil((weekStart.getDate() + seed) / 7))}, ${weekStart.getFullYear()}`,
       range: `${formatDate(weekStart)} - ${formatDate(weekEnd)}`,
-      todayLabel: `${dayNames[0]}, ${weekStart.getDate()}-yanvar`,
-      shortDays: [0, 1, 2, 3].map((index) => ({ label: shortDayNames[index], date: addDays(weekStart, index).getDate() })),
+      todayLabel: formatDate(new Date()),
+      shortDays: [0, 1, 2, 3, 4, 5, 6].map((index) => ({ label: shortDayNames[index], date: addDays(weekStart, index).getDate() })),
       generatedAt,
       saved: Boolean(options.saved)
     },
