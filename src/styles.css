@@ -68,6 +68,7 @@ textarea,
 .settings-card,
 .studio-panel,
 .today-card,
+.attendance-panel,
 .overview-card,
 .legend-card,
 .schedule-modal,
@@ -455,6 +456,7 @@ button:active {
 
 .group-card,
 .studio-panel,
+.attendance-panel,
 .today-card,
 .overview-card,
 .legend-card {
@@ -727,6 +729,180 @@ button:active {
   padding: 16px;
 }
 
+.attendance-panel {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 16px;
+}
+
+.attendance-head,
+.attendance-scan,
+.attendance-metrics,
+.attendance-list article,
+.attendance-recent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.attendance-head h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 17px;
+}
+
+.attendance-head p {
+  margin: 3px 0 0;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.attendance-head > span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  color: #166534;
+  background: #dcfce7;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.attendance-scan {
+  align-items: end;
+}
+
+.attendance-scan label {
+  display: grid;
+  flex: 1;
+  gap: 7px;
+  color: #4b5563;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.attendance-scan select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #d7dee9;
+  border-radius: 7px;
+  padding: 0 12px;
+  color: #111827;
+  background: #ffffff;
+  font: inherit;
+}
+
+.attendance-scan button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 148px;
+  min-height: 42px;
+  border-radius: 7px;
+  color: #ffffff;
+  background: #111827;
+  font-weight: 800;
+}
+
+.attendance-scan button:disabled {
+  opacity: 0.55;
+}
+
+.attendance-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.attendance-metrics div {
+  min-height: 68px;
+  padding: 12px;
+  border-radius: 7px;
+  background: #f3f6fb;
+}
+
+.attendance-metrics strong,
+.attendance-metrics span {
+  display: block;
+}
+
+.attendance-metrics strong {
+  color: #111827;
+  font-size: 17px;
+}
+
+.attendance-metrics span {
+  margin-top: 2px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.attendance-list {
+  display: grid;
+  gap: 8px;
+}
+
+.attendance-list article {
+  min-height: 52px;
+  padding: 9px 11px;
+  border: 1px solid #e5e7eb;
+  border-left: 4px solid #94a3b8;
+  border-radius: 7px;
+  background: #fbfcfe;
+}
+
+.attendance-list article.active {
+  border-left-color: #22c55e;
+  background: #f0fdf4;
+}
+
+.attendance-list strong {
+  display: block;
+  color: #111827;
+  font-size: 13px;
+}
+
+.attendance-list span {
+  display: block;
+  margin-top: 2px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.attendance-list em {
+  color: #111827;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.attendance-empty {
+  margin: 0;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.attendance-recent {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.attendance-recent span {
+  display: inline-flex;
+  min-height: 26px;
+  align-items: center;
+  padding: 0 9px;
+  border-radius: 999px;
+  color: #4b5563;
+  background: #eef2f7;
+  font-size: 12px;
+}
+
 .compact-staff {
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr) auto auto 62px;
@@ -837,6 +1013,15 @@ button:active {
 
 .legend-mark.empty {
   background: #e5e7eb;
+}
+
+.legend-mark.tjk {
+  color: #713f12;
+  background: #facc15;
+}
+
+.legend-mark.studio {
+  background: #22c55e;
 }
 
 .legend-item p {
@@ -1340,6 +1525,15 @@ button:active {
   background: #e5e7eb;
 }
 
+.month-cell.tjk {
+  color: #713f12;
+  background: #facc15;
+}
+
+.month-cell.studio {
+  background: #22c55e;
+}
+
 .month-cell:focus-visible {
   outline: 2px solid #111827;
   outline-offset: -2px;
@@ -1360,6 +1554,18 @@ button:active {
 
 .month-total.rest {
   color: #b91c1c;
+}
+
+.month-total.tjk {
+  color: #a16207;
+}
+
+.month-total.studio {
+  color: #15803d;
+}
+
+.month-total.hours {
+  color: #172033;
 }
 
 .time-panel {
@@ -1528,13 +1734,31 @@ button:active {
 
 .avatar-upload-field {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-columns: 70px minmax(0, 1fr) 108px;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   padding: 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-soft);
+}
+
+.avatar-upload-preview {
+  display: grid;
+  place-items: center;
+  width: 70px;
+  height: 70px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--primary);
+  background: var(--surface);
+}
+
+.avatar-upload-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .avatar-upload-field strong,
@@ -1561,14 +1785,21 @@ button:active {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-height: 38px;
-  padding: 0 11px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 10px;
   border-radius: 8px;
   color: #ffffff;
   background: var(--primary);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.avatar-upload-field label svg {
+  flex: 0 0 auto;
 }
 
 .avatar-upload-field input {
@@ -2399,6 +2630,34 @@ button:active {
   background: var(--surface-muted);
 }
 
+:root[data-theme="dark"] .attendance-head h2,
+:root[data-theme="dark"] .attendance-metrics strong,
+:root[data-theme="dark"] .attendance-list strong,
+:root[data-theme="dark"] .attendance-list em {
+  color: var(--text);
+}
+
+:root[data-theme="dark"] .attendance-head p,
+:root[data-theme="dark"] .attendance-metrics span,
+:root[data-theme="dark"] .attendance-list span,
+:root[data-theme="dark"] .attendance-empty,
+:root[data-theme="dark"] .attendance-recent span {
+  color: var(--text-muted);
+}
+
+:root[data-theme="dark"] .attendance-scan select,
+:root[data-theme="dark"] .attendance-metrics div,
+:root[data-theme="dark"] .attendance-list article,
+:root[data-theme="dark"] .attendance-recent span {
+  border-color: var(--border);
+  color: var(--text);
+  background: var(--surface-muted);
+}
+
+:root[data-theme="dark"] .attendance-list article.active {
+  background: rgba(34, 197, 94, 0.14);
+}
+
 .week-nav .nav-active,
 .icon-button.nav-active,
 .create-button,
@@ -2645,6 +2904,20 @@ button:active {
     padding-inline: 14px;
   }
 
+  .attendance-head,
+  .attendance-scan {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .attendance-scan button {
+    width: 100%;
+  }
+
+  .attendance-metrics {
+    grid-template-columns: 1fr;
+  }
+
   .documents-field-grid,
   .portfolio-row {
     grid-template-columns: 1fr;
@@ -2655,12 +2928,18 @@ button:active {
     gap: 10px;
   }
 
-  .document-preview {
+  .document-preview,
+  .avatar-upload-preview {
     width: 58px;
     height: 58px;
   }
 
-  .documents-form .document-upload-button {
+  .avatar-upload-field {
+    grid-template-columns: 58px minmax(0, 1fr);
+  }
+
+  .documents-form .document-upload-button,
+  .avatar-upload-field label {
     grid-column: 1 / -1;
   }
 

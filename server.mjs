@@ -111,10 +111,11 @@ async function loadDb() {
     return {
       generation: Number(parsed.generation || 0),
       employees: employees.map(normalizeEmployee),
-      schedules: parsed.schedules && typeof parsed.schedules === "object" ? parsed.schedules : {}
+      schedules: parsed.schedules && typeof parsed.schedules === "object" ? parsed.schedules : {},
+      attendance: Array.isArray(parsed.attendance) ? parsed.attendance.map(normalizeAttendanceRecord).filter(Boolean) : []
     };
   } catch {
-    return { generation: 0, employees: initialEmployees.map(normalizeEmployee), schedules: {} };
+    return { generation: 0, employees: initialEmployees.map(normalizeEmployee), schedules: {}, attendance: [] };
   }
 }
 
@@ -176,6 +177,12 @@ function formatInputDate(date) {
   return `${year}-${month}-${day}`;
 }
 
+function formatInputMonth(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
 function getWeekStart(value) {
   const date = value ? new Date(`${value}T00:00:00`) : new Date("2026-01-29T00:00:00");
   return Number.isNaN(date.getTime()) ? new Date("2026-01-29T00:00:00") : date;
@@ -188,6 +195,84 @@ function pickEmployee(index) {
 function scheduleEmployee(employee) {
   const { documents, ...publicEmployee } = employee;
   return publicEmployee;
+}
+
+function normalizeAttendanceRecord(record) {
+  if (!record || !record.employeeId || !record.checkIn) return null;
+  const checkIn = new Date(record.checkIn);
+  const checkOut = record.checkOut ? new Date(record.checkOut) : null;
+  if (Number.isNaN(checkIn.getTime())) return null;
+
+  return {
+    id: String(record.id || `att-${checkIn.getTime()}-${record.employeeId}`),
+    employeeId: Number(record.employeeId),
+    employeeName: String(record.employeeName || ""),
+    date: record.date || formatInputDate(checkIn),
+    checkIn: checkIn.toISOString(),
+    checkOut: checkOut && !Number.isNaN(checkOut.getTime()) ? checkOut.toISOString() : null,
+    method: record.method || "face"
+  };
+}
+
+function minutesBetween(start, end) {
+  const startDate = new Date(start);
+  const endDate = end ? new Date(end) : new Date();
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return 0;
+  return Math.max(0, Math.round((endDate.getTime() - startDate.getTime()) / 60000));
+}
+
+function buildAttendanceSummary() {
+  const today = formatInputDate(new Date());
+  const month = formatInputMonth(new Date());
+  const records = db.attendance || [];
+  const todayRecords = records.filter((record) => record.date === today);
+  const monthlyRecords = records.filter((record) => record.date?.startsWith(month));
+  const openRecords = records.filter((record) => !record.checkOut);
+  const employeeRows = new Map();
+
+  for (const employee of db.employees) {
+    employeeRows.set(Number(employee.id), {
+      employeeId: Number(employee.id),
+      name: employee.name,
+      todayMinutes: 0,
+      monthMinutes: 0,
+      active: false,
+      lastAction: null
+    });
+  }
+
+  for (const record of monthlyRecords) {
+    const row = employeeRows.get(Number(record.employeeId));
+    if (!row) continue;
+    const minutes = minutesBetween(record.checkIn, record.checkOut);
+    row.monthMinutes += minutes;
+    if (record.date === today) row.todayMinutes += minutes;
+    if (!record.checkOut) row.active = true;
+    row.lastAction = record.checkOut || record.checkIn;
+  }
+
+  for (const record of openRecords) {
+    const row = employeeRows.get(Number(record.employeeId));
+    if (!row) continue;
+    row.active = true;
+    row.lastAction = record.checkIn;
+  }
+
+  const topRows = [...employeeRows.values()]
+    .filter((row) => row.monthMinutes > 0 || row.active)
+    .sort((first, second) => second.monthMinutes - first.monthMinutes)
+    .slice(0, 6);
+
+  return {
+    today,
+    month,
+    activeNow: openRecords.length,
+    todayScans: todayRecords.reduce((sum, record) => sum + 1 + (record.checkOut ? 1 : 0), 0),
+    todayMinutes: todayRecords.reduce((sum, record) => sum + minutesBetween(record.checkIn, record.checkOut), 0),
+    monthMinutes: monthlyRecords.reduce((sum, record) => sum + minutesBetween(record.checkIn, record.checkOut), 0),
+    recent: [...records].slice(-6).reverse(),
+    rows: topRows
+  };
 }
 
 function buildPerson(employee, studio, dayIndex, offset, seed) {
@@ -286,7 +371,8 @@ function buildDashboard(weekStartValue, options = {}) {
       `${rest} ta dam olish kuni belgilangan.`,
       `${backup} ta xodim zaxirada.`
     ],
-    employees: db.employees
+    employees: db.employees,
+    attendance: buildAttendanceSummary()
   };
 }
 
@@ -365,6 +451,7 @@ async function deleteEmployee(id) {
   if (!exists) throw new Error("Xodim topilmadi");
   if (db.employees.length <= 1) throw new Error("Oxirgi xodimni o'chirib bo'lmaydi");
   db.employees = db.employees.filter((employee) => String(employee.id) !== String(id));
+  db.attendance = db.attendance.filter((record) => String(record.employeeId) !== String(id));
 
   for (const key of Object.keys(db.schedules)) {
     const schedule = db.schedules[key];
@@ -378,6 +465,35 @@ async function deleteEmployee(id) {
 
   await saveDb();
   return { ok: true };
+}
+
+async function scanAttendance(payload) {
+  const employee = db.employees.find((item) => String(item.id) === String(payload.employeeId));
+  if (!employee) throw new Error("Face ID uchun xodim tanlanmadi");
+
+  const openRecord = db.attendance.find((record) => String(record.employeeId) === String(employee.id) && !record.checkOut);
+  const now = new Date();
+
+  if (openRecord) {
+    openRecord.checkOut = now.toISOString();
+    openRecord.employeeName = employee.name;
+    await saveDb();
+    return { action: "checkout", employee: scheduleEmployee(employee), record: openRecord, dashboard: getDashboard(payload.weekStart) };
+  }
+
+  const record = {
+    id: `att-${now.getTime()}-${employee.id}`,
+    employeeId: Number(employee.id),
+    employeeName: employee.name,
+    date: formatInputDate(now),
+    checkIn: now.toISOString(),
+    checkOut: null,
+    method: "face"
+  };
+
+  db.attendance.push(record);
+  await saveDb();
+  return { action: "checkin", employee: scheduleEmployee(employee), record, dashboard: getDashboard(payload.weekStart) };
 }
 
 function refreshScheduleDerivedData(schedule) {
@@ -601,6 +717,10 @@ export async function handleRequest(request, response) {
 
     if (request.method === "POST" && url.pathname === "/api/employees") {
       return sendJson(response, 201, await createEmployee(await readBody(request)));
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/attendance/scan") {
+      return sendJson(response, 200, await scanAttendance(await readBody(request)));
     }
 
     const employeeMatch = url.pathname.match(/^\/api\/employees\/(\d+)$/);

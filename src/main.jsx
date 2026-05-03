@@ -49,10 +49,17 @@ const OPERATOR_NAMES = [
   "SOLIBOYEV I.", "AZIMOV E.", "RUSTAMOV E.", "SOLIBOYEV Y.", "UMAROV J."
 ];
 const SHIFT_LABELS = ["09:00-18:00", "09:00-22:00", "18:00-09:00", "Dam"];
+const MONTHLY_STATUS_OPTIONS = {
+  work: { label: "K", shift: "Kundalik ish", hours: 9 },
+  rest: { label: "D", shift: "Dam", hours: 0 },
+  tjk: { label: "T", shift: "TJK guruhi", hours: 9 },
+  studio: { label: "S", shift: "Studiyada", hours: 9 }
+};
+const MONTHLY_STATUS_SEQUENCE = ["work", "rest", "tjk", "studio"];
 const DOCUMENT_TYPES = [
   { id: "photo3x4", label: "3x4 rasm", shortLabel: "3x4" },
   { id: "passportUz", label: "Pasport UZ", shortLabel: "UZ" },
-  { id: "passportForeign", label: "Zagran pasport", shortLabel: "Zagran" },
+  { id: "passportForeign", label: "Xalqaro pasport", shortLabel: "Xalqaro" },
   { id: "certificate", label: "Guvohnoma", shortLabel: "Guvohnoma" }
 ];
 const DEPARTMENTS = [
@@ -239,6 +246,7 @@ const emptyDashboard = {
   overviewRows: [],
   reports: [],
   notifications: [],
+  attendance: { activeNow: 0, todayScans: 0, todayMinutes: 0, monthMinutes: 0, recent: [], rows: [] },
   employees: []
 };
 
@@ -302,6 +310,25 @@ function telegramHref(value) {
   if (!telegram) return "";
   if (telegram.startsWith("http")) return telegram;
   return `https://t.me/${telegram.replace(/^@/, "")}`;
+}
+
+function formatDuration(minutes) {
+  const total = Math.max(0, Number(minutes) || 0);
+  const hours = Math.floor(total / 60);
+  const minute = total % 60;
+  if (!hours) return `${minute} daq`;
+  return minute ? `${hours} soat ${minute} daq` : `${hours} soat`;
+}
+
+function formatDateTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("uz-UZ", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(date);
 }
 
 function App() {
@@ -409,6 +436,19 @@ function App() {
   }
 
   async function saveEmployee(employee) {
+    if (!String(employee.name || "").trim()) {
+      notify("F.I.Sh ni kiriting.", "error");
+      return false;
+    }
+    if (!String(employee.role || "").trim()) {
+      notify("Lavozimni kiriting.", "error");
+      return false;
+    }
+    if (!String(employee.phone || "").trim()) {
+      notify("Telefon raqamini kiriting.", "error");
+      return false;
+    }
+
     setGenerating(true);
     setError("");
 
@@ -462,6 +502,22 @@ function App() {
     }
   }
 
+  async function scanAttendance(employeeId) {
+    setError("");
+
+    try {
+      const result = await api("/api/attendance/scan", {
+        method: "POST",
+        body: JSON.stringify({ employeeId, weekStart })
+      });
+      setDashboard(result.dashboard);
+      notify(result.action === "checkin" ? "Face ID kirish vaqtini yozdi" : "Face ID chiqish vaqtini yozdi");
+    } catch (scanError) {
+      setError(scanError.message);
+      notify(scanError.message, "error");
+    }
+  }
+
   async function addStudioSchedule(payload) {
     setGenerating(true);
     setError("");
@@ -473,9 +529,11 @@ function App() {
       }));
       setActiveDay("Barcha kunlar");
       notify("Yangi smena jadvalga qo'shildi");
+      return true;
     } catch (scheduleError) {
       setError(scheduleError.message);
       notify(scheduleError.message, "error");
+      return false;
     } finally {
       setGenerating(false);
     }
@@ -556,6 +614,7 @@ function App() {
                 onAddSchedule={addStudioSchedule}
                 onDeleteEmployee={deleteEmployee}
                 onSaveEmployee={saveEmployee}
+                onScanAttendance={scanAttendance}
                 onNotify={notify}
                 onMoveWeek={moveWeek}
                 navDirection={navDirection}
@@ -894,7 +953,8 @@ function MonthlyPage({ dashboard, weekStart }) {
     operators.forEach((operator) => {
       matrix[operator.id] = monthInfo.days.map((day) => {
         if ((operator.id + day) % 7 === 0) return "rest";
-        if ((operator.id * 2 + day) % 11 === 0) return "empty";
+        if ((operator.id * 2 + day) % 11 === 0) return "tjk";
+        if ((operator.id * 3 + day) % 13 === 0) return "studio";
         return "work";
       });
     });
@@ -913,19 +973,24 @@ function MonthlyPage({ dashboard, weekStart }) {
     const values = Object.values(matrix).flat();
     return {
       work: values.filter((value) => value === "work").length,
-      rest: values.filter((value) => value === "rest").length
+      rest: values.filter((value) => value === "rest").length,
+      tjk: values.filter((value) => value === "tjk").length,
+      studio: values.filter((value) => value === "studio").length,
+      hours: values.reduce((sum, value) => sum + (MONTHLY_STATUS_OPTIONS[value]?.hours || 0), 0)
     };
   }, [matrix]);
 
   function getShift(operatorId, day, status) {
-    if (status === "rest") return "Dam";
-    if (status === "empty") return "Belgilanmagan";
+    if (status === "rest" || status === "tjk" || status === "studio") {
+      return MONTHLY_STATUS_OPTIONS[status].shift;
+    }
     return SHIFT_LABELS[(operatorId + day) % 3];
   }
 
   function toggleCell(operator, dayIndex) {
-    const current = matrix[operator.id]?.[dayIndex] || "empty";
-    const next = current === "work" ? "rest" : current === "rest" ? "empty" : "work";
+    const current = matrix[operator.id]?.[dayIndex] || "work";
+    const currentIndex = MONTHLY_STATUS_SEQUENCE.indexOf(current);
+    const next = MONTHLY_STATUS_SEQUENCE[(currentIndex + 1) % MONTHLY_STATUS_SEQUENCE.length];
     const day = monthInfo.days[dayIndex];
 
     setMatrix((currentMatrix) => ({
@@ -949,21 +1014,30 @@ function MonthlyPage({ dashboard, weekStart }) {
         </div>
         <div className="monthly-counts">
           <span><b>{totals.work}</b> ish</span>
+          <span><b>{totals.tjk}</b> TJK</span>
+          <span><b>{totals.studio}</b> studiya</span>
           <span><b>{totals.rest}</b> dam</span>
+          <span><b>{totals.hours}</b> soat</span>
         </div>
       </div>
 
       <div className="monthly-table-wrap" role="region" aria-label="Oylik operatorlar grafigi">
-        <div className="monthly-table" style={{ gridTemplateColumns: `132px repeat(${monthInfo.days.length}, 34px) 72px 72px` }}>
+        <div className="monthly-table" style={{ gridTemplateColumns: `132px repeat(${monthInfo.days.length}, 34px) 58px 58px 58px 58px 72px` }}>
           <div className="month-sticky month-header">Operator</div>
           {monthInfo.days.map((day) => <div className="month-header day" key={day}>{day}</div>)}
-          <div className="month-header summary">Ish</div>
+          <div className="month-header summary">K</div>
+          <div className="month-header summary">T</div>
+          <div className="month-header summary">S</div>
           <div className="month-header summary">Dam</div>
+          <div className="month-header summary">Soat</div>
 
           {operators.map((operator) => {
             const days = matrix[operator.id] || [];
             const workCount = days.filter((value) => value === "work").length;
             const restCount = days.filter((value) => value === "rest").length;
+            const tjkCount = days.filter((value) => value === "tjk").length;
+            const studioCount = days.filter((value) => value === "studio").length;
+            const hourCount = days.reduce((sum, value) => sum + (MONTHLY_STATUS_OPTIONS[value]?.hours || 0), 0);
 
             return (
               <React.Fragment key={operator.id}>
@@ -976,11 +1050,14 @@ function MonthlyPage({ dashboard, weekStart }) {
                     title={`${operator.name}, ${monthInfo.days[index]}-${MONTH_NAMES[new Date(`${weekStart}T00:00:00`).getMonth()]}`}
                     onClick={() => toggleCell(operator, index)}
                   >
-                    {value === "work" ? "K" : value === "rest" ? "D" : ""}
+                    {MONTHLY_STATUS_OPTIONS[value]?.label || "K"}
                   </button>
                 ))}
                 <div className="month-total work">{workCount}</div>
+                <div className="month-total tjk">{tjkCount}</div>
+                <div className="month-total studio">{studioCount}</div>
                 <div className="month-total rest">{restCount}</div>
+                <div className="month-total hours">{hourCount}</div>
               </React.Fragment>
             );
           })}
@@ -993,7 +1070,7 @@ function MonthlyPage({ dashboard, weekStart }) {
           <strong>Vaqt belgilari</strong>
           <p>
             {selectedCell
-              ? `${selectedCell.operator}: ${selectedCell.day}-kun, ${selectedCell.shift}`
+              ? `${selectedCell.operator}: ${selectedCell.day}-kun, ${selectedCell.shift}, ${MONTHLY_STATUS_OPTIONS[selectedCell.status]?.hours || 0} soat`
               : "Katakni bosing, shu operatorning kunlik vaqti shu yerda chiqadi."}
           </p>
         </div>
@@ -1002,7 +1079,8 @@ function MonthlyPage({ dashboard, weekStart }) {
       <section className="legend-card compact">
         <LegendItem tone="work" label="Ko'k katak - ishlagan kun" />
         <LegendItem tone="rest" label="Qizil katak - dam kuni" />
-        <LegendItem tone="empty" label="Kulrang katak - belgilanmagan" />
+        <LegendItem tone="tjk" label="Sariq katak - TJK guruhi" />
+        <LegendItem tone="studio" label="Yashil katak - studiyada" />
       </section>
     </section>
   );
@@ -1064,7 +1142,7 @@ function WeeklyPage({ activeDay, dashboard, navDirection, onCreate, onDeleteSche
   );
 }
 
-function StudioPage({ dashboard, showAllOverview, navDirection, onAddSchedule, onCreate, onDeleteEmployee, onNotify, onSaveEmployee, onMoveWeek, onToggleOverview }) {
+function StudioPage({ dashboard, showAllOverview, navDirection, onAddSchedule, onCreate, onDeleteEmployee, onNotify, onSaveEmployee, onMoveWeek, onScanAttendance, onToggleOverview }) {
   const overviewRows = showAllOverview ? dashboard.overviewRows : dashboard.overviewRows.slice(0, 5);
   const scheduleBlank = {
     day: "Dushanba",
@@ -1077,7 +1155,7 @@ function StudioPage({ dashboard, showAllOverview, navDirection, onAddSchedule, o
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [scheduleDraft, setScheduleDraft] = useState(scheduleBlank);
 
-  function submitSchedule(event) {
+  async function submitSchedule(event) {
     event.preventDefault();
     if (!scheduleDraft.meta.trim()) {
       onNotify("Studiya yoki joy nomini kiriting.", "error");
@@ -1094,10 +1172,11 @@ function StudioPage({ dashboard, showAllOverview, navDirection, onAddSchedule, o
       event.currentTarget.querySelector("[name='schedule-employee']")?.focus();
       return;
     }
-    onAddSchedule({
+    const saved = await onAddSchedule({
       ...scheduleDraft,
       employeeIds: scheduleDraft.employeeIds.filter(Boolean)
     });
+    if (!saved) return;
     setScheduleDraft(scheduleBlank);
     setScheduleModalOpen(false);
   }
@@ -1128,6 +1207,8 @@ function StudioPage({ dashboard, showAllOverview, navDirection, onAddSchedule, o
         <MetricCard icon={<BriefcaseBusiness size={19} />} value={dashboard.metrics.workingToday} label="Ishlayotgan" tone="green" />
         <MetricCard icon={<Coffee size={19} />} value={dashboard.metrics.restToday} label="Bugun damda" tone="orange" />
       </section>
+
+      <AttendancePanel attendance={dashboard.attendance} employees={dashboard.employees} onScan={onScanAttendance} />
 
       <EmployeeManager employees={dashboard.employees} onDelete={onDeleteEmployee} onNotify={onNotify} onSave={onSaveEmployee} />
 
@@ -1232,6 +1313,82 @@ function StudioPage({ dashboard, showAllOverview, navDirection, onAddSchedule, o
         </div>
       )}
     </>
+  );
+}
+
+function AttendancePanel({ attendance = {}, employees, onScan }) {
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
+  const rows = attendance.rows || [];
+  const recent = attendance.recent || [];
+  const selectedRow = rows.find((row) => String(row.employeeId) === String(selectedEmployeeId));
+  const selectedActive = Boolean(selectedRow?.active);
+
+  useEffect(() => {
+    if (!selectedEmployeeId && employees.length) setSelectedEmployeeId(String(employees[0].id));
+  }, [employees, selectedEmployeeId]);
+
+  return (
+    <section className="attendance-panel">
+      <div className="attendance-head">
+        <div>
+          <h2>Face ID nazorati</h2>
+          <p>Bugungi kirish-chiqish va oylik ish soatlari</p>
+        </div>
+        <span>{attendance.activeNow || 0} ichkarida</span>
+      </div>
+
+      <div className="attendance-scan">
+        <label>
+          Xodim
+          <select value={selectedEmployeeId} onChange={(event) => setSelectedEmployeeId(event.target.value)}>
+            {employees.map((employee) => (
+              <option key={employee.id} value={employee.id}>{employee.name} - {departmentMeta(employee.department).shortLabel}</option>
+            ))}
+          </select>
+        </label>
+        <button type="button" disabled={!selectedEmployeeId} onClick={() => onScan(selectedEmployeeId)}>
+          <UserCheck size={18} />
+          {selectedActive ? "Face ID chiqish" : "Face ID kirish"}
+        </button>
+      </div>
+
+      <div className="attendance-metrics">
+        <div>
+          <strong>{attendance.todayScans || 0}</strong>
+          <span>bugungi skan</span>
+        </div>
+        <div>
+          <strong>{formatDuration(attendance.todayMinutes)}</strong>
+          <span>bugungi soat</span>
+        </div>
+        <div>
+          <strong>{formatDuration(attendance.monthMinutes)}</strong>
+          <span>oylik jami</span>
+        </div>
+      </div>
+
+      <div className="attendance-list">
+        {rows.length ? rows.map((row) => (
+          <article className={row.active ? "active" : ""} key={row.employeeId}>
+            <div>
+              <strong>{row.name}</strong>
+              <span>{row.active ? "Ishxonada" : "Chiqib ketgan"} • bugun {formatDuration(row.todayMinutes)}</span>
+            </div>
+            <em>{formatDuration(row.monthMinutes)}</em>
+          </article>
+        )) : (
+          <p className="attendance-empty">Hozircha Face ID skanlari yo'q</p>
+        )}
+      </div>
+
+      {recent.length > 0 && (
+        <div className="attendance-recent">
+          {recent.slice(0, 3).map((record) => (
+            <span key={record.id}>{record.employeeName}: {record.checkOut ? "chiqish" : "kirish"} {formatDateTime(record.checkOut || record.checkIn)}</span>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -1380,7 +1537,7 @@ function EmployeeManager({ employees, onDelete, onNotify, onSave }) {
             </label>
             <label>
               Bo'lim
-              <select value={draft.department || "operator"} onChange={(event) => setDraft({ ...draft, department: event.target.value })}>
+              <select name="department" value={draft.department || "operator"} onChange={(event) => setDraft({ ...draft, department: event.target.value })}>
                 {DEPARTMENTS.map((department) => (
                   <option key={department.id} value={department.id}>{department.label}</option>
                 ))}
@@ -1392,14 +1549,16 @@ function EmployeeManager({ employees, onDelete, onNotify, onSave }) {
             </label>
             <label>
               Telegram
-              <input value={draft.telegram || ""} onChange={(event) => setDraft({ ...draft, telegram: event.target.value })} placeholder="@username yoki link" />
+              <input name="telegram" value={draft.telegram || ""} onChange={(event) => setDraft({ ...draft, telegram: event.target.value })} placeholder="@username yoki link" />
             </label>
             <label>
               Yashash manzili
-              <textarea value={draft.address || ""} onChange={(event) => setDraft({ ...draft, address: event.target.value })} placeholder="Toshkent shahri, tuman, ko'cha..." />
+              <textarea name="address" value={draft.address || ""} onChange={(event) => setDraft({ ...draft, address: event.target.value })} placeholder="Toshkent shahri, tuman, ko'cha..." />
             </label>
             <div className="avatar-upload-field">
-              <Avatar person={draft} />
+              <div className="avatar-upload-preview">
+                {draft.avatar ? <img src={draft.avatar} alt="Xodim rasmi" /> : <User size={28} />}
+              </div>
               <div>
                 <strong>Xodim rasmi</strong>
                 <span>{draft.avatar ? "Rasm tanlangan" : "Rasm yuklanmagan"}</span>
@@ -1471,6 +1630,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
         { title: "", url: "", date: new Date().toISOString().slice(0, 10) }
       ]
     });
+    onNotify("Portfolio qatori qo'shildi. Syomka nomi va linkini to'ldiring.");
   }
 
   function removePortfolioItem(index) {
@@ -1493,10 +1653,18 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
       return;
     }
 
-    const invalidPortfolio = (draft.portfolio || []).findIndex((item) => (item.title && !item.url) || (!item.title && item.url));
+    if (!countEmployeeDocuments(draft)) {
+      onNotify("Kamida bitta hujjat rasmini yuklang.", "error");
+      formRef.current?.querySelector(".document-upload-button")?.focus();
+      return;
+    }
+
+    const invalidPortfolio = (draft.portfolio || []).findIndex((item) => !String(item.title || "").trim() || !String(item.url || "").trim());
     if (invalidPortfolio !== -1) {
       onNotify("Portfolio uchun syomka nomi va linkini to'liq kiriting.", "error");
-      formRef.current?.querySelector(`[name='portfolio-title-${invalidPortfolio}']`)?.focus();
+      const item = (draft.portfolio || [])[invalidPortfolio];
+      const field = !String(item?.title || "").trim() ? "title" : "url";
+      formRef.current?.querySelector(`[name='portfolio-${field}-${invalidPortfolio}']`)?.focus();
       return;
     }
 
@@ -1550,7 +1718,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
             </label>
             <label>
               Telegram
-              <input value={draft.telegram || ""} onChange={(event) => setDraft({ ...draft, telegram: event.target.value })} placeholder="@username" />
+              <input name="documents-telegram" value={draft.telegram || ""} onChange={(event) => setDraft({ ...draft, telegram: event.target.value })} placeholder="@username" />
             </label>
           </div>
           <label>
@@ -1569,7 +1737,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
                     <strong>{item.label}</strong>
                     <span>{image ? "JPG yuklangan" : "JPG tanlanmagan"}</span>
                   </div>
-                  <label className="document-upload-button">
+                  <label className="document-upload-button" tabIndex={0}>
                     <Upload size={15} />
                     <span>Yuklash</span>
                     <input type="file" accept="image/jpeg,.jpg,.jpeg" onChange={(event) => updateDocument(item.id, event.target.files?.[0])} />
@@ -1594,7 +1762,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
             {(draft.portfolio || []).map((item, index) => (
               <article className="portfolio-row" key={`${index}-${item.url}`}>
                 <input name={`portfolio-title-${index}`} value={item.title || ""} onChange={(event) => updatePortfolio(index, "title", event.target.value)} placeholder="Syomka nomi" />
-                <input value={item.url || ""} onChange={(event) => updatePortfolio(index, "url", event.target.value)} placeholder="Video yoki efir linki" />
+                <input name={`portfolio-url-${index}`} value={item.url || ""} onChange={(event) => updatePortfolio(index, "url", event.target.value)} placeholder="Video yoki efir linki" />
                 <input type="date" value={item.date || ""} onChange={(event) => updatePortfolio(index, "date", event.target.value)} />
                 <button type="button" aria-label="Portfolio linkni o'chirish" onClick={() => removePortfolioItem(index)}>
                   <Trash2 size={15} />
@@ -1782,7 +1950,9 @@ function ToggleRow({ label, active, onClick }) {
 function LegendItem({ tone, label }) {
   return (
     <div className="legend-item">
-      <span className={`legend-mark ${tone}`}>{tone === "work" ? <Check size={15} /> : tone === "rest" ? "x" : null}</span>
+      <span className={`legend-mark ${tone}`}>
+        {tone === "work" ? <Check size={15} /> : tone === "rest" ? "x" : tone === "tjk" ? "T" : tone === "studio" ? "S" : null}
+      </span>
       <p>{label}</p>
     </div>
   );
