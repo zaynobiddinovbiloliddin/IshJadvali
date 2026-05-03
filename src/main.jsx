@@ -50,7 +50,7 @@ const OPERATOR_NAMES = [
 ];
 const SHIFT_LABELS = ["09:00-18:00", "09:00-22:00", "18:00-09:00", "Dam"];
 const MONTHLY_STATUS_OPTIONS = {
-  work: { label: "I", shift: "Ishlagan kun", hours: 9 },
+  work: { label: "S", shift: "Studiyada", hours: 9 },
   rest: { label: "D", shift: "Dam", hours: 0 },
   trip: { label: "K", shift: "Komandirovka", hours: 9 },
   tjk: { label: "T", shift: "TJK guruhi", hours: 9 },
@@ -58,14 +58,14 @@ const MONTHLY_STATUS_OPTIONS = {
 };
 const MONTHLY_STATUS_SEQUENCE = ["work", "rest", "trip", "tjk", "empty"];
 const SCHEDULE_STATUS_OPTIONS = [
-  { value: "working", label: "Ishlamoqda", mark: "I" },
+  { value: "working", label: "Studiyada", mark: "S" },
   { value: "rest", label: "Damda", mark: "D" },
   { value: "trip", label: "Komandirovka", mark: "K" },
-  { value: "tjk", label: "TJK guruhi", mark: "T" },
+  { value: "tjk", label: "TJK ishda", mark: "T" },
   { value: "backup", label: "Zaxira", mark: "Z" }
 ];
 const WEEKLY_STATUS_MARKS = {
-  work: "I",
+  work: "S",
   rest: "D",
   trip: "K",
   tjk: "T",
@@ -79,10 +79,10 @@ const DOCUMENT_TYPES = [
 ];
 const DEPARTMENTS = [
   { id: "pull", label: "Pull xizmati", shortLabel: "Pull" },
-  { id: "operator", label: "Oddiy operatorlar", shortLabel: "Operator" },
   { id: "dron", label: "Dron bo'limi", shortLabel: "Dron" },
   { id: "tjk", label: "TJK guruhi", shortLabel: "TJK" }
 ];
+const DEPARTMENT_FILTERS = DEPARTMENTS.filter((department) => department.id !== "operator");
 const SHOOTING_SCHEDULE = [
   {
     camera: "1\n(914)",
@@ -1030,10 +1030,10 @@ function MonthlyPage({ dashboard, weekStart }) {
           <p>{operators.length} operator uchun oylik ish grafigi</p>
         </div>
         <div className="monthly-counts">
-          <span><b>{totals.work}</b> I</span>
+          <span><b>{totals.tjk}</b> T</span>
+          <span><b>{totals.work}</b> S</span>
           <span><b>{totals.rest}</b> D</span>
           <span><b>{totals.trip}</b> K</span>
-          <span><b>{totals.tjk}</b> T</span>
           <span><b>{totals.empty}</b> belgilanmagan</span>
           <span><b>{totals.hours}</b> soat</span>
         </div>
@@ -1043,10 +1043,10 @@ function MonthlyPage({ dashboard, weekStart }) {
         <div className="monthly-table" style={{ gridTemplateColumns: `132px repeat(${monthInfo.days.length}, 34px) 48px 48px 48px 48px 58px 72px` }}>
           <div className="month-sticky month-header">Operator</div>
           {monthInfo.days.map((day) => <div className="month-header day" key={day}>{day}</div>)}
-          <div className="month-header summary">I</div>
+          <div className="month-header summary">T</div>
+          <div className="month-header summary">S</div>
           <div className="month-header summary">D</div>
           <div className="month-header summary">K</div>
-          <div className="month-header summary">T</div>
           <div className="month-header summary">-</div>
           <div className="month-header summary">Soat</div>
 
@@ -1073,10 +1073,10 @@ function MonthlyPage({ dashboard, weekStart }) {
                     {MONTHLY_STATUS_OPTIONS[value]?.label ?? ""}
                   </button>
                 ))}
+                <div className="month-total tjk">{tjkCount}</div>
                 <div className="month-total work">{workCount}</div>
                 <div className="month-total rest">{restCount}</div>
                 <div className="month-total trip">{tripCount}</div>
-                <div className="month-total tjk">{tjkCount}</div>
                 <div className="month-total empty">{emptyCount}</div>
                 <div className="month-total hours">{hourCount}</div>
               </React.Fragment>
@@ -1098,10 +1098,10 @@ function MonthlyPage({ dashboard, weekStart }) {
       </div>
 
       <section className="legend-card compact">
-        <LegendItem tone="work" label="I - ko'k katak, ishlagan kun" />
+        <LegendItem tone="tjk" label="T - ko'k katak, TJK ishda" />
+        <LegendItem tone="work" label="S - yashil katak, studiyada" />
         <LegendItem tone="rest" label="D - qizil katak, dam kuni" />
-        <LegendItem tone="trip" label="K - yashil katak, komandirovka" />
-        <LegendItem tone="tjk" label="T - sariq katak, TJK guruhi" />
+        <LegendItem tone="trip" label="K - sariq katak, komandirovka" />
         <LegendItem tone="empty" label="Kulrang katak - belgilanmagan" />
       </section>
     </section>
@@ -1254,10 +1254,10 @@ function StudioPage({ dashboard, showAllOverview, navDirection, onAddSchedule, o
 
       <section className="legend-card">
         <h3>Belgilar izohi</h3>
-        <LegendItem tone="work" label="I - ish smenasi" />
+        <LegendItem tone="tjk" label="T - TJK ishda" />
+        <LegendItem tone="work" label="S - studiyada" />
         <LegendItem tone="rest" label="D - dam olish kuni" />
         <LegendItem tone="trip" label="K - komandirovka" />
-        <LegendItem tone="tjk" label="T - TJK guruhi" />
         <LegendItem tone="empty" label="Jadvalga kiritilmagan" />
       </section>
 
@@ -1523,7 +1523,7 @@ function EmployeeManager({ employees, onDelete, onNotify, onSave }) {
       </button>
       <div className="department-tabs">
         <button className={activeDepartment === "all" ? "active" : ""} type="button" onClick={() => setActiveDepartment("all")}>Hammasi</button>
-        {DEPARTMENTS.map((department) => (
+        {DEPARTMENT_FILTERS.map((department) => (
           <button className={activeDepartment === department.id ? "active" : ""} type="button" key={department.id} onClick={() => setActiveDepartment(department.id)}>
             {department.shortLabel}
           </button>
@@ -1973,7 +1973,7 @@ function LegendItem({ tone, label }) {
   return (
     <div className="legend-item">
       <span className={`legend-mark ${tone}`}>
-        {tone === "work" ? "I" : tone === "rest" ? "D" : tone === "trip" ? "K" : tone === "tjk" ? "T" : null}
+        {tone === "work" ? "S" : tone === "rest" ? "D" : tone === "trip" ? "K" : tone === "tjk" ? "T" : null}
       </span>
       <p>{label}</p>
     </div>

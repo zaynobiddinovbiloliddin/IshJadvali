@@ -638,21 +638,21 @@ button:active {
 }
 
 .status-pill.trip {
-  color: #166534 !important;
-  background: #dcfce7;
-}
-
-.status-pill.trip i {
-  background: #16a34a;
-}
-
-.status-pill.tjk {
   color: #713f12 !important;
   background: #fef3c7;
 }
 
-.status-pill.tjk i {
+.status-pill.trip i {
   background: #facc15;
+}
+
+.status-pill.tjk {
+  color: #1d4ed8 !important;
+  background: #dbeafe;
+}
+
+.status-pill.tjk i {
+  background: #3b82f6;
 }
 
 .status-select {
@@ -678,13 +678,13 @@ button:active {
 }
 
 .status-select.trip {
-  color: #166534;
-  background: #dcfce7;
+  color: #713f12;
+  background: #fef3c7;
 }
 
 .status-select.tjk {
-  color: #713f12;
-  background: #fef3c7;
+  color: #1d4ed8;
+  background: #dbeafe;
 }
 
 .create-button {
@@ -1000,7 +1000,7 @@ button:active {
 
 .cell.work {
   color: #ffffff;
-  background: #3b82f6;
+  background: #16a34a;
 }
 
 .cell.rest {
@@ -1008,12 +1008,13 @@ button:active {
 }
 
 .cell.trip {
-  background: #16a34a;
+  color: #713f12;
+  background: #facc15;
 }
 
 .cell.tjk {
-  color: #713f12;
-  background: #facc15;
+  color: #ffffff;
+  background: #3b82f6;
 }
 
 .cell.empty {
@@ -1055,7 +1056,7 @@ button:active {
 }
 
 .legend-mark.work {
-  background: #3b82f6;
+  background: #16a34a;
 }
 
 .legend-mark.rest {
@@ -1068,12 +1069,13 @@ button:active {
 }
 
 .legend-mark.trip {
-  background: #16a34a;
+  color: #713f12;
+  background: #facc15;
 }
 
 .legend-mark.tjk {
-  color: #713f12;
-  background: #facc15;
+  color: #ffffff;
+  background: #3b82f6;
 }
 
 .legend-item p {
@@ -1565,7 +1567,7 @@ button:active {
 }
 
 .month-cell.work {
-  background: #3b82f6;
+  background: #16a34a;
 }
 
 .month-cell.rest {
@@ -1578,12 +1580,13 @@ button:active {
 }
 
 .month-cell.tjk {
-  color: #713f12;
-  background: #facc15;
+  color: #ffffff;
+  background: #3b82f6;
 }
 
 .month-cell.trip {
-  background: #16a34a;
+  color: #713f12;
+  background: #facc15;
 }
 
 .month-cell:focus-visible {
@@ -1601,7 +1604,7 @@ button:active {
 }
 
 .month-total.work {
-  color: #1d4ed8;
+  color: #15803d;
 }
 
 .month-total.rest {
@@ -1609,11 +1612,11 @@ button:active {
 }
 
 .month-total.tjk {
-  color: #a16207;
+  color: #1d4ed8;
 }
 
 .month-total.trip {
-  color: #15803d;
+  color: #a16207;
 }
 
 .month-total.empty {
@@ -2785,26 +2788,26 @@ button:active {
 
 .status-select.trip,
 .status-pill.trip {
-  color: #166534 !important;
-  background: #dcfce7;
-}
-
-:root[data-theme="dark"] .status-select.trip,
-:root[data-theme="dark"] .status-pill.trip {
-  color: #bbf7d0 !important;
-  background: rgba(22, 163, 74, 0.24);
-}
-
-.status-select.tjk,
-.status-pill.tjk {
   color: #713f12 !important;
   background: #fef3c7;
 }
 
-:root[data-theme="dark"] .status-select.tjk,
-:root[data-theme="dark"] .status-pill.tjk {
+:root[data-theme="dark"] .status-select.trip,
+:root[data-theme="dark"] .status-pill.trip {
   color: #fde68a !important;
   background: rgba(250, 204, 21, 0.22);
+}
+
+.status-select.tjk,
+.status-pill.tjk {
+  color: #1d4ed8 !important;
+  background: #dbeafe;
+}
+
+:root[data-theme="dark"] .status-select.tjk,
+:root[data-theme="dark"] .status-pill.tjk {
+  color: #bfdbfe !important;
+  background: rgba(59, 130, 246, 0.24);
 }
 
 .bottom-nav {

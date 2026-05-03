@@ -15,11 +15,11 @@ const departments = [
   { id: "tjk", name: "TJK guruhi" }
 ];
 const statusMap = {
-  working: "Ishlamoqda",
+  working: "Studiyada",
   rest: "Damda",
   backup: "Zaxira",
   trip: "Komandirovka",
-  tjk: "TJK guruhi"
+  tjk: "TJK ishda"
 };
 
 const initialEmployees = [
