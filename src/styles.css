@@ -69,6 +69,7 @@ textarea,
 .group-card,
 .employee-row,
 .profile-hero,
+.contacts-card,
 .settings-card,
 .studio-panel,
 .today-card,
@@ -768,6 +769,16 @@ button.metric-card {
   background: #dbeafe;
 }
 
+.people-list-row.administration em {
+  color: #6d28d9;
+  background: #ede9fe;
+}
+
+.people-list-row.presidential em {
+  color: #92400e;
+  background: #fef3c7;
+}
+
 .group-card,
 .studio-panel,
 .attendance-panel,
@@ -937,38 +948,85 @@ button.metric-card {
 .person-sheet-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 88;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding: 0 14px 78px;
-  background: rgba(15, 23, 42, 0.28);
+  z-index: 110;
+  display: block;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--primary) 10%, transparent), transparent 220px),
+    var(--surface-soft);
+  animation: sheetBackdropIn 0.18s ease both;
 }
 
 .person-sheet {
   display: grid;
-  gap: 12px;
-  width: min(100%, 520px);
-  max-height: min(72vh, 600px);
+  align-content: start;
+  gap: 14px;
+  width: min(100%, 430px);
+  min-height: 100dvh;
+  max-height: 100dvh;
+  margin: 0 auto;
   overflow-y: auto;
-  padding: 0 14px 14px;
-  border: 1px solid var(--border);
-  border-radius: 16px 16px 8px 8px;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 16px calc(24px + env(safe-area-inset-bottom, 0px));
+  background: transparent;
+  animation: fullSheetIn 0.24s cubic-bezier(0.2, 0.82, 0.24, 1) both;
+  scroll-behavior: smooth;
+}
+
+.person-sheet-top {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 52px;
+  padding: 4px 0 8px;
+  background: color-mix(in srgb, var(--surface-soft) 90%, transparent);
+  backdrop-filter: blur(16px);
+}
+
+.person-sheet-top button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 13px 0 9px;
+  border-radius: 999px;
+  color: var(--text);
   background: var(--surface);
-  box-shadow: 0 22px 55px rgba(15, 23, 42, 0.24);
+  box-shadow: inset 0 0 0 1px var(--border), var(--shadow-soft);
+  font-weight: 900;
+}
+
+.person-sheet-top span {
+  min-width: 0;
+  overflow: hidden;
+  padding: 8px 10px;
+  border-radius: 999px;
+  color: var(--primary-strong);
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+  font-size: 12px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .person-sheet-head {
   display: grid;
-  grid-template-columns: 54px minmax(0, 1fr) 34px;
+  grid-template-columns: 66px minmax(0, 1fr);
   align-items: center;
-  gap: 11px;
-  padding-top: 4px;
+  gap: 14px;
+  min-height: 104px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 
 .person-sheet-head .avatar {
-  width: 54px;
-  height: 54px;
+  width: 66px;
+  height: 66px;
 }
 
 .person-sheet-head strong,
@@ -981,33 +1039,24 @@ button.metric-card {
 
 .person-sheet-head strong {
   color: var(--text);
-  font-size: 17px;
+  font-size: 24px;
+  line-height: 1.05;
 }
 
 .person-sheet-head span {
-  margin-top: 3px;
+  margin-top: 6px;
   color: var(--text-muted);
-  font-size: 13px;
-}
-
-.person-sheet-head button {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  color: var(--text);
-  background: var(--surface-muted);
-  font-size: 23px;
+  font-size: 15px;
 }
 
 .person-kpi {
   display: grid;
-  gap: 8px;
-  padding: 12px;
+  gap: 14px;
+  padding: 16px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface-soft);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
 }
 
 .person-kpi > div {
@@ -1026,12 +1075,13 @@ button.metric-card {
 
 .person-kpi strong {
   color: var(--text);
-  font-size: 24px;
+  font-size: 30px;
+  line-height: 1;
 }
 
 .person-kpi i {
   display: block;
-  height: 9px;
+  height: 11px;
   overflow: hidden;
   border-radius: 999px;
   background: var(--surface-muted);
@@ -1047,17 +1097,18 @@ button.metric-card {
 .person-stats-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 10px;
 }
 
 .person-stats-grid div {
   display: grid;
   align-content: center;
-  min-height: 68px;
-  padding: 9px;
+  min-height: 86px;
+  padding: 13px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface-soft);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
 }
 
 .person-stats-grid strong {
@@ -1074,7 +1125,7 @@ button.metric-card {
 .person-contact-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 10px;
 }
 
 .person-contact-grid a {
@@ -1083,9 +1134,9 @@ button.metric-card {
   justify-content: center;
   gap: 7px;
   min-width: 0;
-  min-height: 42px;
+  min-height: 50px;
   padding: 0 10px;
-  border-radius: 8px;
+  border-radius: 12px;
   color: var(--primary-strong);
   background: color-mix(in srgb, var(--primary) 12%, var(--surface));
   font-size: 13px;
@@ -1108,7 +1159,7 @@ button.metric-card {
 
 .person-assignments {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .person-assignments > strong {
@@ -1118,14 +1169,15 @@ button.metric-card {
 
 .person-assignments article {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 30px;
+  grid-template-columns: minmax(0, 1fr) 42px;
   align-items: center;
   gap: 10px;
-  min-height: 48px;
-  padding: 8px 10px;
+  min-height: 64px;
+  padding: 12px 13px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface-soft);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
 }
 
 .person-assignments span,
@@ -1152,11 +1204,32 @@ button.metric-card {
 .person-assignments b {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 7px;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
   color: #ffffff;
   background: var(--primary);
+  font-size: 18px;
+}
+
+.person-assignments b.rest,
+.person-assignments b.vacation,
+.person-assignments b.otpiska {
+  background: #ef4444;
+}
+
+.person-assignments b.trip,
+.person-assignments b.presidential {
+  color: #111827;
+  background: #f59e0b;
+}
+
+.person-assignments b.tjk {
+  background: #3b82f6;
+}
+
+.person-assignments b.administration {
+  background: #7c3aed;
 }
 
 .status-pill {
@@ -1215,6 +1288,24 @@ button.metric-card {
   background: #3b82f6;
 }
 
+.status-pill.administration {
+  color: #6d28d9 !important;
+  background: #ede9fe;
+}
+
+.status-pill.administration i {
+  background: #7c3aed;
+}
+
+.status-pill.presidential {
+  color: #92400e !important;
+  background: #fef3c7;
+}
+
+.status-pill.presidential i {
+  background: #f59e0b;
+}
+
 .status-select {
   width: 122px;
   min-height: 30px;
@@ -1255,6 +1346,16 @@ button.metric-card {
 .status-select.tjk {
   color: #1d4ed8;
   background: #dbeafe;
+}
+
+.status-select.administration {
+  color: #6d28d9;
+  background: #ede9fe;
+}
+
+.status-select.presidential {
+  color: #92400e;
+  background: #fef3c7;
 }
 
 .create-button {
@@ -1562,6 +1663,16 @@ button.metric-card {
   background: #dbeafe;
 }
 
+.compact-staff em.administration {
+  color: #6d28d9;
+  background: #ede9fe;
+}
+
+.compact-staff em.presidential {
+  color: #92400e;
+  background: #fef3c7;
+}
+
 .compact-staff em.backup {
   color: #374151;
   background: #e5e7eb;
@@ -1628,6 +1739,16 @@ button.metric-card {
   background: #3b82f6;
 }
 
+.cell.administration {
+  color: #ffffff;
+  background: #7c3aed;
+}
+
+.cell.presidential {
+  color: #111827;
+  background: #f59e0b;
+}
+
 .cell.empty {
   color: #6b7280;
   background: #e5e7eb;
@@ -1691,6 +1812,15 @@ button.metric-card {
 
 .legend-mark.studio {
   background: #047857;
+}
+
+.legend-mark.administration {
+  background: #7c3aed;
+}
+
+.legend-mark.presidential {
+  color: #111827;
+  background: #f59e0b;
 }
 
 .legend-mark.vacation {
@@ -2342,6 +2472,16 @@ button.metric-card {
   background: #047857;
 }
 
+.month-cell.administration {
+  color: #ffffff;
+  background: #7c3aed;
+}
+
+.month-cell.presidential {
+  color: #111827;
+  background: #f59e0b;
+}
+
 .month-cell.vacation {
   color: #374151;
   background: #e5e7eb;
@@ -2384,6 +2524,14 @@ button.metric-card {
 
 .month-total.studio {
   color: #047857;
+}
+
+.month-total.administration {
+  color: #6d28d9;
+}
+
+.month-total.presidential {
+  color: #b45309;
 }
 
 .month-total.vacation,
@@ -3126,6 +3274,7 @@ button.metric-card {
 
 .profile-card,
 .profile-hero,
+.contacts-card,
 .profile-edit-card,
 .profile-stats,
 .settings-card {
@@ -3336,6 +3485,28 @@ button.metric-card {
   background:
     linear-gradient(135deg, rgba(59, 130, 246, 0.22), rgba(255, 255, 255, 0.62)),
     var(--surface);
+}
+
+.profile-today-banner.administration {
+  border-color: #ddd6fe;
+  color: #4c1d95;
+  background:
+    linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(255, 255, 255, 0.62)),
+    var(--surface);
+}
+
+.profile-today-banner.presidential {
+  border-color: #fed7aa;
+  color: #7c2d12;
+  background:
+    linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(255, 255, 255, 0.62)),
+    var(--surface);
+}
+
+.profile-today-banner.empty {
+  border-color: var(--border);
+  color: var(--text);
+  background: var(--surface);
 }
 
 .profile-today-banner span,
@@ -3555,7 +3726,7 @@ button.metric-card {
 
 .profile-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   padding: 10px;
 }
 
@@ -3581,6 +3752,152 @@ button.metric-card {
 .profile-stats span {
   color: var(--text-muted);
   font-size: 12px;
+}
+
+.contacts-card {
+  overflow: hidden;
+}
+
+.contacts-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 56px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.contacts-head div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.contacts-head strong {
+  font-size: 17px;
+}
+
+.contacts-head span {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.contact-form {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 9px;
+  padding: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.contact-form select,
+.contact-form input {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 10px;
+  color: var(--text);
+  background: var(--surface-soft);
+  font: inherit;
+  font-size: 13px;
+}
+
+.contact-form button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #2563eb;
+  font-weight: 800;
+}
+
+.contact-form input:nth-of-type(2),
+.contact-form input:nth-of-type(3),
+.contact-form button {
+  grid-column: 1 / -1;
+}
+
+.contact-list {
+  display: grid;
+}
+
+.contact-row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 38px;
+  align-items: center;
+  gap: 10px;
+  min-height: 72px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.contact-row:last-child {
+  border-bottom: 0;
+}
+
+.contact-row > span {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #0f766e;
+}
+
+.contact-row > span.driver {
+  background: #7c3aed;
+}
+
+.contact-row strong,
+.contact-row em,
+.contact-row a {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.contact-row strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contact-row em {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-style: normal;
+}
+
+.contact-row a {
+  margin-top: 4px;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.contact-row button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  color: var(--danger);
+  background: var(--danger-soft);
 }
 
 .settings-card {
@@ -3776,22 +4093,62 @@ button.metric-card {
   }
 }
 
+@keyframes sheetBackdropIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fullSheetIn {
+  from {
+    opacity: 0;
+    transform: translateX(18px) scale(0.99);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
 .loading-screen {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: 130;
   display: grid;
   place-items: center;
-  border: 4px solid #3328ff;
-  background: #edeaff;
+  background: color-mix(in srgb, var(--surface-soft) 88%, transparent);
+  backdrop-filter: blur(16px);
+  animation: sheetBackdropIn 0.18s ease both;
+}
+
+.loading-screen::before {
+  content: "";
+  width: 54px;
+  height: 54px;
+  border: 5px solid color-mix(in srgb, var(--primary) 18%, transparent);
+  border-top-color: var(--primary);
+  border-radius: 999px;
+  animation: spin 0.85s linear infinite;
 }
 
 .loading-screen strong {
-  padding: 2px 3px;
-  outline: 2px dashed #40a1ff;
-  color: #3328ff;
-  font-size: 34px;
-  line-height: 1;
+  position: absolute;
+  margin-top: 92px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .toast-stack {
@@ -4436,6 +4793,30 @@ button.metric-card {
   background: rgba(59, 130, 246, 0.24);
 }
 
+.status-select.administration,
+.status-pill.administration {
+  color: #6d28d9 !important;
+  background: #ede9fe;
+}
+
+:root[data-theme="dark"] .status-select.administration,
+:root[data-theme="dark"] .status-pill.administration {
+  color: #ddd6fe !important;
+  background: rgba(124, 58, 237, 0.24);
+}
+
+.status-select.presidential,
+.status-pill.presidential {
+  color: #92400e !important;
+  background: #fef3c7;
+}
+
+:root[data-theme="dark"] .status-select.presidential,
+:root[data-theme="dark"] .status-pill.presidential {
+  color: #fde68a !important;
+  background: rgba(245, 158, 11, 0.22);
+}
+
 .bottom-nav {
   height: 76px;
   border-color: var(--border);
@@ -4461,6 +4842,7 @@ button.metric-card {
 
 .profile-hero,
 .profile-stats,
+.contacts-card,
 .settings-card {
   border-color: var(--border);
   background: var(--surface);
@@ -4570,6 +4952,7 @@ button.metric-card {
 :root[data-theme="dark"] .legend-card,
 :root[data-theme="dark"] .documents-card,
 :root[data-theme="dark"] .documents-summary button,
+:root[data-theme="dark"] .contacts-card,
 :root[data-theme="dark"] .profile-edit-card,
 :root[data-theme="dark"] .profile-calendar-card,
 :root[data-theme="dark"] .profile-today-banner,
@@ -4587,6 +4970,8 @@ button.metric-card {
 :root[data-theme="dark"] .employee-row,
 :root[data-theme="dark"] .contact-edit-row,
 :root[data-theme="dark"] .contact-edit-row input,
+:root[data-theme="dark"] .contact-form select,
+:root[data-theme="dark"] .contact-form input,
 :root[data-theme="dark"] .profile-edit-form input,
 :root[data-theme="dark"] .profile-edit-form select,
 :root[data-theme="dark"] .profile-edit-form textarea,

@@ -38,8 +38,8 @@ import {
 import "./styles.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
-const DAY_TABS = ["Barcha kunlar", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba", "Yakshanba"];
-const DAY_NAMES = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba", "Yakshanba"];
+const WEEK_DAYS = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba", "Yakshanba"];
+const DAY_TABS = ["Bugun", ...WEEK_DAYS, "Barcha kunlar"];
 const MONTH_NAMES = ["Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun", "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr"];
 const STATUS_OPTIONS = [
   { id: "working", code: "S", label: "Studiyada", metric: "working" },
@@ -48,7 +48,9 @@ const STATUS_OPTIONS = [
   { id: "tjk", code: "T", label: "TJK ishda", metric: "working" },
   { id: "backup", code: "Z", label: "Zaxira", metric: "working" },
   { id: "vacation", code: "M", label: "Mehnat ta'tili", metric: "rest" },
-  { id: "sick", code: "B", label: "Balnishniy", metric: "rest" }
+  { id: "administration", code: "A", label: "Administratsiya", metric: "working" },
+  { id: "presidential", code: "P", label: "Prezidentskiy", metric: "working" },
+  { id: "otpiska", code: "O", label: "Otpiska", metric: "rest" }
 ];
 const STATUS_META = Object.fromEntries(STATUS_OPTIONS.map((status) => [status.id, status]));
 const OPERATOR_NAMES = [
@@ -62,29 +64,20 @@ const OPERATOR_NAMES = [
 ];
 const SHIFT_LABELS = ["09:00-18:00", "09:00-22:00", "18:00-09:00", "Dam"];
 const MONTHLY_STATUS_OPTIONS = {
-  work: { label: "I", shift: "Ish kuni", hours: 9 },
+  work: { label: "K", shift: "Kundalik ish", hours: 9 },
   rest: { label: "D", shift: "Dam", hours: 0 },
-  trip: { label: "K", shift: "Komandirovka", hours: 9 },
   tjk: { label: "T", shift: "TJK guruhi", hours: 9 },
   studio: { label: "S", shift: "Studiyada", hours: 9 },
-  vacation: { label: "O", shift: "Otpusk", hours: 0 },
-  sick: { label: "B", shift: "Balnishniy", hours: 0 }
+  administration: { label: "A", shift: "Administratsiya", hours: 9 },
+  presidential: { label: "P", shift: "Prezidentskiy", hours: 9 }
 };
-const MONTHLY_STATUS_SEQUENCE = ["work", "studio", "trip", "tjk", "rest", "vacation", "sick"];
+const MONTHLY_STATUS_SEQUENCE = ["work", "rest", "tjk", "studio", "administration", "presidential"];
 const DEPARTMENTS = [
   { id: "pull", label: "Pull xizmati", shortLabel: "Pull" },
-  { id: "operator", label: "Operatorlar", shortLabel: "Operator" },
+  { id: "operator", label: "Oddiy operatorlar", shortLabel: "Operator" },
   { id: "dron", label: "Dron bo'limi", shortLabel: "Dron" },
   { id: "tjk", label: "TJK guruhi", shortLabel: "TJK" }
 ];
-const CONTACT_BOOK_DEFAULTS = {
-  reporters: [
-    { id: "reporter-1", name: "Sarvar Raximov", phone: "+998 90 302 55 92", note: "Muxbir" }
-  ],
-  drivers: [
-    { id: "driver-1", name: "Haydovchi", phone: "+998 90 406 15 78", vehicle: "142 Caddy", note: "Moshina egasi almashsa shu yerdan tahrirlanadi" }
-  ]
-};
 const SHOOTING_SCHEDULE = [
   {
     camera: "1\n(914)",
@@ -172,7 +165,7 @@ const SHOOTING_SCHEDULE = [
     operators: ["ILMURZIN A."],
     topic: "\"Hilton\" meh.da \"Xalqaro zilzila qurbonlarini xotirlash kuni\" munosabati bilan xalqaro konferensiya.",
     reporters: ["ESHBOYEV I.", "ZARIPXAN K."]
-  },
+  } ,
   {
     equipment: "HD jamlanmasi, mikrofon, chiroq, avtotransport",
     camera: "25/(2)\n(672)",
@@ -264,7 +257,8 @@ const emptyDashboard = {
   reports: [],
   notifications: [],
   attendance: { activeNow: 0, todayScans: 0, todayMinutes: 0, monthMinutes: 0, recent: [], rows: [] },
-  employees: []
+  employees: [],
+  contacts: []
 };
 
 async function api(path, options) {
@@ -288,26 +282,6 @@ function addDays(dateText, amount) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
-}
-
-function toInputDate(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function getCurrentWeekStartInput() {
-  const today = new Date();
-  const weekStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const mondayOffset = (weekStart.getDay() + 6) % 7;
-  weekStart.setDate(weekStart.getDate() - mondayOffset);
-  return toInputDate(weekStart);
-}
-
-function parseInputDate(value) {
-  const date = new Date(`${value}T00:00:00`);
-  return Number.isNaN(date.getTime()) ? new Date() : date;
 }
 
 function readStoredJson(key, fallback) {
@@ -363,85 +337,23 @@ function formatDateTime(value) {
   }).format(date);
 }
 
-function normalizeName(value) {
-  return String(value || "").toLowerCase().replace(/[^a-z0-9\u0400-\u04ff']/gi, "");
+function todayDayName() {
+  const mondayBasedIndex = (new Date().getDay() + 6) % 7;
+  return WEEK_DAYS[mondayBasedIndex] || "Dushanba";
 }
 
-function downloadHtmlFile(html, filename, type = "application/msword;charset=utf-8") {
-  const blob = new Blob([html], { type });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-}
-
-function findShootingAssignment(operatorName) {
-  const target = normalizeName(operatorName);
-  return SHOOTING_SCHEDULE.find((row) => (
-    row.operators.some((name) => normalizeName(name) === target)
-    || row.operators.some((name) => normalizeName(name).includes(target) || target.includes(normalizeName(name)))
-  ));
-}
-
-function monthlyStatusForEmployee(employee, date) {
-  if (!employee) return "rest";
-  const day = date.getDate();
-  const id = Number(employee.id) || 1;
-  if ((id + day) % 7 === 0) return "rest";
-  if ((id * 7 + day) % 29 === 0) return "vacation";
-  if ((id * 5 + day) % 23 === 0) return "sick";
-  if ((id * 3 + day) % 17 === 0) return "trip";
-  if ((id * 2 + day) % 13 === 0) return "tjk";
-  if ((id * 3 + day) % 11 === 0) return "studio";
-  return "work";
-}
-
-function buildPersonalAssignment(employee, dateText, dashboard) {
-  const date = parseInputDate(dateText);
-  const dayIndex = Math.floor((date.getTime() - parseInputDate(dashboard.week.start).getTime()) / 86400000);
-  const weekGroup = dayIndex >= 0 && dayIndex < 7
-    ? dashboard.groups.find((group) => group.day === DAY_NAMES[dayIndex] && group.people.some((person) => String(person.id) === String(employee?.id)))
-    : null;
-  const weekPerson = weekGroup?.people.find((person) => String(person.id) === String(employee?.id));
-
-  if (weekGroup && weekPerson) {
-    const shoot = findShootingAssignment(weekPerson.name);
-    return {
-      dateText,
-      status: weekPerson.statusType,
-      statusLabel: STATUS_META[weekPerson.statusType]?.label || weekPerson.status,
-      place: weekGroup.meta,
-      time: weekPerson.time,
-      camera: shoot?.camera || "",
-      topic: shoot?.topic || `${weekGroup.meta} bo'yicha smena`,
-      source: "Haftalik jadval"
-    };
-  }
-
-  const status = monthlyStatusForEmployee(employee, date);
-  const shoot = findShootingAssignment(employee?.name);
-  const isActive = ["work", "studio", "trip", "tjk"].includes(status);
-  const fallbackPlace = status === "tjk" ? "TJK guruhi" : status === "studio" ? "Studiya" : status === "trip" ? "Komandirovka" : isActive ? "Ish smenasi" : "Dam";
-  return {
-    dateText,
-    status,
-    statusLabel: MONTHLY_STATUS_OPTIONS[status]?.shift || "Dam",
-    place: fallbackPlace,
-    time: isActive ? (shoot?.time || "09:00 - 18:00") : "Ish belgilanmagan",
-    camera: isActive ? (shoot?.camera || "") : "",
-    topic: isActive ? (shoot?.topic || "Kunlik ish vazifasi jadvalda belgilanadi") : "Bu kunda ishga chiqmaydi",
-    source: "Oylik kalendar"
-  };
+function normalizeLookupName(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9'`.\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function App() {
   const [page, setPage] = useState("weekly");
-  const [weekStart, setWeekStart] = useState(getCurrentWeekStartInput);
-  const [activeDay, setActiveDay] = useState("Barcha kunlar");
+  const [weekStart, setWeekStart] = useState("2026-01-29");
+  const [activeDay, setActiveDay] = useState("Bugun");
   const [dashboard, setDashboard] = useState(emptyDashboard);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -491,50 +403,11 @@ function App() {
     const nextUser = {
       name: user.name.trim() || "Administrator",
       email: user.email.trim() || "admin@uz24.local",
-      role: "Jadval administratori",
-      phone: "",
-      department: "",
-      note: "",
-      avatar: ""
+      role: "Jadval administratori"
     };
     window.localStorage.setItem("currentUser", JSON.stringify(nextUser));
     setCurrentUser(nextUser);
     notify("Tizimga muvaffaqiyatli kirdingiz");
-  }
-
-  async function saveProfile(profile) {
-    const nextUser = {
-      ...currentUser,
-      name: String(profile.name || "").trim() || currentUser.name,
-      email: String(profile.email || "").trim() || currentUser.email,
-      role: String(profile.role || "").trim() || currentUser.role,
-      phone: String(profile.phone || "").trim(),
-      department: String(profile.department || "").trim(),
-      note: String(profile.note || "").trim(),
-      avatar: profile.avatar || "",
-      employeeId: profile.employeeId || currentUser.employeeId || ""
-    };
-    window.localStorage.setItem("currentUser", JSON.stringify(nextUser));
-    setCurrentUser(nextUser);
-    if (nextUser.employeeId) {
-      const linkedEmployee = dashboard.employees.find((employee) => String(employee.id) === String(nextUser.employeeId));
-      if (linkedEmployee) {
-        try {
-          await api(`/api/employees/${linkedEmployee.id}`, {
-            method: "PUT",
-            body: JSON.stringify({
-              ...linkedEmployee,
-              phone: nextUser.phone || linkedEmployee.phone,
-              avatar: nextUser.avatar || linkedEmployee.avatar
-            })
-          });
-          await loadDashboard();
-        } catch (profileError) {
-          notify(profileError.message, "error");
-        }
-      }
-    }
-    notify("Profil ma'lumotlari saqlandi");
   }
 
   function handleLogout() {
@@ -554,7 +427,7 @@ function App() {
         body: JSON.stringify({ weekStart })
       });
       setDashboard(nextDashboard);
-      setActiveDay("Barcha kunlar");
+      setActiveDay("Bugun");
       notify("Jadval muvaffaqiyatli yaratildi");
     } catch (generateError) {
       setError(generateError.message);
@@ -664,6 +537,52 @@ function App() {
     }
   }
 
+  async function saveContact(contact) {
+    if (!String(contact.name || contact.vehicle || "").trim()) {
+      notify("Ism yoki mashina raqamini kiriting.", "error");
+      return false;
+    }
+    if (!String(contact.phone || "").trim()) {
+      notify("Telefon raqamini kiriting.", "error");
+      return false;
+    }
+
+    setGenerating(true);
+    setError("");
+
+    try {
+      const result = await api("/api/contacts", {
+        method: "POST",
+        body: JSON.stringify(contact)
+      });
+      setDashboard((current) => ({ ...current, contacts: result.contacts }));
+      notify("Kontakt saqlandi");
+      return true;
+    } catch (contactError) {
+      setError(contactError.message);
+      notify(contactError.message, "error");
+      return false;
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function deleteContact(id) {
+    setGenerating(true);
+    setError("");
+
+    try {
+      const result = await api(`/api/contacts/${encodeURIComponent(id)}`, { method: "DELETE" });
+      setDashboard((current) => ({ ...current, contacts: result.contacts }));
+      notify("Kontakt o'chirildi");
+    } catch (contactError) {
+      setError(contactError.message);
+      notify(contactError.message, "error");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   async function addStudioSchedule(payload) {
     setGenerating(true);
     setError("");
@@ -673,7 +592,7 @@ function App() {
         method: "POST",
         body: JSON.stringify(payload)
       }));
-      setActiveDay("Barcha kunlar");
+      setActiveDay("Bugun");
       notify("Yangi smena jadvalga qo'shildi");
       return true;
     } catch (scheduleError) {
@@ -688,13 +607,13 @@ function App() {
   function moveWeek(days) {
     setNavDirection(days < 0 ? "prev" : "next");
     setWeekStart((value) => addDays(value, days));
-    setActiveDay("Barcha kunlar");
+    setActiveDay("Bugun");
     setShowAllOverview(false);
   }
 
   const title = useMemo(() => {
     if (page === "studio") return "Studiyo jadvali";
-    if (page === "documents") return "Hujjatlar";
+    if (page === "documents") return "Oshkora ma'lumotlar";
     if (page === "monthly") return "Oylik grafik";
     if (page === "shooting") return "Tasvir jadvali";
     if (page === "reports") return "Hisobotlar";
@@ -747,8 +666,6 @@ function App() {
                 onCreate={createSchedule}
                 onDeleteSchedule={deleteSchedule}
                 onDayChange={setActiveDay}
-                onMoveWeek={moveWeek}
-                navDirection={navDirection}
                 onStatusChange={updateStatus}
               />
             )}
@@ -779,8 +696,9 @@ function App() {
                 theme={theme}
                 onLogout={handleLogout}
                 onRefresh={loadDashboard}
-                onSaveProfile={saveProfile}
                 onThemeChange={setTheme}
+                onSaveContact={saveContact}
+                onDeleteContact={deleteContact}
               />
             )}
           </>
@@ -903,14 +821,9 @@ function ShootingPage({ onNotify }) {
     operatorsText: row.operators.join("\n"),
     reportersText: row.reporters.join("\n")
   })));
-  const [contacts, setContacts] = useState(() => readStoredJson("shootingContacts", CONTACT_BOOK_DEFAULTS));
   const [addOpen, setAddOpen] = useState(false);
   const [draftRow, setDraftRow] = useState(blankRow);
   const addFormRef = useRef(null);
-
-  useEffect(() => {
-    window.localStorage.setItem("shootingContacts", JSON.stringify(contacts));
-  }, [contacts]);
 
   function updateRow(index, field, value) {
     setRows((currentRows) => currentRows.map((row, rowIndex) => (
@@ -939,38 +852,6 @@ function ShootingPage({ onNotify }) {
     onNotify("Tasvir jadvaliga yangi qator qo'shildi");
   }
 
-  function updateContact(type, id, field, value) {
-    setContacts((current) => ({
-      ...current,
-      [type]: (current[type] || []).map((item) => (item.id === id ? { ...item, [field]: value } : item))
-    }));
-  }
-
-  function addContact(type) {
-    const prefix = type === "drivers" ? "driver" : "reporter";
-    setContacts((current) => ({
-      ...current,
-      [type]: [
-        ...(current[type] || []),
-        {
-          id: `${prefix}-${Date.now()}`,
-          name: type === "drivers" ? "Yangi haydovchi" : "Yangi muxbir",
-          phone: "+998 ",
-          vehicle: type === "drivers" ? "" : undefined,
-          note: ""
-        }
-      ]
-    }));
-    onNotify(type === "drivers" ? "Haydovchi kontakti qo'shildi" : "Muxbir kontakti qo'shildi");
-  }
-
-  function removeContact(type, id) {
-    setContacts((current) => ({
-      ...current,
-      [type]: (current[type] || []).filter((item) => item.id !== id)
-    }));
-  }
-
   function downloadExcel() {
     const body = rows.map((row) => `
       <tr><td colspan="3"><b>Kerakli jihoz va texnika:</b></td><td colspan="2"><b>${escapeHtml(row.equipment)}</b></td></tr>
@@ -992,7 +873,15 @@ function ShootingPage({ onNotify }) {
       </table>
       </body></html>
     `;
-    downloadHtmlFile(html, "tasvirga-olish-jadvali-29-aprel-2026.xls", "application/vnd.ms-excel;charset=utf-8");
+    const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "tasvirga-olish-jadvali-29-aprel-2026.xls";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
     onNotify("Excel fayl tayyorlandi");
   }
 
@@ -1064,8 +953,6 @@ function ShootingPage({ onNotify }) {
         </div>
       </article>
 
-      <ContactBook contacts={contacts} onAdd={addContact} onRemove={removeContact} onUpdate={updateContact} />
-
       {addOpen && (
         <div className="modal-backdrop" role="presentation">
           <form ref={addFormRef} className="schedule-modal" onSubmit={addRow}>
@@ -1131,11 +1018,8 @@ function MonthlyPage({ dashboard, weekStart }) {
     operators.forEach((operator) => {
       matrix[operator.id] = monthInfo.days.map((day) => {
         if ((operator.id + day) % 7 === 0) return "rest";
-        if ((operator.id * 7 + day) % 29 === 0) return "vacation";
-        if ((operator.id * 5 + day) % 23 === 0) return "sick";
-        if ((operator.id * 3 + day) % 17 === 0) return "trip";
-        if ((operator.id * 2 + day) % 13 === 0) return "tjk";
-        if ((operator.id * 3 + day) % 11 === 0) return "studio";
+        if ((operator.id * 2 + day) % 11 === 0) return "tjk";
+        if ((operator.id * 3 + day) % 13 === 0) return "studio";
         return "work";
       });
     });
@@ -1144,7 +1028,6 @@ function MonthlyPage({ dashboard, weekStart }) {
 
   const [matrix, setMatrix] = useState(initialMatrix);
   const [selectedCell, setSelectedCell] = useState(null);
-  const [exportDayIndex, setExportDayIndex] = useState(0);
 
   useEffect(() => {
     setMatrix(initialMatrix);
@@ -1156,11 +1039,10 @@ function MonthlyPage({ dashboard, weekStart }) {
     return {
       work: values.filter((value) => value === "work").length,
       rest: values.filter((value) => value === "rest").length,
-      trip: values.filter((value) => value === "trip").length,
       tjk: values.filter((value) => value === "tjk").length,
       studio: values.filter((value) => value === "studio").length,
-      vacation: values.filter((value) => value === "vacation").length,
-      sick: values.filter((value) => value === "sick").length,
+      administration: values.filter((value) => value === "administration").length,
+      presidential: values.filter((value) => value === "presidential").length,
       hours: values.reduce((sum, value) => sum + (MONTHLY_STATUS_OPTIONS[value]?.hours || 0), 0)
     };
   }, [matrix]);
@@ -1190,47 +1072,6 @@ function MonthlyPage({ dashboard, weekStart }) {
     });
   }
 
-  function exportWorkPlan() {
-    const day = monthInfo.days[exportDayIndex] || 1;
-    const activeStatuses = new Set(["work", "studio", "trip", "tjk"]);
-    const rows = operators
-      .map((operator) => {
-        const status = matrix[operator.id]?.[exportDayIndex] || "work";
-        const assignment = findShootingAssignment(operator.name);
-        return {
-          operator,
-          status,
-          shift: getShift(operator.id, day, status),
-          assignment
-        };
-      })
-      .filter((row) => activeStatuses.has(row.status));
-
-    const body = rows.map((row, index) => `
-      <tr>
-        <td>${index + 1}</td>
-        <td>${escapeHtml(row.operator.name)}</td>
-        <td>${escapeHtml(MONTHLY_STATUS_OPTIONS[row.status]?.shift || row.shift)}</td>
-        <td>${escapeHtml(row.assignment?.camera || "").replaceAll("\n", "<br>")}</td>
-        <td>${escapeHtml(row.assignment?.time || row.shift).replaceAll("\n", "<br>")}</td>
-        <td>${escapeHtml(row.assignment?.topic || "").replaceAll("\n", "<br>")}</td>
-      </tr>
-    `).join("");
-    const html = `
-      <html><head><meta charset="UTF-8">
-      <style>body{font-family:Arial,sans-serif}table{width:100%;border-collapse:collapse}td,th{border:1px solid #111;padding:6px;font-size:12px;vertical-align:top}th{background:#e5e7eb}</style>
-      </head><body>
-      <h2>${escapeHtml(monthInfo.title)}, ${day}-kun ish grafigi</h2>
-      <p>Dam, otpusk va balnishniy statusidagi xodimlar chiqarilmadi.</p>
-      <table>
-        <tr><th>#</th><th>F.I.Sh</th><th>Status</th><th>Kamera / avto</th><th>Vaqt</th><th>Syomka / izoh</th></tr>
-        ${body || "<tr><td colspan='6'>Bu kunda ishdagi xodim topilmadi</td></tr>"}
-      </table>
-      </body></html>
-    `;
-    downloadHtmlFile(html, `ish-grafigi-${day}-${monthInfo.title}.doc`);
-  }
-
   return (
     <section className="monthly-page">
       <div className="monthly-head">
@@ -1238,49 +1079,37 @@ function MonthlyPage({ dashboard, weekStart }) {
           <h2>{monthInfo.title}</h2>
           <p>{operators.length} operator uchun oylik ish grafigi</p>
         </div>
-        <div className="monthly-export">
-          <select value={exportDayIndex} onChange={(event) => setExportDayIndex(Number(event.target.value))} aria-label="Word uchun kun">
-            {monthInfo.days.map((day, index) => <option key={day} value={index}>{day}-kun</option>)}
-          </select>
-          <button type="button" onClick={exportWorkPlan}>
-            <FileText size={16} />
-            Word
-          </button>
-        </div>
         <div className="monthly-counts">
           <span><b>{totals.work}</b> ish</span>
-          <span><b>{totals.trip}</b> K</span>
           <span><b>{totals.tjk}</b> TJK</span>
           <span><b>{totals.studio}</b> studiya</span>
+          <span><b>{totals.administration}</b> admin</span>
+          <span><b>{totals.presidential}</b> prez</span>
           <span><b>{totals.rest}</b> dam</span>
-          <span><b>{totals.vacation}</b> otpusk</span>
-          <span><b>{totals.sick}</b> baln.</span>
           <span><b>{totals.hours}</b> soat</span>
         </div>
       </div>
 
       <div className="monthly-table-wrap" role="region" aria-label="Oylik operatorlar grafigi">
-        <div className="monthly-table" style={{ gridTemplateColumns: `132px repeat(${monthInfo.days.length}, 34px) 48px 48px 48px 48px 48px 48px 48px 72px` }}>
+        <div className="monthly-table" style={{ gridTemplateColumns: `132px repeat(${monthInfo.days.length}, 34px) 58px 58px 58px 58px 58px 58px 72px` }}>
           <div className="month-sticky month-header">Operator</div>
           {monthInfo.days.map((day) => <div className="month-header day" key={day}>{day}</div>)}
-          <div className="month-header summary">I</div>
           <div className="month-header summary">K</div>
           <div className="month-header summary">T</div>
           <div className="month-header summary">S</div>
+          <div className="month-header summary">A</div>
+          <div className="month-header summary">P</div>
           <div className="month-header summary">Dam</div>
-          <div className="month-header summary">O</div>
-          <div className="month-header summary">B</div>
           <div className="month-header summary">Soat</div>
 
           {operators.map((operator) => {
             const days = matrix[operator.id] || [];
             const workCount = days.filter((value) => value === "work").length;
             const restCount = days.filter((value) => value === "rest").length;
-            const tripCount = days.filter((value) => value === "trip").length;
             const tjkCount = days.filter((value) => value === "tjk").length;
             const studioCount = days.filter((value) => value === "studio").length;
-            const vacationCount = days.filter((value) => value === "vacation").length;
-            const sickCount = days.filter((value) => value === "sick").length;
+            const administrationCount = days.filter((value) => value === "administration").length;
+            const presidentialCount = days.filter((value) => value === "presidential").length;
             const hourCount = days.reduce((sum, value) => sum + (MONTHLY_STATUS_OPTIONS[value]?.hours || 0), 0);
 
             return (
@@ -1294,16 +1123,15 @@ function MonthlyPage({ dashboard, weekStart }) {
                     title={`${operator.name}, ${monthInfo.days[index]}-${MONTH_NAMES[new Date(`${weekStart}T00:00:00`).getMonth()]}`}
                     onClick={() => toggleCell(operator, index)}
                   >
-                    {MONTHLY_STATUS_OPTIONS[value]?.label || "I"}
+                    {MONTHLY_STATUS_OPTIONS[value]?.label || "K"}
                   </button>
                 ))}
                 <div className="month-total work">{workCount}</div>
-                <div className="month-total trip">{tripCount}</div>
                 <div className="month-total tjk">{tjkCount}</div>
                 <div className="month-total studio">{studioCount}</div>
+                <div className="month-total administration">{administrationCount}</div>
+                <div className="month-total presidential">{presidentialCount}</div>
                 <div className="month-total rest">{restCount}</div>
-                <div className="month-total vacation">{vacationCount}</div>
-                <div className="month-total sick">{sickCount}</div>
                 <div className="month-total hours">{hourCount}</div>
               </React.Fragment>
             );
@@ -1324,51 +1152,54 @@ function MonthlyPage({ dashboard, weekStart }) {
       </div>
 
       <section className="legend-card compact">
-        <LegendItem tone="work" label="Yashil katak - ishlagan kun" />
-        <LegendItem tone="trip" label="Sariq katak - komandirovka" />
+        <LegendItem tone="work" label="Ko'k katak - ishlagan kun" />
         <LegendItem tone="rest" label="Qizil katak - dam kuni" />
-        <LegendItem tone="tjk" label="Ko'k katak - TJK guruhi" />
-        <LegendItem tone="studio" label="To'q yashil katak - studiyada" />
-        <LegendItem tone="vacation" label="Kulrang katak - otpusk" />
-        <LegendItem tone="sick" label="Binafsha katak - balnishniy" />
+        <LegendItem tone="tjk" label="Sariq katak - TJK guruhi" />
+        <LegendItem tone="studio" label="Yashil katak - studiyada" />
+        <LegendItem tone="administration" label="A - Administratsiya" />
+        <LegendItem tone="presidential" label="P - Prezidentskiy" />
       </section>
     </section>
   );
 }
 
-function WeeklyPage({ activeDay, dashboard, navDirection, onCreate, onDeleteSchedule, onDayChange, onMoveWeek, onStatusChange }) {
+function WeeklyPage({ activeDay, dashboard, onCreate, onDeleteSchedule, onDayChange, onStatusChange }) {
   const [openMetric, setOpenMetric] = useState("");
   const [openGroups, setOpenGroups] = useState(() => new Set());
   const [selectedPerson, setSelectedPerson] = useState(null);
+  const todayName = todayDayName();
   const filteredGroups = useMemo(() => {
     if (activeDay === "Barcha kunlar") return dashboard.groups;
-    return dashboard.groups.filter((group) => group.day === activeDay);
-  }, [activeDay, dashboard.groups]);
+    const selectedDay = activeDay === "Bugun" ? todayName : activeDay;
+    return dashboard.groups.filter((group) => group.day === selectedDay);
+  }, [activeDay, dashboard.groups, todayName]);
   const visiblePeople = useMemo(() => filteredGroups.flatMap((group) => group.people.map((person) => ({ ...person, groupTitle: group.title, groupMeta: group.meta }))), [filteredGroups]);
-  const groupedByDate = useMemo(() => {
-    const map = new Map();
-    for (const group of filteredGroups) {
-      const key = group.title;
-      if (!map.has(key)) map.set(key, { id: key, title: group.title, day: group.day, groups: [] });
-      map.get(key).groups.push(group);
-    }
-    return [...map.values()];
-  }, [filteredGroups]);
   const dayMetrics = useMemo(() => {
     const working = visiblePeople.filter((person) => STATUS_META[person.statusType]?.metric === "working").length;
     const rest = visiblePeople.filter((person) => STATUS_META[person.statusType]?.metric === "rest").length;
-    return { working, rest, total: dashboard.metrics.total };
-  }, [dashboard.metrics.total, visiblePeople]);
+    return { working, rest, total: visiblePeople.length };
+  }, [visiblePeople]);
+  const statusSummary = useMemo(() => (
+    STATUS_OPTIONS
+      .map((status) => ({
+        ...status,
+        count: visiblePeople.filter((person) => person.statusType === status.id).length
+      }))
+      .filter((status) => status.count > 0)
+      .map((status) => `${status.count} ${status.label}`)
+      .join(" • ") || "Bugun uchun smena kiritilmagan"
+  ), [visiblePeople]);
   const metricLists = useMemo(() => ({
     working: visiblePeople.filter((person) => STATUS_META[person.statusType]?.metric === "working"),
     rest: visiblePeople.filter((person) => STATUS_META[person.statusType]?.metric === "rest"),
-    total: dashboard.employees
-  }), [dashboard.employees, visiblePeople]);
+    total: visiblePeople
+  }), [visiblePeople]);
 
   useEffect(() => {
     setOpenMetric("");
-    setOpenGroups(new Set(filteredGroups.map((group) => group.id)));
-  }, [activeDay, dashboard.week.start, filteredGroups]);
+    setOpenGroups(new Set());
+    setSelectedPerson(null);
+  }, [activeDay, dashboard.week.start]);
 
   function toggleGroup(groupId) {
     setOpenGroups((current) => {
@@ -1383,27 +1214,16 @@ function WeeklyPage({ activeDay, dashboard, navDirection, onCreate, onDeleteSche
     <>
       <section className="hero-block">
         <h2>Haftalik jadval</h2>
-        <p>Bugun {dashboard.week.todayLabel} • {dashboard.week.range}</p>
+        <p>{activeDay === "Bugun" ? `Bugun ${dashboard.week.todayLabel}` : dashboard.week.range}</p>
       </section>
 
-      <section className="week-insight">
+      <div className="week-insight">
         <div>
-          <span>Bugungi smena</span>
-          <strong>{dashboard.metrics.workingToday || 0} ishda</strong>
-          <p>{dashboard.metrics.tjkToday || 0} TJK • {dashboard.metrics.tripToday || 0} komandirovka • {dashboard.metrics.restToday || 0} damda</p>
+          <span>{activeDay === "Bugun" ? "Bugungi smena" : activeDay}</span>
+          <strong>{dayMetrics.working} ishda</strong>
+          <p>{statusSummary}</p>
         </div>
-        <CalendarDays size={28} />
-      </section>
-
-      <div className="week-nav">
-        <button className={navDirection === "prev" ? "nav-active" : ""} type="button" onClick={() => onMoveWeek(-7)}>
-          <ChevronLeft size={19} />
-          Oldingi
-        </button>
-        <button type="button" className={navDirection === "next" ? "nav-active" : ""} onClick={() => onMoveWeek(7)}>
-          Keyingi
-          <ChevronRight size={19} />
-        </button>
+        <CalendarDays size={22} />
       </div>
 
       <section className="metric-grid">
@@ -1416,7 +1236,6 @@ function WeeklyPage({ activeDay, dashboard, navDirection, onCreate, onDeleteSche
         <PeopleListPanel
           title={openMetric === "working" ? "Ishlayotganlar" : openMetric === "rest" ? "Damda / ta'tilda" : "Jami ro'yxat"}
           people={metricLists[openMetric]}
-          onClose={() => setOpenMetric("")}
         />
       )}
 
@@ -1429,15 +1248,14 @@ function WeeklyPage({ activeDay, dashboard, navDirection, onCreate, onDeleteSche
       </div>
 
       <section className="schedule-groups">
-        {groupedByDate.length ? groupedByDate.map((dayGroup) => (
-          <DateScheduleGroup
-            key={dayGroup.id}
-            dashboard={dashboard}
-            dayGroup={dayGroup}
-            openGroups={openGroups}
-            onPersonOpen={setSelectedPerson}
+        {filteredGroups.length ? filteredGroups.map((group) => (
+          <StudioGroup
+            key={group.id}
+            group={group}
+            open={openGroups.has(group.id)}
+            onToggle={() => toggleGroup(group.id)}
+            onPersonOpen={(person) => setSelectedPerson({ ...person, groupTitle: group.title, groupMeta: group.meta })}
             onStatusChange={onStatusChange}
-            onToggle={toggleGroup}
           />
         )) : <EmptyCard text="Bu kunga jadval kiritilmagan" />}
       </section>
@@ -1454,37 +1272,15 @@ function WeeklyPage({ activeDay, dashboard, navDirection, onCreate, onDeleteSche
       )}
 
       {selectedPerson && (
-        <PersonProfileSheet
-          dashboard={dashboard}
+        <PersonDetailScreen
           person={selectedPerson}
+          assignments={dashboard.groups.flatMap((group) => group.people
+            .filter((person) => String(person.id) === String(selectedPerson.id))
+            .map((person) => ({ ...person, groupTitle: group.title, groupMeta: group.meta, day: group.day })))}
           onClose={() => setSelectedPerson(null)}
         />
       )}
     </>
-  );
-}
-
-function DateScheduleGroup({ dashboard, dayGroup, openGroups, onPersonOpen, onStatusChange, onToggle }) {
-  return (
-    <article className="date-group-card">
-      <header className="date-group-head">
-        <strong>{dayGroup.title}</strong>
-        <span>{dayGroup.groups.length} ta joy</span>
-      </header>
-      <div className="date-group-sections">
-        {dayGroup.groups.map((group) => (
-          <StudioGroup
-            key={group.id}
-            dashboard={dashboard}
-            group={group}
-            open={openGroups.has(group.id)}
-            onToggle={() => onToggle(group.id)}
-            onPersonOpen={onPersonOpen}
-            onStatusChange={onStatusChange}
-          />
-        ))}
-      </div>
-    </article>
   );
 }
 
@@ -1602,7 +1398,7 @@ function StudioPage({ dashboard, showAllOverview, navDirection, onAddSchedule, o
               <label>
                 Kun
                 <select value={scheduleDraft.day} onChange={(event) => setScheduleDraft({ ...scheduleDraft, day: event.target.value })}>
-                  {DAY_TABS.filter((day) => day !== "Barcha kunlar").map((day) => <option key={day} value={day}>{day}</option>)}
+                  {WEEK_DAYS.map((day) => <option key={day} value={day}>{day}</option>)}
                 </select>
               </label>
               <label>
@@ -1737,7 +1533,7 @@ function AttendancePanel({ attendance = {}, employees, onScan }) {
   );
 }
 
-function StudioGroup({ dashboard, group, open = true, onToggle, onPersonOpen, onStatusChange }) {
+function StudioGroup({ group, open = true, onPersonOpen, onToggle, onStatusChange }) {
   return (
     <article className="group-card">
       <button className={`group-head ${group.tone}`} type="button" onClick={onToggle} aria-expanded={open}>
@@ -1748,7 +1544,7 @@ function StudioGroup({ dashboard, group, open = true, onToggle, onPersonOpen, on
       {open && (
         <div className="group-people">
           {group.people.map((person) => (
-            <StaffRow key={person.id} dashboard={dashboard} groupId={group.id} person={person} onPersonOpen={onPersonOpen} onStatusChange={onStatusChange} />
+            <StaffRow key={person.id} groupId={group.id} person={person} onPersonOpen={onPersonOpen} onStatusChange={onStatusChange} />
           ))}
         </div>
       )}
@@ -1756,22 +1552,21 @@ function StudioGroup({ dashboard, group, open = true, onToggle, onPersonOpen, on
   );
 }
 
-function StaffRow({ dashboard, groupId, person, onPersonOpen, onStatusChange }) {
+function StaffRow({ groupId, person, onPersonOpen, onStatusChange }) {
   const department = departmentMeta(person.department);
   const phone = cleanPhone(person.phone);
   const telegram = telegramHref(person.telegram);
-  const personStats = getPersonStats(dashboard, person);
 
   return (
     <article className={`staff-row department-${department.id}`}>
       <Avatar person={person} />
       <button className="staff-main" type="button" onClick={() => onPersonOpen?.(person)}>
         <strong>{person.name}</strong>
-        <span>{department.label} • {personStats.shoots} syomka • KPI {personStats.kpi}%</span>
+        <span>{department.label} • {person.employeeId ? `ID: ${person.employeeId}` : person.time}</span>
       </button>
       <ContactActions phone={phone} telegram={telegram} />
       {onStatusChange ? (
-        <select className={`status-select ${person.statusType}`} value={person.statusType} onClick={(event) => event.stopPropagation()} onChange={(event) => onStatusChange(groupId, person.id, event.target.value)} aria-label={`${person.name} statusi`}>
+        <select className={`status-select ${person.statusType}`} value={person.statusType} onChange={(event) => onStatusChange(groupId, person.id, event.target.value)} aria-label={`${person.name} statusi`}>
           {STATUS_OPTIONS.map((status) => (
             <option key={status.id} value={status.id}>{status.code} - {status.label}</option>
           ))}
@@ -1786,164 +1581,108 @@ function StaffRow({ dashboard, groupId, person, onPersonOpen, onStatusChange }) 
   );
 }
 
-function ContactBook({ contacts, onAdd, onRemove, onUpdate }) {
-  return (
-    <section className="contact-book">
-      <ContactSection
-        icon={<User size={17} />}
-        title="Muxbirlar"
-        type="reporters"
-        items={contacts.reporters || []}
-        onAdd={onAdd}
-        onRemove={onRemove}
-        onUpdate={onUpdate}
-      />
-      <ContactSection
-        icon={<Car size={17} />}
-        title="Haydovchilar"
-        type="drivers"
-        items={contacts.drivers || []}
-        onAdd={onAdd}
-        onRemove={onRemove}
-        onUpdate={onUpdate}
-      />
-    </section>
-  );
-}
-
-function ContactSection({ icon, title, type, items, onAdd, onRemove, onUpdate }) {
-  return (
-    <article className="contact-section">
-      <div className="contact-section-head">
-        <div>
-          <span>{icon}</span>
-          <strong>{title}</strong>
-        </div>
-        <button type="button" onClick={() => onAdd(type)}>
-          <Plus size={15} />
-          Qo'shish
-        </button>
-      </div>
-      <div className="contact-edit-list">
-        {items.map((item) => (
-          <div className="contact-edit-row" key={item.id}>
-            <input value={item.name || ""} onChange={(event) => onUpdate(type, item.id, "name", event.target.value)} placeholder={type === "drivers" ? "Haydovchi ismi" : "Muxbir ismi"} />
-            {type === "drivers" && (
-              <input value={item.vehicle || ""} onChange={(event) => onUpdate(type, item.id, "vehicle", event.target.value)} placeholder="142 Caddy" />
-            )}
-            <input value={item.phone || ""} onChange={(event) => onUpdate(type, item.id, "phone", event.target.value)} placeholder="+998 ..." />
-            <input value={item.note || ""} onChange={(event) => onUpdate(type, item.id, "note", event.target.value)} placeholder="Izoh" />
-            <button type="button" aria-label="Kontaktni o'chirish" onClick={() => onRemove(type, item.id)}>
-              <Trash2 size={15} />
-            </button>
-          </div>
-        ))}
-      </div>
-    </article>
-  );
-}
-
-function getPersonStats(dashboard, person) {
-  const assignments = dashboard.groups.flatMap((group) => group.people.map((item) => ({ ...item, groupTitle: group.title, groupMeta: group.meta, day: group.day }))).filter((item) => String(item.id) === String(person.id));
-  const working = assignments.filter((item) => STATUS_META[item.statusType]?.metric === "working").length;
-  const rest = assignments.filter((item) => STATUS_META[item.statusType]?.metric === "rest").length;
-  const away = assignments.filter((item) => STATUS_META[item.statusType]?.metric === "away").length;
-  const portfolioCount = person.portfolio?.filter((item) => item.url)?.length || 0;
-  const kpi = Math.max(0, Math.min(100, 55 + working * 7 + away * 4 + portfolioCount * 3 - rest * 5));
-  return { assignments, shoots: assignments.length, working, rest, away, portfolioCount, kpi };
-}
-
-function PersonProfileSheet({ dashboard, person, onClose }) {
+function PersonDetailScreen({ assignments, onClose, person }) {
   const department = departmentMeta(person.department);
   const phone = cleanPhone(person.phone);
   const telegram = telegramHref(person.telegram);
-  const stats = getPersonStats(dashboard, person);
+  const workingCount = assignments.filter((assignment) => STATUS_META[assignment.statusType]?.metric === "working").length;
+  const restCount = assignments.filter((assignment) => STATUS_META[assignment.statusType]?.metric === "rest").length;
+  const kpi = Math.min(96, Math.max(45, 52 + workingCount * 8 + assignments.length));
 
   return (
-    <div className="person-sheet-backdrop" role="presentation" onClick={onClose}>
-      <section className="person-sheet" role="dialog" aria-modal="true" aria-label={`${person.name} kartasi`} onClick={(event) => event.stopPropagation()}>
-        <div className="people-list-grip" />
+    <div className="person-sheet-backdrop" role="dialog" aria-modal="true" aria-label={`${person.name} ma'lumotlari`}>
+      <section className="person-sheet">
+        <header className="person-sheet-top">
+          <button type="button" onClick={onClose}>
+            <ChevronLeft size={21} />
+            Orqaga
+          </button>
+          <span>{STATUS_META[person.statusType]?.code || "S"} - {STATUS_META[person.statusType]?.label || person.status}</span>
+        </header>
+
         <div className="person-sheet-head">
           <Avatar person={person} />
           <div>
             <strong>{person.name}</strong>
             <span>{department.label}</span>
           </div>
-          <button type="button" onClick={onClose} aria-label="Kartani yopish">×</button>
         </div>
 
-        <div className="person-kpi">
+        <section className="person-kpi">
           <div>
             <span>Samaradorlik</span>
-            <strong>{stats.kpi}%</strong>
+            <strong>{kpi}%</strong>
           </div>
-          <i><b style={{ width: `${stats.kpi}%` }} /></i>
-        </div>
+          <i><b style={{ width: `${kpi}%` }} /></i>
+        </section>
 
-        <div className="person-stats-grid">
-          <div><strong>{stats.shoots}</strong><span>Ushbu oy syomka</span></div>
-          <div><strong>{stats.working}</strong><span>Ishda</span></div>
-          <div><strong>{stats.rest}</strong><span>Dam/ta'til</span></div>
-        </div>
+        <section className="person-stats-grid">
+          <div>
+            <strong>{assignments.length}</strong>
+            <span>Ushbu hafta smena</span>
+          </div>
+          <div>
+            <strong>{workingCount}</strong>
+            <span>Ishda</span>
+          </div>
+          <div>
+            <strong>{restCount}</strong>
+            <span>Dam/ta'til</span>
+          </div>
+        </section>
 
-        <div className="person-contact-grid">
+        <section className="person-contact-grid">
           <a className={!phone ? "disabled" : ""} href={phone ? `tel:${phone}` : undefined}>
-            <Phone size={16} />
+            <Phone size={17} />
             <span>{person.phone || "Telefon yo'q"}</span>
           </a>
           <a className={!telegram ? "disabled" : ""} href={telegram || undefined} target="_blank" rel="noreferrer">
-            <Send size={16} />
-            <span>{person.telegram || "Telegram yo'q"}</span>
+            <Send size={17} />
+            <span>{telegram ? "Telegram" : "Telegram yo'q"}</span>
           </a>
-        </div>
+        </section>
 
-        <div className="person-assignments">
-          <strong>Yaqin syomkalar</strong>
-          {stats.assignments.slice(0, 4).map((item) => (
-            <article key={`${item.groupTitle}-${item.id}-${item.statusType}`}>
-              <div>
-                <span>{item.groupTitle}</span>
-                <em>{item.groupMeta}</em>
-              </div>
-              <b>{STATUS_META[item.statusType]?.code || "I"}</b>
-            </article>
-          ))}
-          {!stats.assignments.length && <p>Jadvalda biriktirilgan syomka yo'q.</p>}
-        </div>
+        <section className="person-assignments">
+          <strong>Yaqin smenkalar</strong>
+          {assignments.length ? assignments.slice(0, 6).map((assignment) => {
+            const status = STATUS_META[assignment.statusType] || STATUS_META.working;
+            return (
+              <article key={`${assignment.groupTitle}-${assignment.groupMeta}-${assignment.statusType}`}>
+                <div>
+                  <span>{assignment.groupTitle}</span>
+                  <em>{assignment.groupMeta} • {assignment.time}</em>
+                </div>
+                <b className={assignment.statusType}>{status.code}</b>
+              </article>
+            );
+          }) : <EmptyCard text="Yaqin smenkalar topilmadi" />}
+        </section>
       </section>
     </div>
   );
 }
 
-function PeopleListPanel({ title, people, onClose }) {
+function PeopleListPanel({ title, people }) {
   return (
-    <div className="people-sheet-backdrop" role="presentation" onClick={onClose}>
-      <section className="people-list-panel" role="dialog" aria-modal="true" aria-label={title} onClick={(event) => event.stopPropagation()}>
-        <div className="people-list-grip" />
-        <div className="people-list-head">
-          <div>
-            <strong>{title}</strong>
-            <span>{people.length} ta xodim</span>
-          </div>
-          <button type="button" onClick={onClose} aria-label="Ro'yxatni yopish">×</button>
-        </div>
-        <div className="people-list-scroll">
-          {people.length ? people.map((person) => {
-            const status = STATUS_META[person.statusType];
-            return (
-              <article className={`people-list-row ${person.statusType || "total"}`} key={`${person.groupTitle || "employee"}-${person.id}-${person.statusType || "total"}`}>
-                <Avatar person={person} />
-                <div>
-                  <strong>{person.name}</strong>
-                  <span>{person.groupTitle ? `${person.groupTitle} • ${person.groupMeta}` : departmentMeta(person.department).label}</span>
-                </div>
-                <em>{status ? `${status.code} - ${status.label}` : "Ro'yxatda"}</em>
-              </article>
-            );
-          }) : <p className="people-list-empty">Bu bo'limda xodim yo'q</p>}
-        </div>
-      </section>
-    </div>
+    <section className="people-list-panel">
+      <div className="people-list-head">
+        <strong>{title}</strong>
+        <span>{people.length} ta</span>
+      </div>
+      {people.length ? people.map((person) => {
+        const status = STATUS_META[person.statusType] || STATUS_META.working;
+        return (
+          <article className={`people-list-row ${person.statusType}`} key={`${person.groupTitle}-${person.id}-${person.statusType}`}>
+            <Avatar person={person} />
+            <div>
+              <strong>{person.name}</strong>
+              <span>{person.groupTitle} • {person.groupMeta}</span>
+            </div>
+            <em>{status.code} - {status.label}</em>
+          </article>
+        );
+      }) : <p className="people-list-empty">Bu bo'limda xodim yo'q</p>}
+    </section>
   );
 }
 
@@ -2091,7 +1830,6 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
   const selectedEmployee = employees.find((employee) => String(employee.id) === String(selectedId)) || employees[0];
   const [draft, setDraft] = useState(selectedEmployee || null);
   const [saving, setSaving] = useState(false);
-  const [editorOpen, setEditorOpen] = useState(false);
   const formRef = useRef(null);
 
   useEffect(() => {
@@ -2150,7 +1888,6 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
     const saved = await onSaveEmployee(draft);
     setSaving(false);
     if (!saved) return;
-    setEditorOpen(false);
   }
 
   if (!draft) return <EmptyCard text="Xodimlar ro'yxati bo'sh" />;
@@ -2159,93 +1896,77 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
     <section className="documents-page">
       <section className="documents-card">
         <div className="section-head">
-          <h2>Hujjatlar</h2>
+          <h2>Oshkora ma'lumotlar</h2>
           <span>{(draft.portfolio || []).length} video</span>
         </div>
         <label className="document-select">
           Xodim
-          <select value={selectedId} onChange={(event) => {
-            setSelectedId(event.target.value);
-            setEditorOpen(false);
-          }}>
+          <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
             {employees.map((employee) => (
               <option key={employee.id} value={employee.id}>{employee.name}</option>
             ))}
           </select>
         </label>
-        <button className="document-profile document-profile-button" type="button" onClick={() => setEditorOpen((value) => !value)}>
-          <Avatar person={draft} />
-          <div>
-            <strong>{draft.name}</strong>
-            <span>{draft.role} • {departmentMeta(draft.department).label}</span>
+        <form ref={formRef} className="documents-form" onSubmit={submit}>
+          <div className="document-profile">
+            <Avatar person={draft} />
+            <div>
+              <strong>{draft.name}</strong>
+              <span>{draft.role}</span>
+            </div>
           </div>
-          <em>{editorOpen ? "Yopish" : "Tahrirlash"}</em>
-        </button>
-        {editorOpen && (
-          <form ref={formRef} className="documents-form" onSubmit={submit}>
-            <div className="document-profile">
-              <Avatar person={draft} />
-              <div>
-                <strong>{draft.name}</strong>
-                <span>{draft.role}</span>
-              </div>
-            </div>
+          <label>
+            Ism familiya
+            <input name="documents-name" value={draft.name || ""} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Abduqodirxo'jayev Izzat" />
+          </label>
+          <label>
+            Lavozimi
+            <input name="documents-role" value={draft.role || ""} onChange={(event) => setDraft({ ...draft, role: event.target.value })} placeholder="Tasvir yozish operatori" />
+          </label>
+          <div className="documents-field-grid">
             <label>
-              Ism familiya
-              <input name="documents-name" value={draft.name || ""} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Abduqodirxo'jayev Izzat" />
+              Bo'lim
+              <select value={draft.department || "operator"} onChange={(event) => setDraft({ ...draft, department: event.target.value })}>
+                {DEPARTMENTS.map((department) => (
+                  <option key={department.id} value={department.id}>{department.label}</option>
+                ))}
+              </select>
             </label>
             <label>
-              Lavozimi
-              <input name="documents-role" value={draft.role || ""} onChange={(event) => setDraft({ ...draft, role: event.target.value })} placeholder="Tasvir yozish operatori" />
+              Telegram
+              <input name="documents-telegram" value={draft.telegram || ""} onChange={(event) => setDraft({ ...draft, telegram: event.target.value })} placeholder="@username" />
             </label>
-            <div className="documents-field-grid">
-              <label>
-                Bo'lim
-                <select value={draft.department || "operator"} onChange={(event) => setDraft({ ...draft, department: event.target.value })}>
-                  {DEPARTMENTS.map((department) => (
-                    <option key={department.id} value={department.id}>{department.label}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Telegram
-                <input name="documents-telegram" value={draft.telegram || ""} onChange={(event) => setDraft({ ...draft, telegram: event.target.value })} placeholder="@username" />
-              </label>
+          </div>
+          <section className="portfolio-editor">
+            <div className="section-head">
+              <h2>Portfolio</h2>
+              <button type="button" onClick={addPortfolioItem}>
+                <Plus size={15} />
+                Link
+              </button>
             </div>
-            <section className="portfolio-editor">
-              <div className="section-head">
-                <h2>Portfolio</h2>
-                <button type="button" onClick={addPortfolioItem}>
-                  <Plus size={15} />
-                  Link
+            {(draft.portfolio || []).map((item, index) => (
+              <article className="portfolio-row" key={`${index}-${item.url}`}>
+                <input name={`portfolio-title-${index}`} value={item.title || ""} onChange={(event) => updatePortfolio(index, "title", event.target.value)} placeholder="Syomka nomi" />
+                <input name={`portfolio-url-${index}`} value={item.url || ""} onChange={(event) => updatePortfolio(index, "url", event.target.value)} placeholder="Video yoki efir linki" />
+                <input type="date" value={item.date || ""} onChange={(event) => updatePortfolio(index, "date", event.target.value)} />
+                <button type="button" aria-label="Portfolio linkni o'chirish" onClick={() => removePortfolioItem(index)}>
+                  <Trash2 size={15} />
                 </button>
-              </div>
-              {(draft.portfolio || []).map((item, index) => (
-                <article className="portfolio-row" key={`${index}-${item.url}`}>
-                  <input name={`portfolio-title-${index}`} value={item.title || ""} onChange={(event) => updatePortfolio(index, "title", event.target.value)} placeholder="Syomka nomi" />
-                  <input name={`portfolio-url-${index}`} value={item.url || ""} onChange={(event) => updatePortfolio(index, "url", event.target.value)} placeholder="Video yoki efir linki" />
-                  <input type="date" value={item.date || ""} onChange={(event) => updatePortfolio(index, "date", event.target.value)} />
-                  <button type="button" aria-label="Portfolio linkni o'chirish" onClick={() => removePortfolioItem(index)}>
-                    <Trash2 size={15} />
-                  </button>
-                </article>
-              ))}
-              {!(draft.portfolio || []).length && <p className="portfolio-empty">Efirga ketgan syomka linklarini shu yerda yig'ib borasiz.</p>}
-            </section>
-            <button className="documents-save-button" type="submit" disabled={saving}>
-              <Save size={17} />
-              {saving ? "Saqlanmoqda..." : "Ma'lumotlarni saqlash"}
-            </button>
-          </form>
-        )}
+              </article>
+            ))}
+            {!(draft.portfolio || []).length && <p className="portfolio-empty">Efirga ketgan syomka linklarini shu yerda yig'ib borasiz.</p>}
+          </section>
+          <button className="documents-save-button" type="submit" disabled={saving}>
+            <Save size={17} />
+            {saving ? "Saqlanmoqda..." : "Ma'lumotlarni saqlash"}
+          </button>
+        </form>
       </section>
 
       <section className="documents-summary">
         {employees.map((employee) => (
-          <button className={`${String(employee.id) === String(draft.id) ? "active" : ""} department-${employee.department || "operator"}`} key={employee.id} type="button" onClick={() => {
-            setSelectedId(employee.id);
-            setEditorOpen(true);
-          }}>
+          <button className={`${String(employee.id) === String(draft.id) ? "active" : ""} department-${employee.department || "operator"}`} key={employee.id} type="button" onClick={() => setSelectedId(employee.id)}>
             <Avatar person={employee} />
             <div>
               <strong>{employee.name}</strong>
@@ -2294,7 +2015,7 @@ function CompactStaffCard({ person }) {
           <PlayCircle size={16} />
         </a>
       )}
-      <em>{person.status}</em>
+      <em className={person.statusType}>{person.status}</em>
     </article>
   );
 }
@@ -2313,7 +2034,7 @@ function WeeklyOverview({ rows, days }) {
           <strong>{row.name}</strong>
           {row.days.map((value, index) => (
             <span className={`cell ${value}`} key={`${row.name}-${index}`}>
-              {value === "work" ? <Check size={16} /> : ["rest", "vacation", "sick"].includes(value) ? "x" : value === "tjk" ? "T" : null}
+              {value === "work" ? <Check size={16} /> : value === "rest" ? "x" : null}
             </span>
           ))}
         </div>
@@ -2323,105 +2044,7 @@ function WeeklyOverview({ rows, days }) {
 }
 
 function ReportsPage({ dashboard }) {
-  const [openReport, setOpenReport] = useState("");
-  const [activeReportTab, setActiveReportTab] = useState("summary");
-  const allPeople = useMemo(() => dashboard.groups.flatMap((group) => group.people.map((person) => ({ ...person, groupTitle: group.title, groupMeta: group.meta, day: group.day }))), [dashboard.groups]);
-  const todayPeople = useMemo(() => allPeople.filter((person) => person.day === "Dushanba"), [allPeople]);
-  const statusRows = useMemo(() => STATUS_OPTIONS.map((status) => ({
-    ...status,
-    people: allPeople.filter((person) => person.statusType === status.id)
-  })).filter((status) => status.people.length || ["working", "rest", "trip", "vacation", "sick"].includes(status.id)), [allPeople]);
-  const dayRows = useMemo(() => DAY_TABS.filter((day) => day !== "Barcha kunlar").map((day) => {
-    const people = allPeople.filter((person) => person.day === day);
-    return {
-      id: day,
-      label: day,
-      people,
-      working: people.filter((person) => STATUS_META[person.statusType]?.metric === "working").length,
-      rest: people.filter((person) => STATUS_META[person.statusType]?.metric === "rest").length,
-      away: people.filter((person) => STATUS_META[person.statusType]?.metric === "away").length
-    };
-  }), [allPeople]);
-  const studioRows = useMemo(() => dashboard.groups.map((group) => {
-    const people = group.people.map((person) => ({ ...person, groupTitle: group.title, groupMeta: group.meta, day: group.day }));
-    return {
-      id: group.id,
-      label: `${group.day} • ${group.meta}`,
-      people,
-      working: people.filter((person) => STATUS_META[person.statusType]?.metric === "working").length,
-      rest: people.filter((person) => STATUS_META[person.statusType]?.metric === "rest").length
-    };
-  }), [dashboard.groups]);
-  const reportLists = useMemo(() => {
-    const lists = {
-      today: todayPeople,
-      working: allPeople.filter((person) => STATUS_META[person.statusType]?.metric === "working"),
-      rest: allPeople.filter((person) => STATUS_META[person.statusType]?.metric === "rest"),
-      away: allPeople.filter((person) => STATUS_META[person.statusType]?.metric === "away"),
-      total: dashboard.employees
-    };
-    for (const status of statusRows) lists[`status-${status.id}`] = status.people;
-    for (const day of dayRows) lists[`day-${day.id}`] = day.people;
-    for (const studio of studioRows) lists[`studio-${studio.id}`] = studio.people;
-    return lists;
-  }, [allPeople, dashboard.employees, dayRows, statusRows, studioRows, todayPeople]);
-  const reportTitle = useMemo(() => {
-    if (openReport === "today") return "Bugungi smena";
-    if (openReport === "working") return "Ishlayotganlar";
-    if (openReport === "rest") return "Damda / ta'tilda";
-    if (openReport === "away") return "Komandirovka";
-    if (openReport === "total") return "Jami xodimlar";
-    const status = statusRows.find((item) => openReport === `status-${item.id}`);
-    if (status) return status.label;
-    const day = dayRows.find((item) => openReport === `day-${item.id}`);
-    if (day) return `${day.label} hisoboti`;
-    const studio = studioRows.find((item) => openReport === `studio-${item.id}`);
-    if (studio) return studio.label;
-    return "Hisobot";
-  }, [dayRows, openReport, statusRows, studioRows]);
-  const workingRate = dashboard.metrics.total ? Math.round((dashboard.metrics.working / dashboard.metrics.total) * 100) : 0;
-  const restRate = dashboard.metrics.total ? Math.round((dashboard.metrics.rest / dashboard.metrics.total) * 100) : 0;
-  const tabContent = {
-    summary: (
-      <div className="report-list">
-        {statusRows.map((status) => (
-          <ReportDrillRow
-            key={status.id}
-            label={`${status.code} - ${status.label}`}
-            value={status.people.length}
-            hint={status.metric === "working" ? "ish faol" : status.metric === "rest" ? "dam/ta'til" : "safar"}
-            onClick={() => setOpenReport(`status-${status.id}`)}
-          />
-        ))}
-      </div>
-    ),
-    days: (
-      <div className="report-list">
-        {dayRows.map((day) => (
-          <ReportDrillRow
-            key={day.id}
-            label={day.label}
-            value={day.people.length}
-            hint={`${day.working} ishda • ${day.rest} dam • ${day.away} safar`}
-            onClick={() => setOpenReport(`day-${day.id}`)}
-          />
-        ))}
-      </div>
-    ),
-    studios: (
-      <div className="report-list">
-        {studioRows.map((studio) => (
-          <ReportDrillRow
-            key={studio.id}
-            label={studio.label}
-            value={studio.people.length}
-            hint={`${studio.working} ishda • ${studio.rest} dam`}
-            onClick={() => setOpenReport(`studio-${studio.id}`)}
-          />
-        ))}
-      </div>
-    )
-  };
+  const max = Math.max(...dashboard.reports.map((item) => item.value), 1);
 
   return (
     <section className="reports-page">
@@ -2429,253 +2052,87 @@ function ReportsPage({ dashboard }) {
         <h2>Haftalik hisobot</h2>
         <span>{dashboard.week.range}</span>
       </div>
-      <section className="report-hero">
+      <div className="report-card">
+        {dashboard.reports.map((item) => (
+          <div className="report-row" key={item.label}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+            <i style={{ width: `${(item.value / max) * 100}%` }} />
+          </div>
+        ))}
+      </div>
+      <div className="profile-card">
+        <ChartColumn size={28} />
         <div>
-          <span>Hafta qamrovi</span>
-          <strong>{workingRate}%</strong>
-          <p>{dashboard.metrics.working} ta ishda, {dashboard.metrics.rest} ta damda yoki ta'tilda.</p>
+          <strong>Kunlik qamrov</strong>
+          <p>{dashboard.metrics.working} ta xodim haftalik smenaga biriktirilgan.</p>
         </div>
-        <button type="button" onClick={() => setOpenReport("total")}>
-          <UsersRound size={17} />
-          Jami {dashboard.metrics.total}
-        </button>
-      </section>
-
-      <section className="report-kpi-grid">
-        <ReportKpi icon={<BriefcaseBusiness size={18} />} label="Ishda" value={dashboard.metrics.working} hint={`${workingRate}% qamrov`} onClick={() => setOpenReport("working")} />
-        <ReportKpi icon={<Umbrella size={18} />} label="Dam/ta'til" value={dashboard.metrics.rest} hint={`${restRate}%`} onClick={() => setOpenReport("rest")} />
-        <ReportKpi icon={<CalendarDays size={18} />} label="Bugungi smena" value={todayPeople.length} hint="Dushanba" onClick={() => setOpenReport("today")} />
-        <ReportKpi icon={<ChartColumn size={18} />} label="Safar" value={dashboard.metrics.trip || 0} hint="komandirovka" onClick={() => setOpenReport("away")} />
-      </section>
-
-      <section className="report-tabs-card">
-        <div className="report-tabs" role="tablist" aria-label="Hisobot turlari">
-          <button className={activeReportTab === "summary" ? "active" : ""} type="button" onClick={() => setActiveReportTab("summary")}>Status</button>
-          <button className={activeReportTab === "days" ? "active" : ""} type="button" onClick={() => setActiveReportTab("days")}>Kunlar</button>
-          <button className={activeReportTab === "studios" ? "active" : ""} type="button" onClick={() => setActiveReportTab("studios")}>Studiya</button>
-        </div>
-        {tabContent[activeReportTab]}
-      </section>
-
-      <section className="report-ready-card">
-        <div>
-          <strong>Tayyor hisobotlar</strong>
-          <span>Bitta bosishda ro'yxat ochiladi</span>
-        </div>
-        <div className="report-ready-actions">
-          <button type="button" onClick={() => setOpenReport("working")}>Ishdagilar</button>
-          <button type="button" onClick={() => setOpenReport("rest")}>Damdagilar</button>
-          <button type="button" onClick={() => setOpenReport("today")}>Bugun</button>
-        </div>
-      </section>
-
-      {openReport && (
-        <PeopleListPanel
-          title={reportTitle}
-          people={reportLists[openReport] || []}
-          onClose={() => setOpenReport("")}
-        />
-      )}
+      </div>
     </section>
   );
 }
 
-function ReportKpi({ icon, label, value, hint, onClick }) {
-  return (
-    <button className="report-kpi" type="button" onClick={onClick}>
-      <span>{icon}</span>
-      <strong>{value}</strong>
-      <em>{label}</em>
-      <small>{hint}</small>
-    </button>
-  );
-}
-
-function ReportDrillRow({ label, value, hint, onClick }) {
-  return (
-    <button className="report-drill-row" type="button" onClick={onClick}>
-      <div>
-        <strong>{label}</strong>
-        <span>{hint}</span>
-      </div>
-      <em>{value}</em>
-      <ChevronRight size={18} />
-    </button>
-  );
-}
-
-function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onSaveProfile, onThemeChange }) {
+function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThemeChange, onSaveContact, onDeleteContact }) {
   const [notify, setNotify] = useState(true);
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(currentUser);
-  const todayText = toInputDate(new Date());
-  const [selectedDate, setSelectedDate] = useState(todayText);
+  const [contactDraft, setContactDraft] = useState({ type: "Muxbir", name: "", vehicle: "", phone: "" });
+  const [todaySlide, setTodaySlide] = useState(0);
   const operators = dashboard.employees.filter((employee) => employee.role.includes("Operator")).length;
-  const tjkCount = dashboard.metrics.tjk || 0;
-  const matchedEmployee = useMemo(() => {
-    const saved = dashboard.employees.find((employee) => String(employee.id) === String(currentUser.employeeId));
-    if (saved) return saved;
-    const target = normalizeName(currentUser.name);
-    return dashboard.employees.find((employee) => normalizeName(employee.name) === target) || dashboard.employees[0] || null;
-  }, [currentUser.employeeId, currentUser.name, dashboard.employees]);
-  const activeEmployee = dashboard.employees.find((employee) => String(employee.id) === String(draft.employeeId || matchedEmployee?.id)) || matchedEmployee;
-  const calendarInfo = useMemo(() => {
-    const base = new Date();
-    const first = new Date(base.getFullYear(), base.getMonth(), 1);
-    const daysInMonth = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
-    const leading = (first.getDay() + 6) % 7;
-    const days = Array.from({ length: leading }, () => null).concat(
-      Array.from({ length: daysInMonth }, (_, index) => {
-        const date = new Date(base.getFullYear(), base.getMonth(), index + 1);
-        const dateText = toInputDate(date);
-        return {
-          dateText,
-          day: index + 1,
-          isToday: dateText === todayText,
-          assignment: buildPersonalAssignment(activeEmployee, dateText, dashboard)
-        };
-      })
-    );
-    return { title: `${MONTH_NAMES[base.getMonth()]} ${base.getFullYear()}`, days };
-  }, [activeEmployee, dashboard, todayText]);
-  const todayAssignment = useMemo(() => buildPersonalAssignment(activeEmployee, todayText, dashboard), [activeEmployee, dashboard, todayText]);
-  const selectedAssignment = useMemo(() => buildPersonalAssignment(activeEmployee, selectedDate, dashboard), [activeEmployee, dashboard, selectedDate]);
+  const reporters = dashboard.employees.filter((employee) => employee.role.includes("Muxbir")).length;
+  const contacts = dashboard.contacts || [];
+  const drivers = contacts.filter((contact) => contact.type === "Haydovchi").length;
+  const profileEmployee = useMemo(() => {
+    const userName = normalizeLookupName(currentUser.name);
+    return dashboard.employees.find((employee) => {
+      const employeeName = normalizeLookupName(employee.name);
+      return employeeName === userName || employeeName.includes(userName) || userName.includes(employeeName);
+    });
+  }, [currentUser.name, dashboard.employees]);
+  const todayAssignments = useMemo(() => {
+    if (!profileEmployee) return [];
+    return dashboard.groups
+      .filter((group) => group.day === todayDayName())
+      .flatMap((group) => group.people
+        .filter((person) => String(person.id) === String(profileEmployee.id))
+        .map((person) => ({ ...person, groupTitle: group.title, groupMeta: group.meta })));
+  }, [dashboard.groups, profileEmployee]);
+  const activeAssignment = todayAssignments[todaySlide % Math.max(todayAssignments.length, 1)];
 
   useEffect(() => {
-    setDraft({ ...currentUser, employeeId: currentUser.employeeId || matchedEmployee?.id || "" });
-  }, [currentUser, matchedEmployee]);
+    setTodaySlide(0);
+  }, [profileEmployee?.id, dashboard.week.start]);
 
-  async function updateProfileAvatar(file) {
-    if (!file) return;
-    if (!file.type.startsWith("image/")) return;
-    const image = await readImageFile(file);
-    setDraft((current) => ({ ...current, avatar: image }));
-  }
+  useEffect(() => {
+    if (todayAssignments.length < 2) return undefined;
+    const timer = window.setInterval(() => {
+      setTodaySlide((value) => (value + 1) % todayAssignments.length);
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [todayAssignments.length]);
 
-  async function submitProfile(event) {
+  async function submitContact(event) {
     event.preventDefault();
-    await onSaveProfile(draft);
-    setEditing(false);
+    const saved = await onSaveContact(contactDraft);
+    if (saved) setContactDraft({ type: "Muxbir", name: "", vehicle: "", phone: "" });
   }
 
   return (
     <section className="profile-page">
       <div className="profile-hero">
-        <span className="profile-avatar large">
-          {currentUser.avatar ? <img src={currentUser.avatar} alt={currentUser.name} /> : <User size={38} />}
-        </span>
+        <span className="profile-avatar large"><User size={38} /></span>
         <div>
           <strong>{currentUser.name}</strong>
           <p>{currentUser.role}</p>
           <em>{currentUser.email}</em>
-          {(currentUser.phone || currentUser.department) && <small>{[currentUser.phone, currentUser.department].filter(Boolean).join(" • ")}</small>}
         </div>
       </div>
 
-      <section className="profile-edit-card">
-        <div className="section-head">
-          <h2>Profilni tahrirlash</h2>
-          <button type="button" onClick={() => setEditing((value) => !value)}>{editing ? "Yopish" : "Tahrirlash"}</button>
-        </div>
-        {editing && (
-          <form className="profile-edit-form" onSubmit={submitProfile}>
-            <div className="avatar-upload-field profile-avatar-upload">
-              <div className="avatar-upload-preview">
-                {draft.avatar ? <img src={draft.avatar} alt="Profil rasmi" /> : <User size={28} />}
-              </div>
-              <div>
-                <strong>Profil rasmi</strong>
-                <span>{draft.avatar ? "Rasm tanlangan" : "Rasm yuklanmagan"}</span>
-              </div>
-              <label>
-                <Upload size={15} />
-                Yuklash
-                <input type="file" accept="image/*" onChange={(event) => updateProfileAvatar(event.target.files?.[0])} />
-              </label>
-            </div>
-            <label>
-              Ism familiya
-              <input value={draft.name || ""} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Ism familiya" />
-            </label>
-            <label>
-              Email
-              <input type="email" value={draft.email || ""} onChange={(event) => setDraft({ ...draft, email: event.target.value })} placeholder="email@domain.uz" />
-            </label>
-            <label>
-              Lavozim
-              <input value={draft.role || ""} onChange={(event) => setDraft({ ...draft, role: event.target.value })} placeholder="Lavozim" />
-            </label>
-            <label>
-              Telefon
-              <input value={draft.phone || ""} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} placeholder="+998 ..." />
-            </label>
-            <label>
-              Bo'lim
-              <input value={draft.department || ""} onChange={(event) => setDraft({ ...draft, department: event.target.value })} placeholder="Bo'lim nomi" />
-            </label>
-            <label>
-              Mening xodim kartam
-              <select value={draft.employeeId || activeEmployee?.id || ""} onChange={(event) => setDraft({ ...draft, employeeId: event.target.value })}>
-                <option value="">Tanlanmagan</option>
-                {dashboard.employees.map((employee) => (
-                  <option key={employee.id} value={employee.id}>{employee.name} - {departmentMeta(employee.department).shortLabel}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Qo'shimcha
-              <textarea value={draft.note || ""} onChange={(event) => setDraft({ ...draft, note: event.target.value })} placeholder="Kerakli ma'lumotlar" />
-            </label>
-            <button type="submit">
-              <Save size={17} />
-              Saqlash
-            </button>
-          </form>
-        )}
-      </section>
-
-      <section className={`profile-today-banner ${todayAssignment.status}`}>
+      <section className={`profile-today-banner ${activeAssignment?.statusType || "empty"}`}>
         <div>
-          <span>Bugungi vazifa</span>
-          <strong>{todayAssignment.place}</strong>
-          <p>{todayAssignment.time} • {todayAssignment.statusLabel}</p>
+          <span>Bugungi ish</span>
+          <strong>{activeAssignment ? activeAssignment.groupMeta : "Bugungi ish topilmadi"}</strong>
+          <p>{activeAssignment ? `${activeAssignment.groupTitle} • ${activeAssignment.time}` : "Profil nomi xodimlar ro'yxatidagi F.I.Sh bilan mos bo'lsa, bugungi smena shu yerda chiqadi."}</p>
         </div>
-        <em>{todayAssignment.camera || todayAssignment.source}</em>
-      </section>
-
-      <section className="profile-calendar-card">
-        <div className="section-head">
-          <h2>Mening oylik kalendarim</h2>
-          <span>{calendarInfo.title}</span>
-        </div>
-        <div className="profile-calendar-weekdays">
-          {["Du", "Se", "Cho", "Pa", "Ju", "Sha", "Ya"].map((day) => <span key={day}>{day}</span>)}
-        </div>
-        <div className="profile-calendar-grid">
-          {calendarInfo.days.map((day, index) => day ? (
-            <button
-              className={`${day.assignment.status} ${day.isToday ? "today" : ""} ${selectedDate === day.dateText ? "selected" : ""}`}
-              type="button"
-              key={day.dateText}
-              onClick={() => setSelectedDate(day.dateText)}
-            >
-              <strong>{day.day}</strong>
-              <span>{MONTHLY_STATUS_OPTIONS[day.assignment.status]?.label || STATUS_META[day.assignment.status]?.code || "I"}</span>
-            </button>
-          ) : <i key={`empty-${index}`} />)}
-        </div>
-        <article className={`profile-day-detail ${selectedAssignment.status}`}>
-          <div>
-            <span>{selectedDate}</span>
-            <strong>{selectedAssignment.place}</strong>
-            <p>{selectedAssignment.topic}</p>
-          </div>
-          <dl>
-            <div><dt>Vaqt</dt><dd>{selectedAssignment.time}</dd></div>
-            <div><dt>Status</dt><dd>{selectedAssignment.statusLabel}</dd></div>
-            {selectedAssignment.camera && <div><dt>Kamera</dt><dd>{selectedAssignment.camera}</dd></div>}
-          </dl>
-        </article>
+        <em>{activeAssignment ? `${STATUS_META[activeAssignment.statusType]?.code || "S"} - ${STATUS_META[activeAssignment.statusType]?.label || activeAssignment.status}` : "Bo'sh"}</em>
       </section>
 
       <section className="profile-stats">
@@ -2688,9 +2145,75 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onSav
           <span>Operator</span>
         </article>
         <article>
-          <strong>{tjkCount}</strong>
-          <span>TJK</span>
+          <strong>{reporters}</strong>
+          <span>Muxbir</span>
         </article>
+        <article>
+          <strong>{drivers}</strong>
+          <span>Haydovchi</span>
+        </article>
+      </section>
+
+      <section className="contacts-card">
+        <div className="contacts-head">
+          <div>
+            <Phone size={18} />
+            <strong>Haydovchilar va muxbirlar</strong>
+          </div>
+          <span>{contacts.length} kontakt</span>
+        </div>
+
+        <form className="contact-form" onSubmit={submitContact}>
+          <select
+            value={contactDraft.type}
+            onChange={(event) => setContactDraft({ ...contactDraft, type: event.target.value })}
+            aria-label="Kontakt turi"
+          >
+            <option>Muxbir</option>
+            <option>Haydovchi</option>
+          </select>
+          <input
+            value={contactDraft.name}
+            onChange={(event) => setContactDraft({ ...contactDraft, name: event.target.value })}
+            placeholder={contactDraft.type === "Haydovchi" ? "Haydovchi yoki mashina nomi" : "Muxbir F.I.Sh"}
+          />
+          <input
+            value={contactDraft.vehicle}
+            onChange={(event) => setContactDraft({ ...contactDraft, vehicle: event.target.value })}
+            placeholder="Mashina nomeri, masalan 142 Caddy"
+          />
+          <input
+            value={contactDraft.phone}
+            onChange={(event) => setContactDraft({ ...contactDraft, phone: event.target.value })}
+            placeholder="+998 90 302 55 92"
+            inputMode="tel"
+          />
+          <button type="submit">
+            <Plus size={17} />
+            Qo'shish
+          </button>
+        </form>
+
+        <div className="contact-list">
+          {contacts.length ? contacts.map((contact) => (
+            <article key={contact.id} className="contact-row">
+              <span className={contact.type === "Haydovchi" ? "driver" : ""}>
+                {contact.type === "Haydovchi" ? <Car size={16} /> : <User size={16} />}
+              </span>
+              <div>
+                <strong>{contact.type} {contact.name || contact.vehicle}</strong>
+                {contact.vehicle && contact.vehicle !== contact.name && <em>{contact.vehicle}</em>}
+                <a href={`tel:${contact.phone.replace(/\s/g, "")}`}>
+                  <Phone size={14} />
+                  {contact.phone}
+                </a>
+              </div>
+              <button type="button" aria-label="Kontaktni o'chirish" onClick={() => onDeleteContact(contact.id)}>
+                <Trash2 size={16} />
+              </button>
+            </article>
+          )) : <EmptyCard text="Kontaktlar hali kiritilmagan" />}
+        </div>
       </section>
 
       <section className="settings-card">
@@ -2727,7 +2250,7 @@ function LegendItem({ tone, label }) {
   return (
     <div className="legend-item">
       <span className={`legend-mark ${tone}`}>
-        {tone === "work" ? <Check size={15} /> : tone === "rest" ? "x" : tone === "trip" ? "K" : tone === "tjk" ? "T" : tone === "studio" ? "S" : tone === "vacation" ? "O" : tone === "sick" ? "B" : null}
+        {tone === "work" ? <Check size={15} /> : tone === "rest" ? "x" : tone === "tjk" ? "T" : tone === "studio" ? "S" : tone === "administration" ? "A" : tone === "presidential" ? "P" : null}
       </span>
       <p>{label}</p>
     </div>
@@ -2761,7 +2284,7 @@ function MenuPanel({ onClose, onPageChange }) {
   const links = [
     ["weekly", "Ish jadvali", CalendarDays],
     ["studio", "Jamoa va bo'limlar", UsersRound],
-    ["documents", "Hujjatlar", ShieldCheck],
+    ["documents", "Oshkora ma'lumotlar", ShieldCheck],
     ["monthly", "Oylik grafik", Clock3],
     ["shooting", "Tasvir jadvali", FileText],
     ["reports", "Hisobotlar", ChartColumn],
@@ -2835,7 +2358,7 @@ function BottomNav({ page, onPageChange }) {
   const items = [
     { id: "weekly", label: "Jadval", icon: CalendarDays },
     { id: "studio", label: "Jamoa", icon: UsersRound },
-    { id: "documents", label: "Hujjat", icon: ShieldCheck },
+    { id: "documents", label: "Oshkora", icon: ShieldCheck },
     { id: "profile", label: "Profil", icon: User }
   ];
 

@@ -21,12 +21,16 @@ const statusMap = {
   trip: "Komandirovka",
   tjk: "TJK ishda",
   vacation: "Mehnat ta'tili",
+  administration: "Administratsiya",
+  presidential: "Prezidentskiy",
   sick: "Balnishniy"
 };
 const statusMetricMap = {
   working: "working",
   backup: "working",
   tjk: "working",
+  administration: "working",
+  presidential: "working",
   rest: "rest",
   vacation: "rest",
   sick: "rest",
@@ -114,6 +118,10 @@ const studios = [
   { name: "35 TJK", tone: "purple", time: "9:00 - 18:00" },
   { name: "3 Tongi dastur", tone: "blue", time: "9:00 - 18:00" }
 ];
+const initialContacts = [
+  { id: "contact-1", type: "Muxbir", name: "Sarvar Raximov", vehicle: "", phone: "+998 90 302 55 92" },
+  { id: "contact-2", type: "Haydovchi", name: "142 Caddy", vehicle: "142 Caddy", phone: "+998 90 406 15 78" }
+];
 
 const dayNames = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba", "Yakshanba"];
 const shortDayNames = ["Dush", "Sey", "Chor", "Pay", "Jum", "Shan", "Yak"];
@@ -130,10 +138,11 @@ async function loadDb() {
       generation: Number(parsed.generation || 0),
       employees: employees.map(normalizeEmployee),
       schedules: parsed.schedules && typeof parsed.schedules === "object" ? parsed.schedules : {},
-      attendance: Array.isArray(parsed.attendance) ? parsed.attendance.map(normalizeAttendanceRecord).filter(Boolean) : []
+      attendance: Array.isArray(parsed.attendance) ? parsed.attendance.map(normalizeAttendanceRecord).filter(Boolean) : [],
+      contacts: Array.isArray(parsed.contacts) ? parsed.contacts.map(normalizeContact).filter(Boolean) : initialContacts
     };
   } catch {
-    return { generation: 0, employees: initialEmployees.map(normalizeEmployee), schedules: {}, attendance: [] };
+    return { generation: 0, employees: initialEmployees.map(normalizeEmployee), schedules: {}, attendance: [], contacts: initialContacts };
   }
 }
 
@@ -221,6 +230,27 @@ function scheduleEmployee(employee) {
 
 function publicEmployees() {
   return db.employees.map(scheduleEmployee);
+}
+
+function normalizeContact(contact) {
+  if (!contact || typeof contact !== "object") return null;
+  const type = contact.type === "Haydovchi" ? "Haydovchi" : "Muxbir";
+  const name = String(contact.name || "").trim();
+  const vehicle = String(contact.vehicle || "").trim();
+  const phone = String(contact.phone || "").trim();
+  if (!name && !vehicle && !phone) return null;
+
+  return {
+    id: String(contact.id || `contact-${Date.now()}`),
+    type,
+    name,
+    vehicle,
+    phone
+  };
+}
+
+function publicContacts() {
+  return (db.contacts || []).map(normalizeContact).filter(Boolean);
 }
 
 function countByMetric(people, metric) {
@@ -347,7 +377,7 @@ function createOverviewRows(groups) {
       const groupForEmployee = groups.find((group) => group.day === dayNames[dayIndex] && group.people.some((person) => person.id === employee.id));
       if (!groupForEmployee) return "empty";
       const person = groupForEmployee.people.find((item) => item.id === employee.id);
-      if (["rest", "trip", "tjk", "vacation", "sick"].includes(person.statusType)) return person.statusType;
+      if (["rest", "trip", "tjk", "vacation", "administration", "presidential", "sick"].includes(person.statusType)) return person.statusType;
       return "work";
     });
 
@@ -372,6 +402,8 @@ function buildDashboard(weekStartValue, options = {}) {
   const trip = allPeople.filter((person) => person.statusType === "trip").length;
   const tjk = allPeople.filter((person) => person.statusType === "tjk").length;
   const vacation = allPeople.filter((person) => person.statusType === "vacation").length;
+  const administration = allPeople.filter((person) => person.statusType === "administration").length;
+  const presidential = allPeople.filter((person) => person.statusType === "presidential").length;
   const sick = allPeople.filter((person) => person.statusType === "sick").length;
 
   return {
@@ -395,6 +427,8 @@ function buildDashboard(weekStartValue, options = {}) {
       trip,
       tjk,
       vacation,
+      administration,
+      presidential,
       sick,
       workingToday: countByMetric(todayPeople, "working"),
       restToday: countByMetric(todayPeople, "rest"),
@@ -411,6 +445,8 @@ function buildDashboard(weekStartValue, options = {}) {
       { label: "TJK guruhi", value: tjk },
       { label: "Zaxira", value: backup },
       { label: "Mehnat ta'tili", value: vacation },
+      { label: "Administratsiya", value: administration },
+      { label: "Prezidentskiy", value: presidential },
       { label: "Balnishniy", value: sick },
       { label: "Bugungi smena", value: todayPeople.length }
     ],
@@ -424,6 +460,7 @@ function buildDashboard(weekStartValue, options = {}) {
       `${backup} ta xodim zaxirada.`
     ],
     employees: publicEmployees(),
+    contacts: publicContacts(),
     attendance: buildAttendanceSummary()
   };
 }
@@ -519,6 +556,30 @@ async function deleteEmployee(id) {
   return { ok: true };
 }
 
+async function saveContact(payload) {
+  const contact = normalizeContact({
+    ...payload,
+    id: payload.id || `contact-${Date.now()}`
+  });
+  if (!contact) throw new Error("Kontakt ma'lumotlarini kiriting");
+  if (!contact.name && !contact.vehicle) throw new Error("Ism yoki mashina raqamini kiriting");
+  if (!contact.phone) throw new Error("Telefon raqamini kiriting");
+
+  const contacts = publicContacts();
+  const index = contacts.findIndex((item) => item.id === contact.id);
+  if (index === -1) contacts.unshift(contact);
+  else contacts[index] = contact;
+  db.contacts = contacts;
+  await saveDb();
+  return { contacts: publicContacts() };
+}
+
+async function deleteContact(id) {
+  db.contacts = publicContacts().filter((contact) => contact.id !== id);
+  await saveDb();
+  return { contacts: publicContacts() };
+}
+
 async function scanAttendance(payload) {
   const employee = db.employees.find((item) => String(item.id) === String(payload.employeeId));
   if (!employee) throw new Error("Face ID uchun xodim tanlanmadi");
@@ -566,6 +627,8 @@ function refreshScheduleDerivedData(schedule) {
   const trip = allPeople.filter((person) => person.statusType === "trip").length;
   const tjk = allPeople.filter((person) => person.statusType === "tjk").length;
   const vacation = allPeople.filter((person) => person.statusType === "vacation").length;
+  const administration = allPeople.filter((person) => person.statusType === "administration").length;
+  const presidential = allPeople.filter((person) => person.statusType === "presidential").length;
   const sick = allPeople.filter((person) => person.statusType === "sick").length;
 
   schedule.metrics = {
@@ -577,6 +640,8 @@ function refreshScheduleDerivedData(schedule) {
     trip,
     tjk,
     vacation,
+    administration,
+    presidential,
     sick,
     workingToday: countByMetric(todayPeople, "working"),
     restToday: countByMetric(todayPeople, "rest"),
@@ -592,6 +657,8 @@ function refreshScheduleDerivedData(schedule) {
     { label: "TJK guruhi", value: tjk },
     { label: "Zaxira", value: backup },
     { label: "Mehnat ta'tili", value: vacation },
+    { label: "Administratsiya", value: administration },
+    { label: "Prezidentskiy", value: presidential },
     { label: "Balnishniy", value: sick },
     { label: "Bugungi smena", value: todayPeople.length }
   ];
@@ -601,6 +668,8 @@ function refreshScheduleDerivedData(schedule) {
     `${trip} ta komandirovkada.`,
     `${tjk} ta TJK guruhida.`,
     `${vacation} ta mehnat ta'tilida.`,
+    `${administration} ta administratsiyada.`,
+    `${presidential} ta prezidentskiyda.`,
     `${sick} ta balnishniy.`,
     `${backup} ta xodim zaxirada.`
   ];
@@ -614,6 +683,7 @@ function getDashboard(weekStartValue) {
   const key = getScheduleKey(weekStartValue);
   if (db.schedules[key]) {
     db.schedules[key].employees = publicEmployees();
+    db.schedules[key].contacts = publicContacts();
     refreshScheduleDerivedData(db.schedules[key]);
     return db.schedules[key];
   }
@@ -779,6 +849,14 @@ export async function handleRequest(request, response) {
       return sendJson(response, 201, await createEmployee(await readBody(request)));
     }
 
+    if (request.method === "GET" && url.pathname === "/api/contacts") {
+      return sendJson(response, 200, { contacts: publicContacts() });
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/contacts") {
+      return sendJson(response, 201, await saveContact(await readBody(request)));
+    }
+
     if (request.method === "POST" && url.pathname === "/api/attendance/scan") {
       return sendJson(response, 200, await scanAttendance(await readBody(request)));
     }
@@ -790,6 +868,11 @@ export async function handleRequest(request, response) {
 
     if (employeeMatch && request.method === "DELETE") {
       return sendJson(response, 200, await deleteEmployee(employeeMatch[1]));
+    }
+
+    const contactMatch = url.pathname.match(/^\/api\/contacts\/([^/]+)$/);
+    if (contactMatch && request.method === "DELETE") {
+      return sendJson(response, 200, await deleteContact(decodeURIComponent(contactMatch[1])));
     }
 
     if (request.method === "GET" && url.pathname === "/api/schedules") {
