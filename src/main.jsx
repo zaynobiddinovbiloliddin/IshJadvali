@@ -357,6 +357,7 @@ function App() {
   const [dashboard, setDashboard] = useState(emptyDashboard);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("Yuklanmoqda...");
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [showAllOverview, setShowAllOverview] = useState(false);
@@ -418,6 +419,7 @@ function App() {
   }
 
   async function createSchedule() {
+    setLoadingMessage("Jadval yaratilmoqda...");
     setGenerating(true);
     setError("");
 
@@ -439,6 +441,7 @@ function App() {
 
   async function deleteSchedule() {
     if (!window.confirm("Ushbu hafta jadvalini o'chirasizmi?")) return;
+    setLoadingMessage("Jadval o'chirilmoqda...");
     setGenerating(true);
     setError("");
 
@@ -468,6 +471,7 @@ function App() {
       return false;
     }
 
+    setLoadingMessage(employee.id ? "Xodim saqlanmoqda..." : "Xodim qo'shilmoqda...");
     setGenerating(true);
     setError("");
 
@@ -491,6 +495,7 @@ function App() {
 
   async function deleteEmployee(id) {
     if (!window.confirm("Xodimni ro'yxatdan o'chirasizmi?")) return;
+    setLoadingMessage("Xodim o'chirilmoqda...");
     setGenerating(true);
     setError("");
 
@@ -547,6 +552,7 @@ function App() {
       return false;
     }
 
+    setLoadingMessage("Kontakt saqlanmoqda...");
     setGenerating(true);
     setError("");
 
@@ -568,6 +574,7 @@ function App() {
   }
 
   async function deleteContact(id) {
+    setLoadingMessage("Kontakt o'chirilmoqda...");
     setGenerating(true);
     setError("");
 
@@ -584,6 +591,7 @@ function App() {
   }
 
   async function addStudioSchedule(payload) {
+    setLoadingMessage("Jadval qo'shilmoqda...");
     setGenerating(true);
     setError("");
 
@@ -632,7 +640,7 @@ function App() {
 
   return (
     <div className="app-shell">
-      {generating && <LoadingScreen />}
+      {generating && <LoadingScreen message={loadingMessage} />}
       <header className="topbar">
         <button className="icon-button" type="button" aria-label="Menyu" onClick={() => setMenuOpen((value) => !value)}>
           <Menu size={23} />
@@ -1167,6 +1175,7 @@ function WeeklyPage({ activeDay, dashboard, onCreate, onDeleteSchedule, onDayCha
   const [openMetric, setOpenMetric] = useState("");
   const [openGroups, setOpenGroups] = useState(() => new Set());
   const [selectedPerson, setSelectedPerson] = useState(null);
+  const [promoIndex, setPromoIndex] = useState(0);
   const todayName = todayDayName();
   const filteredGroups = useMemo(() => {
     if (activeDay === "Barcha kunlar") return dashboard.groups;
@@ -1194,12 +1203,35 @@ function WeeklyPage({ activeDay, dashboard, onCreate, onDeleteSchedule, onDayCha
     rest: visiblePeople.filter((person) => STATUS_META[person.statusType]?.metric === "rest"),
     total: visiblePeople
   }), [visiblePeople]);
+  const promoItems = useMemo(() => {
+    const activePeople = visiblePeople.filter((person) => STATUS_META[person.statusType]?.metric !== "rest");
+    const source = activePeople.length ? activePeople : visiblePeople;
+    return source.slice(0, 8).map((person) => ({
+      id: `${person.groupTitle}-${person.id}-${person.statusType}`,
+      name: person.name,
+      place: person.groupMeta,
+      title: person.groupTitle,
+      status: STATUS_META[person.statusType]?.label || person.status,
+      code: STATUS_META[person.statusType]?.code || "S",
+      time: person.time
+    }));
+  }, [visiblePeople]);
+  const activePromo = promoItems[promoIndex % Math.max(promoItems.length, 1)];
 
   useEffect(() => {
     setOpenMetric("");
     setOpenGroups(new Set());
     setSelectedPerson(null);
+    setPromoIndex(0);
   }, [activeDay, dashboard.week.start]);
+
+  useEffect(() => {
+    if (promoItems.length < 2) return undefined;
+    const timer = window.setInterval(() => {
+      setPromoIndex((value) => (value + 1) % promoItems.length);
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [promoItems.length]);
 
   function toggleGroup(groupId) {
     setOpenGroups((current) => {
@@ -1213,8 +1245,10 @@ function WeeklyPage({ activeDay, dashboard, onCreate, onDeleteSchedule, onDayCha
   return (
     <>
       <section className="hero-block">
-        <h2>Haftalik jadval</h2>
-        <p>{activeDay === "Bugun" ? `Bugun ${dashboard.week.todayLabel}` : dashboard.week.range}</p>
+        <span>{activeDay === "Bugun" ? `Bugun ${dashboard.week.todayLabel}` : dashboard.week.range}</span>
+        <h2>{activePromo ? `${activePromo.name} ishda` : "Bugungi ishlar"}</h2>
+        <p>{activePromo ? `${activePromo.place} • ${activePromo.time} • ${activePromo.status}` : "Bugungi smena ma'lumotlari shu yerda almashib turadi."}</p>
+        <em>{activePromo ? activePromo.code : <CalendarDays size={18} />}</em>
       </section>
 
       <div className="week-insight">
@@ -2331,10 +2365,10 @@ function SkeletonPage() {
   );
 }
 
-function LoadingScreen() {
+function LoadingScreen({ message = "Yuklanmoqda..." }) {
   return (
     <div className="loading-screen" role="status" aria-live="polite">
-      <strong>Yaratilmoqda...</strong>
+      <strong>{message}</strong>
     </div>
   );
 }

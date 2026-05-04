@@ -314,28 +314,70 @@ button:active {
 }
 
 .hero-block {
+  position: relative;
+  display: grid;
+  align-content: center;
+  min-height: 164px;
   margin-bottom: 12px;
-  padding: 18px;
+  overflow: hidden;
+  padding: 18px 76px 18px 18px;
   border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
   border-radius: 14px;
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--primary) 12%, transparent), transparent 62%),
+    linear-gradient(135deg, color-mix(in srgb, var(--primary) 18%, transparent), color-mix(in srgb, var(--success) 10%, transparent) 72%),
     var(--surface);
   box-shadow: var(--shadow-soft);
 }
 
+.hero-block::before {
+  content: "";
+  position: absolute;
+  inset: auto -36px -58px auto;
+  width: 146px;
+  height: 146px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
+}
+
+.hero-block span {
+  position: relative;
+  color: var(--primary-strong);
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .hero-block h2 {
-  margin: 0 0 4px;
+  position: relative;
+  margin: 7px 0 6px;
   color: var(--text);
-  font-size: 27px;
+  font-size: 24px;
   line-height: 1.15;
+  animation: promoTextIn 0.38s ease both;
 }
 
 .hero-block p,
 .studio-period p {
+  position: relative;
   margin: 0;
   color: #6b7280;
   font-size: 14px;
+}
+
+.hero-block em {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--primary-strong), var(--primary));
+  box-shadow: 0 12px 24px color-mix(in srgb, var(--primary) 22%, transparent);
+  font-size: 21px;
+  font-style: normal;
+  font-weight: 900;
 }
 
 .week-insight {
@@ -4081,6 +4123,18 @@ button.metric-card {
   }
 }
 
+@keyframes promoTextIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes modalIn {
   from {
     opacity: 0;
@@ -5072,17 +5126,19 @@ button.metric-card {
 
 @media (min-width: 700px) {
   body {
-    padding: 24px;
+    display: grid;
+    place-items: start center;
+    padding: 18px;
   }
 
   .app-shell {
-    width: min(100%, 760px);
+    width: min(100%, 430px);
     min-height: calc(100vh - 48px);
     border-radius: 18px;
   }
 
   .content {
-    padding-inline: 22px;
+    padding-inline: 17px;
   }
 
   .metric-grid,
@@ -5092,20 +5148,12 @@ button.metric-card {
   }
 
   .day-tabs {
-    margin-inline: -22px;
-    padding-inline: 22px;
-  }
-
-  .date-group-sections {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .date-group-sections .group-card:only-child {
-    grid-column: 1 / -1;
+    margin-inline: -17px;
+    padding-inline: 17px;
   }
 
   .documents-page {
-    grid-template-columns: minmax(0, 1fr) 300px;
+    grid-template-columns: 1fr;
   }
 
   .profile-calendar-grid button {
@@ -5113,6 +5161,6 @@ button.metric-card {
   }
 
   .profile-day-detail {
-    grid-template-columns: minmax(0, 1.2fr) minmax(220px, 0.8fr);
+    grid-template-columns: 1fr;
   }
 }
