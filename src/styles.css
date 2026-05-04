@@ -2661,9 +2661,9 @@ button.metric-card {
 
 .employee-card {
   display: grid;
-  gap: 16px;
-  margin: 6px 0 20px;
-  padding: 18px;
+  gap: 12px;
+  margin: 2px 0 16px;
+  padding: 16px;
 }
 
 .employee-card .section-head {
@@ -2709,19 +2709,18 @@ button.metric-card {
 
 .employee-list {
   display: grid;
-  gap: 12px;
-  max-height: 380px;
+  gap: 9px;
+  max-height: 310px;
   overflow-y: auto;
-  padding-right: 2px;
 }
 
 .employee-row {
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr) 34px 34px;
   align-items: center;
-  gap: 12px;
-  min-height: 76px;
-  padding: 12px;
+  gap: 9px;
+  min-height: 64px;
+  padding: 10px;
   border: 1px solid #edf0f4;
   border-radius: 8px;
   background: #fbfcfe;
@@ -2860,18 +2859,13 @@ button.metric-card {
 
 .documents-page {
   display: grid;
-  gap: 16px;
-  width: 100%;
-  min-width: 0;
+  gap: 14px;
 }
 
 .documents-card {
   display: grid;
-  gap: 16px;
-  width: 100%;
-  min-width: 0;
-  padding: 16px;
-  overflow: hidden;
+  gap: 13px;
+  padding: 14px;
 }
 
 .documents-card .section-head {
@@ -2891,7 +2885,7 @@ button.metric-card {
 .documents-form input,
 .documents-form textarea {
   width: 100%;
-  min-height: 48px;
+  min-height: 42px;
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 9px 10px;
@@ -2902,8 +2896,7 @@ button.metric-card {
 
 .documents-form {
   display: grid;
-  gap: 14px;
-  min-width: 0;
+  gap: 12px;
 }
 
 .documents-form textarea {
@@ -2919,29 +2912,10 @@ button.metric-card {
 
 .document-profile {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) auto;
+  grid-template-columns: 42px minmax(0, 1fr);
   align-items: center;
-  gap: 11px;
-  min-height: 72px;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface-soft);
-}
-
-.document-profile em {
-  justify-self: end;
-  max-width: 92px;
-  padding: 7px 9px;
-  overflow: hidden;
-  border-radius: 999px;
-  color: var(--primary-strong);
-  background: color-mix(in srgb, var(--primary) 13%, var(--surface));
-  font-size: 11px;
-  font-style: normal;
-  font-weight: 900;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  gap: 10px;
+  min-height: 58px;
 }
 
 .document-edit-open {
@@ -3099,18 +3073,16 @@ button.metric-card {
 
 .documents-summary {
   display: grid;
-  gap: 12px;
-  min-width: 0;
+  gap: 9px;
 }
 
 .documents-summary button {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
+  grid-template-columns: 42px minmax(0, 1fr);
   align-items: center;
-  gap: 11px;
-  min-height: 74px;
-  padding: 11px;
-  border-radius: 12px;
+  gap: 10px;
+  min-height: 62px;
+  padding: 10px;
   cursor: pointer;
   text-align: left;
 }
@@ -3122,9 +3094,8 @@ button.metric-card {
 
 .portfolio-editor {
   display: grid;
-  gap: 12px;
-  min-width: 0;
-  padding: 14px;
+  gap: 10px;
+  padding: 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-soft);
@@ -3151,22 +3122,8 @@ button.metric-card {
 
 .portfolio-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 42px;
-  gap: 10px;
-  min-width: 0;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-}
-
-.portfolio-row input {
-  min-width: 0;
-}
-
-.portfolio-row input:first-child,
-.portfolio-row input:nth-child(2) {
-  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
 }
 
 .portfolio-row input[type="date"] {
@@ -3217,15 +3174,12 @@ button.metric-card {
 }
 
 .report-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 54px;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 14px;
-  padding: 16px;
+  padding: 15px;
   overflow: hidden;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--primary) 12%, transparent), transparent 62%),
-    var(--surface);
 }
 
 .report-hero span,
@@ -3239,7 +3193,7 @@ button.metric-card {
   display: block;
   margin-top: 2px;
   color: var(--text);
-  font-size: 32px;
+  font-size: 34px;
   line-height: 1;
 }
 
@@ -3264,17 +3218,6 @@ button.metric-card {
   font-weight: 800;
 }
 
-.report-hero > svg {
-  display: grid;
-  place-self: center;
-  width: 54px;
-  height: 54px;
-  padding: 12px;
-  border-radius: 16px;
-  color: #ffffff;
-  background: linear-gradient(135deg, var(--primary-strong), var(--primary));
-}
-
 .report-kpi-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3295,67 +3238,6 @@ button.metric-card {
   background: var(--surface);
   text-align: left;
   box-shadow: var(--shadow);
-}
-
-.report-card {
-  display: grid;
-  gap: 10px;
-  padding: 14px;
-}
-
-.report-card .section-head {
-  margin: 0 0 2px;
-}
-
-.report-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-  min-height: 58px;
-  padding: 11px 12px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface-soft);
-}
-
-.report-row div {
-  min-width: 0;
-}
-
-.report-row span {
-  display: block;
-  overflow: hidden;
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 850;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.report-row strong {
-  min-width: 38px;
-  color: var(--text);
-  font-size: 24px;
-  line-height: 1;
-  text-align: right;
-}
-
-.report-row i {
-  display: block;
-  height: 7px;
-  margin-top: 8px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--primary) 12%, var(--surface-muted));
-}
-
-.report-row b {
-  display: block;
-  height: 100%;
-  min-width: 5px;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #16a34a, var(--primary));
 }
 
 .report-kpi > span {
@@ -3524,7 +3406,7 @@ button.metric-card {
 
 .profile-hero {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr) 42px;
+  grid-template-columns: 72px minmax(0, 1fr);
   align-items: center;
   gap: 14px;
   min-height: 124px;
@@ -3532,16 +3414,6 @@ button.metric-card {
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--primary) 10%, transparent), transparent 58%),
     var(--surface);
-}
-
-.profile-hero > button {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
-  color: var(--primary-strong);
-  background: color-mix(in srgb, var(--primary) 13%, var(--surface));
 }
 
 .profile-hero strong {
@@ -3700,18 +3572,18 @@ button.metric-card {
 }
 
 .profile-today-banner.trip {
-  border-color: #bfdbfe;
-  color: #1e3a8a;
-  background:
-    linear-gradient(135deg, rgba(59, 130, 246, 0.22), rgba(255, 255, 255, 0.62)),
-    var(--surface);
-}
-
-.profile-today-banner.tjk {
   border-color: #fde68a;
   color: #713f12;
   background:
     linear-gradient(135deg, rgba(250, 204, 21, 0.24), rgba(255, 255, 255, 0.62)),
+    var(--surface);
+}
+
+.profile-today-banner.tjk {
+  border-color: #bfdbfe;
+  color: #1e3a8a;
+  background:
+    linear-gradient(135deg, rgba(59, 130, 246, 0.22), rgba(255, 255, 255, 0.62)),
     var(--surface);
 }
 
@@ -3843,28 +3715,20 @@ button.metric-card {
 }
 
 .profile-calendar-grid button.otpiska {
-  background: #f97316;
+  background: #ef4444;
 }
 
 .profile-calendar-grid button.trip {
-  background: #2563eb;
+  color: #713f12;
+  background: #facc15;
 }
 
 .profile-calendar-grid button.tjk {
-  color: #111827;
-  background: #facc15;
+  background: #3b82f6;
 }
 
 .profile-calendar-grid button.studio {
   background: #047857;
-}
-
-.profile-calendar-grid button.administration {
-  background: #7c3aed;
-}
-
-.profile-calendar-grid button.presidential {
-  background: #0f766e;
 }
 
 .profile-calendar-grid button.today {
@@ -3904,23 +3768,13 @@ button.metric-card {
 }
 
 .profile-day-detail.trip {
-  border-color: #bfdbfe;
-  background: #eff6ff;
-}
-
-.profile-day-detail.tjk {
   border-color: #fde68a;
   background: #fffbeb;
 }
 
-.profile-day-detail.administration {
-  border-color: #ddd6fe;
-  background: #f5f3ff;
-}
-
-.profile-day-detail.presidential {
-  border-color: #99f6e4;
-  background: #f0fdfa;
+.profile-day-detail.tjk {
+  border-color: #bfdbfe;
+  background: #eff6ff;
 }
 
 .profile-day-detail span,
@@ -5117,7 +4971,7 @@ button.metric-card {
 }
 
 .profile-page {
-  gap: 16px;
+  gap: 14px;
 }
 
 .profile-hero,
@@ -5131,119 +4985,6 @@ button.metric-card {
 .profile-hero {
   min-height: 118px;
   border-radius: 14px;
-}
-
-.active-carousel-card {
-  display: grid;
-  gap: 12px;
-  padding: 15px;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--success) 12%, transparent), transparent 66%),
-    var(--surface);
-  box-shadow: var(--shadow);
-}
-
-.active-carousel-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.active-carousel-head strong,
-.active-slide strong {
-  display: block;
-  color: var(--text);
-}
-
-.active-carousel-head span,
-.active-slide span,
-.active-carousel-empty {
-  display: block;
-  margin-top: 2px;
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
-.active-carousel-head em {
-  flex: 0 0 auto;
-  padding: 7px 10px;
-  border-radius: 999px;
-  color: #166534;
-  background: #dcfce7;
-  font-size: 12px;
-  font-style: normal;
-  font-weight: 900;
-}
-
-.active-carousel-window {
-  overflow: hidden;
-  margin-inline: -4px;
-}
-
-.active-carousel-track {
-  display: flex;
-  gap: 12px;
-  width: max-content;
-  animation: activeCarousel 24s linear infinite;
-}
-
-.active-carousel-track:hover {
-  animation-play-state: paused;
-}
-
-.active-slide {
-  display: grid;
-  grid-template-columns: 44px 150px;
-  align-items: center;
-  gap: 10px;
-  width: 216px;
-  min-height: 70px;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
-  box-shadow: var(--shadow-soft);
-}
-
-.active-slide strong,
-.active-slide span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.active-slide.department-pull {
-  border-left: 4px solid #2563eb;
-}
-
-.active-slide.department-operator {
-  border-left: 4px solid #16a34a;
-}
-
-.active-slide.department-dron {
-  border-left: 4px solid #f59e0b;
-}
-
-.active-slide.department-tjk {
-  border-left: 4px solid #7c3aed;
-}
-
-.active-carousel-empty {
-  margin: 0;
-}
-
-@keyframes activeCarousel {
-  from {
-    transform: translateX(0);
-  }
-
-  to {
-    transform: translateX(-50%);
-  }
 }
 
 .settings-card .toggle-row {
@@ -5346,8 +5087,6 @@ button.metric-card {
 :root[data-theme="dark"] .documents-card,
 :root[data-theme="dark"] .documents-summary button,
 :root[data-theme="dark"] .contacts-card,
-:root[data-theme="dark"] .active-carousel-card,
-:root[data-theme="dark"] .active-slide,
 :root[data-theme="dark"] .profile-edit-card,
 :root[data-theme="dark"] .profile-calendar-card,
 :root[data-theme="dark"] .profile-today-banner,
