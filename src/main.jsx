@@ -65,14 +65,17 @@ const OPERATOR_NAMES = [
 ];
 const SHIFT_LABELS = ["09:00-18:00", "09:00-22:00", "18:00-09:00", "Dam"];
 const MONTHLY_STATUS_OPTIONS = {
-  work: { label: "K", shift: "Kundalik ish", hours: 9 },
+  work: { label: "I", shift: "Ishda", hours: 9 },
   rest: { label: "D", shift: "Dam", hours: 0 },
+  trip: { label: "K", shift: "Komandirovka", hours: 9 },
   tjk: { label: "T", shift: "TJK guruhi", hours: 9 },
   studio: { label: "S", shift: "Studiyada", hours: 9 },
+  vacation: { label: "M", shift: "Ta'tilda", hours: 0 },
+  otpiska: { label: "O", shift: "Otpiska", hours: 0 },
   administration: { label: "A", shift: "Administratsiya", hours: 9 },
   presidential: { label: "P", shift: "Prezidentskiy", hours: 9 }
 };
-const MONTHLY_STATUS_SEQUENCE = ["work", "rest", "tjk", "studio", "administration", "presidential"];
+const MONTHLY_STATUS_SEQUENCE = ["work", "rest", "trip", "tjk", "studio", "vacation", "otpiska", "administration", "presidential"];
 const DEPARTMENTS = [
   { id: "pull", label: "Pull xizmati", shortLabel: "Pull" },
   { id: "operator", label: "Oddiy operatorlar", shortLabel: "Operator" },
@@ -294,6 +297,43 @@ function readStoredJson(key, fallback) {
   }
 }
 
+function createAuthTokens(seed = "") {
+  const cleanSeed = String(seed || "user")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "")
+    .slice(0, 12) || "user";
+  const stamp = Date.now().toString(36);
+  const random = Math.random().toString(36).slice(2, 10);
+  return {
+    accessToken: `atk_${cleanSeed}_${stamp}_${random}`,
+    refreshToken: `rtk_${cleanSeed}_${stamp}_${random}${Math.random().toString(36).slice(2, 6)}`
+  };
+}
+
+function normalizeCurrentUser(user) {
+  if (!user) return null;
+  const storedTokens = readStoredJson("authTokens", {}) || {};
+  return {
+    name: String(user.name || "Administrator").trim() || "Administrator",
+    email: String(user.email || "admin@uz24.local").trim() || "admin@uz24.local",
+    role: String(user.role || "Jadval administratori").trim() || "Jadval administratori",
+    avatar: user.avatar || "",
+    accessToken: user.accessToken || storedTokens.accessToken || "",
+    refreshToken: user.refreshToken || storedTokens.refreshToken || ""
+  };
+}
+
+function persistCurrentUser(user) {
+  const nextUser = normalizeCurrentUser(user);
+  if (!nextUser) return null;
+  window.localStorage.setItem("currentUser", JSON.stringify(nextUser));
+  window.localStorage.setItem("authTokens", JSON.stringify({
+    accessToken: nextUser.accessToken || "",
+    refreshToken: nextUser.refreshToken || ""
+  }));
+  return nextUser;
+}
+
 function readImageFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -368,11 +408,46 @@ function monthlyStatusForEmployee(employee, date) {
   if ((id * 3 + day) % 17 === 0) return "trip";
   if ((id * 2 + day) % 13 === 0) return "tjk";
   if ((id * 3 + day) % 11 === 0) return "studio";
+  if ((id + day) % 19 === 0) return "administration";
+  if ((id + day) % 23 === 0) return "presidential";
   return "work";
+}
+
+function findShootingAssignmentForEmployee(employee) {
+  const target = normalizeLookupName(employee?.name);
+  if (!target) return null;
+
+  return SHOOTING_SCHEDULE.find((row) => {
+    const people = [...(row.operators || []), ...(row.reporters || [])];
+    return people.some((name) => {
+      const normalized = normalizeLookupName(name);
+      return normalized === target || normalized.includes(target) || target.includes(normalized);
+    });
+  }) || null;
+}
+
+function extractDriverInfo(topic) {
+  return String(topic || "")
+    .split("\n")
+    .find((line) => line.toLowerCase().includes("haydovchi")) || "";
+}
+
+function extractCameraNumber(camera) {
+  const match = String(camera || "").match(/\(([^)]+)\)/);
+  if (match?.[1]) return match[1];
+  const digits = String(camera || "").match(/\d+/g);
+  return digits?.[digits.length - 1] || "";
+}
+
+function formatHourLabel(hours) {
+  const value = Number(hours);
+  if (!Number.isFinite(value) || value <= 0) return "00:00";
+  return `${String(value).padStart(2, "0")}:00`;
 }
 
 function App() {
   const [page, setPage] = useState("weekly");
+  const [previousPage, setPreviousPage] = useState("weekly");
   const [weekStart, setWeekStart] = useState("2026-01-29");
   const [activeDay, setActiveDay] = useState("Bugun");
   const [dashboard, setDashboard] = useState(emptyDashboard);
@@ -384,7 +459,7 @@ function App() {
   const [showAllOverview, setShowAllOverview] = useState(false);
   const [error, setError] = useState("");
   const [theme, setTheme] = useState(() => window.localStorage.getItem("theme") || "light");
-  const [currentUser, setCurrentUser] = useState(() => readStoredJson("currentUser", null));
+  const [currentUser, setCurrentUser] = useState(() => normalizeCurrentUser(readStoredJson("currentUser", null)));
   const [navDirection, setNavDirection] = useState("next");
   const [toasts, setToasts] = useState([]);
   const hasLoadedDashboard = useRef(false);
@@ -421,22 +496,55 @@ function App() {
     window.localStorage.setItem("theme", theme);
   }, [theme]);
 
+  useEffect(() => {
+    if (page === "monthly") {
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = "";
+      };
+    }
+    document.body.style.overflow = "";
+    return undefined;
+  }, [page]);
+
   function handleAuth(user) {
-    const nextUser = {
+    const nextUser = persistCurrentUser({
       name: user.name.trim() || "Administrator",
       email: user.email.trim() || "admin@uz24.local",
-      role: "Jadval administratori"
-    };
-    window.localStorage.setItem("currentUser", JSON.stringify(nextUser));
+      role: "Jadval administratori",
+      avatar: "",
+      ...createAuthTokens(user.email)
+    });
     setCurrentUser(nextUser);
     notify("Tizimga muvaffaqiyatli kirdingiz");
   }
 
+  function updateCurrentUser(nextUser) {
+    const mergedUser = persistCurrentUser({
+      ...(currentUser || {}),
+      ...nextUser,
+      accessToken: currentUser?.accessToken || "",
+      refreshToken: currentUser?.refreshToken || ""
+    });
+    setCurrentUser(mergedUser);
+    notify("Profil ma'lumotlari saqlandi");
+  }
+
   function handleLogout() {
     window.localStorage.removeItem("currentUser");
+    window.localStorage.removeItem("authTokens");
     setCurrentUser(null);
     setPage("weekly");
     notify("Tizimdan chiqildi");
+  }
+
+  function openMonthly(fromPage = page) {
+    setPreviousPage(fromPage || "weekly");
+    setPage("monthly");
+  }
+
+  function closeMonthly() {
+    setPage(previousPage || "weekly");
   }
 
   async function createSchedule() {
@@ -642,7 +750,7 @@ function App() {
 
   const title = useMemo(() => {
     if (page === "studio") return "Studiyo jadvali";
-    if (page === "documents") return "Oshkora ma'lumotlar";
+    if (page === "documents") return "Hujjatlar";
     if (page === "monthly") return "Oylik grafik";
     if (page === "shooting") return "Tasvir jadvali";
     if (page === "reports") return "Hisobotlar";
@@ -679,7 +787,7 @@ function App() {
         </button>
       </header>
 
-      {menuOpen && <MenuPanel onClose={() => setMenuOpen(false)} onPageChange={setPage} />}
+      {menuOpen && <MenuPanel onClose={() => setMenuOpen(false)} onPageChange={setPage} onOpenMonthly={openMonthly} />}
       {notificationsOpen && <NotificationsPanel items={dashboard.notifications} />}
 
       <main className="content">
@@ -695,6 +803,7 @@ function App() {
                 onCreate={createSchedule}
                 onDeleteSchedule={deleteSchedule}
                 onDayChange={setActiveDay}
+                onOpenMonthly={openMonthly}
                 onStatusChange={updateStatus}
               />
             )}
@@ -713,7 +822,7 @@ function App() {
                 onToggleOverview={() => setShowAllOverview((value) => !value)}
               />
             )}
-            {page === "monthly" && <MonthlyPage dashboard={dashboard} weekStart={weekStart} />}
+            {page === "monthly" && <MonthlyPage dashboard={dashboard} weekStart={weekStart} fullscreen onClose={closeMonthly} />}
             {page === "documents" && <DocumentsPage employees={dashboard.employees} onNotify={notify} onSaveEmployee={saveEmployee} />}
             {page === "shooting" && <ShootingPage onNotify={notify} />}
             {page === "reports" && <ReportsPage dashboard={dashboard} />}
@@ -722,13 +831,15 @@ function App() {
                 currentUser={currentUser}
                 dashboard={dashboard}
                 notificationsEnabled={notificationsOpen}
-                theme={theme}
-                onLogout={handleLogout}
-                onRefresh={loadDashboard}
-                onThemeChange={setTheme}
-                onSaveContact={saveContact}
-                onDeleteContact={deleteContact}
-              />
+              theme={theme}
+              onLogout={handleLogout}
+              onRefresh={loadDashboard}
+              onThemeChange={setTheme}
+              onUpdateUser={updateCurrentUser}
+              onNotify={notify}
+              onSaveContact={saveContact}
+              onDeleteContact={deleteContact}
+            />
             )}
           </>
         )}
@@ -1024,7 +1135,7 @@ function ShootingPage({ onNotify }) {
   );
 }
 
-function MonthlyPage({ dashboard, weekStart }) {
+function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose }) {
   const monthInfo = useMemo(() => {
     const base = new Date(`${weekStart}T00:00:00`);
     const year = base.getFullYear();
@@ -1101,8 +1212,8 @@ function MonthlyPage({ dashboard, weekStart }) {
     });
   }
 
-  return (
-    <section className="monthly-page">
+  const monthlyBody = (
+    <>
       <div className="monthly-head">
         <div>
           <h2>{monthInfo.title}</h2>
@@ -1188,11 +1299,38 @@ function MonthlyPage({ dashboard, weekStart }) {
         <LegendItem tone="administration" label="A - Administratsiya" />
         <LegendItem tone="presidential" label="P - Prezidentskiy" />
       </section>
-    </section>
+    </>
   );
+
+  if (!fullscreen) {
+    return <section className="monthly-page">{monthlyBody}</section>;
+  }
+
+  return createPortal((
+    <div className="monthly-fullscreen-backdrop" role="dialog" aria-modal="true" aria-label="Oylik grafik" onClick={onClose}>
+      <section className="monthly-fullscreen" onClick={(event) => event.stopPropagation()}>
+        <header className="monthly-fullscreen-head">
+          <button type="button" onClick={onClose} aria-label="Chiqish">
+            <ChevronLeft size={20} />
+            Chiqish
+          </button>
+          <div>
+            <strong>Oylik grafik</strong>
+            <span>{monthInfo.title}</span>
+          </div>
+          <i />
+        </header>
+        <div className="monthly-fullscreen-body">
+          <section className="monthly-page">
+            {monthlyBody}
+          </section>
+        </div>
+      </section>
+    </div>
+  ), document.body);
 }
 
-function WeeklyPage({ activeDay, dashboard, onCreate, onDeleteSchedule, onDayChange, onStatusChange }) {
+function WeeklyPage({ activeDay, dashboard, onCreate, onDeleteSchedule, onDayChange, onOpenMonthly, onStatusChange }) {
   const [openMetric, setOpenMetric] = useState("");
   const [openGroups, setOpenGroups] = useState(() => new Set());
   const [selectedPerson, setSelectedPerson] = useState(null);
@@ -1278,9 +1416,9 @@ function WeeklyPage({ activeDay, dashboard, onCreate, onDeleteSchedule, onDayCha
           <strong>{dayMetrics.working} ishda</strong>
           <p>{statusSummary}</p>
         </div>
-        <button className="week-insight-action" type="button" onClick={() => setOpenMetric(openMetric === "total" ? "" : "total")} aria-label="Bugungi ro'yxatni ko'rish">
+        <button className="week-insight-action" type="button" onClick={() => onOpenMonthly("weekly")} aria-label="Oylik grafikni ko'rish">
           <CalendarDays size={22} />
-          <span>Ko'rish</span>
+          <span>Oylik grafik</span>
         </button>
       </div>
 
@@ -1957,7 +2095,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
     <section className="documents-page">
       <section className="documents-card">
         <div className="section-head">
-          <h2>Oshkora ma'lumotlar</h2>
+          <h2>Hujjatlar</h2>
           <span>{(draft.portfolio || []).length} video</span>
         </div>
         <label className="document-select">
@@ -1996,7 +2134,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
         <div className="modal-backdrop" role="presentation">
           <form ref={formRef} className="schedule-modal documents-modal" onSubmit={submit}>
             <div className="modal-head">
-              <strong>Oshkora ma'lumotlarni tahrirlash</strong>
+              <strong>Hujjatlarni tahrirlash</strong>
               <button type="button" onClick={() => setEditOpen(false)}>×</button>
             </div>
             <label>
@@ -2145,23 +2283,29 @@ function ReportsPage({ dashboard }) {
   );
 }
 
-function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThemeChange, onSaveContact, onDeleteContact }) {
+function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThemeChange, onSaveContact, onDeleteContact, onUpdateUser, onNotify }) {
   const [notify, setNotify] = useState(true);
+  const [editOpen, setEditOpen] = useState(false);
+  const [draft, setDraft] = useState(currentUser);
   const [contactDraft, setContactDraft] = useState({ type: "Muxbir", name: "", vehicle: "", phone: "" });
   const [contactFormOpen, setContactFormOpen] = useState(false);
   const [todaySlide, setTodaySlide] = useState(0);
   const [selectedDate, setSelectedDate] = useState(() => toInputDate(new Date()));
+  const formRef = useRef(null);
   const operators = dashboard.employees.filter((employee) => employee.role.includes("Operator")).length;
   const reporters = dashboard.employees.filter((employee) => employee.role.includes("Muxbir")).length;
   const contacts = dashboard.contacts || [];
   const drivers = contacts.filter((contact) => contact.type === "Haydovchi").length;
   const profileEmployee = useMemo(() => {
     const userName = normalizeLookupName(currentUser.name);
-    return dashboard.employees.find((employee) => {
+    const matchedEmployee = dashboard.employees.find((employee) => {
       const employeeName = normalizeLookupName(employee.name);
       return employeeName === userName || employeeName.includes(userName) || userName.includes(employeeName);
     });
+    return matchedEmployee || dashboard.employees[0] || null;
   }, [currentUser.name, dashboard.employees]);
+  const shootingAssignment = useMemo(() => findShootingAssignmentForEmployee(profileEmployee), [profileEmployee]);
+  const driverContact = useMemo(() => contacts.find((contact) => contact.type === "Haydovchi"), [contacts]);
   const todayAssignments = useMemo(() => {
     if (!profileEmployee) return [];
     return dashboard.groups
@@ -2171,6 +2315,7 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
         .map((person) => ({ ...person, groupTitle: group.title, groupMeta: group.meta })));
   }, [dashboard.groups, profileEmployee]);
   const activeAssignment = todayAssignments[todaySlide % Math.max(todayAssignments.length, 1)];
+  const todayPlan = activeAssignment || shootingAssignment;
   const calendarInfo = useMemo(() => {
     const base = new Date();
     const year = base.getFullYear();
@@ -2198,6 +2343,12 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
   }, [profileEmployee]);
   const selectedDay = calendarInfo.days.find((day) => day?.dateText === selectedDate) || calendarInfo.days.find((day) => day?.isToday) || calendarInfo.days.find(Boolean);
   const selectedStatusMeta = selectedDay ? (MONTHLY_STATUS_OPTIONS[selectedDay.status] || STATUS_META[selectedDay.status]) : null;
+  const bannerStatusMeta = activeAssignment ? STATUS_META[activeAssignment.statusType] : selectedStatusMeta;
+  const showAssignmentDetail = selectedDay && !["rest", "vacation", "otpiska"].includes(selectedDay.status);
+
+  useEffect(() => {
+    setDraft(currentUser);
+  }, [currentUser]);
 
   useEffect(() => {
     setTodaySlide(0);
@@ -2211,6 +2362,30 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
     return () => window.clearInterval(timer);
   }, [todayAssignments.length]);
 
+  function submitProfile(event) {
+    event.preventDefault();
+    const required = [
+      ["profile-name", draft.name, "Ism familiyani kiriting."],
+      ["profile-email", draft.email, "Emailni kiriting."],
+      ["profile-role", draft.role, "Rolni kiriting."]
+    ];
+    const invalid = required.find(([, value]) => !String(value || "").trim());
+    if (invalid) {
+      onNotify(invalid[2], "error");
+      formRef.current?.querySelector(`[name='${invalid[0]}']`)?.focus();
+      return;
+    }
+
+    onUpdateUser(draft);
+    setEditOpen(false);
+  }
+
+  async function updateAvatar(file) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return;
+    setDraft({ ...draft, avatar: await readImageFile(file) });
+  }
+
   async function submitContact(event) {
     event.preventDefault();
     const saved = await onSaveContact(contactDraft);
@@ -2223,21 +2398,81 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
   return (
     <section className="profile-page">
       <div className="profile-hero">
-        <span className="profile-avatar large"><User size={38} /></span>
+        <span className="profile-avatar large">
+          {currentUser.avatar ? <img src={currentUser.avatar} alt={currentUser.name} /> : <User size={38} />}
+        </span>
         <div>
           <strong>{currentUser.name}</strong>
           <p>{currentUser.role}</p>
           <em>{currentUser.email}</em>
         </div>
+        <button type="button" aria-label="Profilni tahrirlash" onClick={() => setEditOpen((value) => !value)}>
+          <Edit3 size={17} />
+        </button>
       </div>
+
+      {editOpen && (
+        <section className="profile-edit-card">
+          <div className="section-head">
+            <h2>Profilni tahrirlash</h2>
+            <button type="button" onClick={() => setEditOpen(false)}>
+              Yopish
+            </button>
+          </div>
+          <form ref={formRef} className="profile-edit-form" onSubmit={submitProfile}>
+            <div className="avatar-upload-field profile-avatar-upload">
+              <div className="avatar-upload-preview">
+                {draft.avatar ? <img src={draft.avatar} alt="Profil rasmi" /> : <User size={28} />}
+              </div>
+              <div>
+                <strong>Profil rasmi</strong>
+                <span>{draft.avatar ? "Rasm tanlangan" : "Rasm yuklanmagan"}</span>
+              </div>
+              <label>
+                <Upload size={15} />
+                Yuklash
+                <input type="file" accept="image/*" onChange={(event) => updateAvatar(event.target.files?.[0])} />
+              </label>
+            </div>
+            <label>
+              Ism familiya
+              <input name="profile-name" value={draft.name || ""} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Administrator" />
+            </label>
+            <label>
+              Email
+              <input name="profile-email" type="email" value={draft.email || ""} onChange={(event) => setDraft({ ...draft, email: event.target.value })} placeholder="admin@uz24.local" />
+            </label>
+            <label>
+              Rol
+              <input name="profile-role" value={draft.role || ""} onChange={(event) => setDraft({ ...draft, role: event.target.value })} placeholder="Jadval administratori" />
+            </label>
+            <button type="submit">
+              <Save size={17} />
+              Saqlash
+            </button>
+          </form>
+        </section>
+      )}
 
       <section className={`profile-today-banner ${activeAssignment?.statusType || "empty"}`}>
         <div>
           <span>Bugungi ish</span>
-          <strong>{activeAssignment ? activeAssignment.groupMeta : "Bugungi ish topilmadi"}</strong>
-          <p>{activeAssignment ? `${activeAssignment.groupTitle} • ${activeAssignment.time}` : "Profil nomi xodimlar ro'yxatidagi F.I.Sh bilan mos bo'lsa, bugungi smena shu yerda chiqadi."}</p>
+          <strong>{todayPlan ? (activeAssignment ? activeAssignment.groupMeta : shootingAssignment?.topic || "Bugungi reja") : "Bugungi ish topilmadi"}</strong>
+          <p>
+            {activeAssignment
+              ? `${activeAssignment.groupTitle} • ${activeAssignment.time}`
+              : todayPlan
+                ? `Kamera ${extractCameraNumber(shootingAssignment?.camera) || "—"} • ${shootingAssignment?.time || "—"}`
+                : "Profil nomi xodimlar ro'yxatidagi F.I.Sh bilan mos bo'lsa, bugungi smena shu yerda chiqadi."}
+          </p>
         </div>
-        <em>{activeAssignment ? `${STATUS_META[activeAssignment.statusType]?.code || "S"} - ${STATUS_META[activeAssignment.statusType]?.label || activeAssignment.status}` : "Bo'sh"}</em>
+        <em>
+          {todayPlan
+            ? (activeAssignment
+              ? `${bannerStatusMeta?.code || "S"} - ${bannerStatusMeta?.label || activeAssignment.status}`
+              : `${bannerStatusMeta?.label || "K"} - ${bannerStatusMeta?.shift || "Reja"}`)
+            : "Bo'sh"}
+        </em>
       </section>
 
       <section className="profile-calendar-card">
@@ -2269,8 +2504,16 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
               <p>{profileEmployee ? `${profileEmployee.name} uchun oylik status.` : "Profil xodimga ulanmagan."}</p>
             </div>
             <dl>
-              <div><dt>Status</dt><dd>{MONTHLY_STATUS_OPTIONS[selectedDay.status]?.label || STATUS_META[selectedDay.status]?.code || "K"}</dd></div>
-              <div><dt>Soat</dt><dd>{MONTHLY_STATUS_OPTIONS[selectedDay.status]?.hours ?? (STATUS_META[selectedDay.status]?.metric === "rest" ? 0 : 9)}</dd></div>
+              <div><dt>Status</dt><dd>{selectedStatusMeta?.shift || selectedStatusMeta?.label || STATUS_META[selectedDay.status]?.code || "K"}</dd></div>
+              <div><dt>Soat</dt><dd>{formatHourLabel(MONTHLY_STATUS_OPTIONS[selectedDay.status]?.hours ?? (STATUS_META[selectedDay.status]?.metric === "rest" ? 0 : 9))}</dd></div>
+              {showAssignmentDetail && (
+                <>
+                  <div><dt>Kamera raqami</dt><dd>{extractCameraNumber(shootingAssignment?.camera) || "Kiritilmagan"}</dd></div>
+                  <div><dt>Mashina</dt><dd>{driverContact?.vehicle || "Kiritilmagan"}</dd></div>
+                  <div><dt>Haydovchi</dt><dd>{extractDriverInfo(shootingAssignment?.topic) || driverContact?.name || "Kiritilmagan"}</dd></div>
+                  <div><dt>Muxbir</dt><dd>{shootingAssignment?.reporters?.join(", ") || "Kiritilmagan"}</dd></div>
+                </>
+              )}
             </dl>
           </article>
         )}
@@ -2393,9 +2636,9 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
         </button>
       </section>
 
-      <button className="logout-button" type="button" onClick={onLogout}>
+      <button className="logout-button" type="button" onClick={() => window.confirm("Haqiqatan ham akkauntdan chiqib ketmoqchimisiz?") && onLogout()}>
         <LogOut size={18} />
-        Log out
+        Chiqish
       </button>
     </section>
   );
@@ -2444,11 +2687,11 @@ function EmptyCard({ text }) {
   return <div className="empty-card">{text}</div>;
 }
 
-function MenuPanel({ onClose, onPageChange }) {
+function MenuPanel({ onClose, onPageChange, onOpenMonthly }) {
   const links = [
     ["weekly", "Ish jadvali", CalendarDays],
     ["studio", "Jamoa va bo'limlar", UsersRound],
-    ["documents", "Oshkora ma'lumotlar", ShieldCheck],
+    ["documents", "Hujjatlar", ShieldCheck],
     ["monthly", "Oylik grafik", Clock3],
     ["shooting", "Tasvir jadvali", FileText],
     ["reports", "Hisobotlar", ChartColumn],
@@ -2463,7 +2706,8 @@ function MenuPanel({ onClose, onPageChange }) {
           key={id}
           type="button"
           onClick={() => {
-            onPageChange(id);
+            if (id === "monthly") onOpenMonthly?.();
+            else onPageChange(id);
             onClose();
           }}
         >
@@ -2522,7 +2766,7 @@ function BottomNav({ page, onPageChange }) {
   const items = [
     { id: "weekly", label: "Jadval", icon: CalendarDays },
     { id: "studio", label: "Jamoa", icon: UsersRound },
-    { id: "documents", label: "Oshkora", icon: ShieldCheck },
+    { id: "documents", label: "Hujjatlar", icon: ShieldCheck },
     { id: "profile", label: "Profil", icon: User }
   ];
 

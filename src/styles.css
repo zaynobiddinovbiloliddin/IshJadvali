@@ -2646,6 +2646,78 @@ button.metric-card {
   line-height: 1.35;
 }
 
+.monthly-fullscreen-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  background: #f8fafc;
+}
+
+.monthly-fullscreen {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+}
+
+.monthly-fullscreen-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #d7dee9;
+  background: #ffffff;
+  box-shadow: 0 7px 20px rgba(29, 38, 55, 0.05);
+}
+
+.monthly-fullscreen-head button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 8px;
+  color: #111827;
+  background: #eef2ff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.monthly-fullscreen-head div {
+  display: grid;
+  gap: 3px;
+  text-align: center;
+}
+
+.monthly-fullscreen-head strong {
+  color: #111827;
+  font-size: 17px;
+}
+
+.monthly-fullscreen-head span {
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.monthly-fullscreen-head i {
+  display: block;
+  width: 88px;
+  height: 1px;
+}
+
+.monthly-fullscreen-body {
+  overflow: auto;
+  padding: 14px;
+}
+
+.monthly-fullscreen-body .monthly-page {
+  margin: 0 auto;
+  width: min(100%, 1400px);
+}
+
 .report-card,
 .profile-card,
 .employee-card,
@@ -3078,11 +3150,11 @@ button.metric-card {
 
 .documents-summary button {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr);
+  grid-template-columns: 48px minmax(0, 1fr);
   align-items: center;
-  gap: 10px;
-  min-height: 62px;
-  padding: 10px;
+  gap: 12px;
+  min-height: 72px;
+  padding: 12px;
   cursor: pointer;
   text-align: left;
 }
@@ -3406,7 +3478,7 @@ button.metric-card {
 
 .profile-hero {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
+  grid-template-columns: 72px minmax(0, 1fr) 42px;
   align-items: center;
   gap: 14px;
   min-height: 124px;
@@ -3414,6 +3486,16 @@ button.metric-card {
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--primary) 10%, transparent), transparent 58%),
     var(--surface);
+}
+
+.profile-hero > button {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  color: var(--primary-strong);
+  background: color-mix(in srgb, var(--primary) 13%, var(--surface));
 }
 
 .profile-hero strong {
@@ -3477,8 +3559,8 @@ button.metric-card {
   min-height: 34px;
   padding: 0 10px;
   border-radius: 7px;
-  color: #ffffff;
-  background: #2563eb;
+  color: var(--text);
+  background: var(--surface-muted);
   font-size: 12px;
   font-weight: 800;
 }
@@ -3705,6 +3787,10 @@ button.metric-card {
   font-weight: 900;
 }
 
+.profile-calendar-grid button.work {
+  background: #16a34a;
+}
+
 .profile-calendar-grid button.rest,
 .profile-calendar-grid button.vacation {
   background: #ef4444;
@@ -3715,20 +3801,27 @@ button.metric-card {
 }
 
 .profile-calendar-grid button.otpiska {
-  background: #ef4444;
+  background: #f97316;
 }
 
 .profile-calendar-grid button.trip {
-  color: #713f12;
-  background: #facc15;
+  background: #2563eb;
 }
 
 .profile-calendar-grid button.tjk {
-  background: #3b82f6;
+  background: #f59e0b;
 }
 
 .profile-calendar-grid button.studio {
   background: #047857;
+}
+
+.profile-calendar-grid button.administration {
+  background: #7c3aed;
+}
+
+.profile-calendar-grid button.presidential {
+  background: #0f766e;
 }
 
 .profile-calendar-grid button.today {
@@ -3757,24 +3850,44 @@ button.metric-card {
   background: #fef2f2;
 }
 
+.profile-day-detail.work {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.profile-day-detail.trip {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
 .profile-day-detail.sick {
   border-color: #ddd6fe;
   background: #f5f3ff;
 }
 
 .profile-day-detail.otpiska {
-  border-color: #fecaca;
-  background: #fef2f2;
+  border-color: #fed7aa;
+  background: #fff7ed;
 }
 
-.profile-day-detail.trip {
+.profile-day-detail.studio {
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+}
+
+.profile-day-detail.tjk {
   border-color: #fde68a;
   background: #fffbeb;
 }
 
-.profile-day-detail.tjk {
-  border-color: #bfdbfe;
-  background: #eff6ff;
+.profile-day-detail.administration {
+  border-color: #ddd6fe;
+  background: #f5f3ff;
+}
+
+.profile-day-detail.presidential {
+  border-color: #99f6e4;
+  background: #f0fdfa;
 }
 
 .profile-day-detail span,
@@ -4482,8 +4595,38 @@ button.metric-card {
   .settings-card,
   .employee-card,
   .attendance-panel,
-  .documents-card {
+  .documents-card,
+  .documents-summary button {
     border-radius: 16px;
+  }
+
+  .documents-summary button {
+    min-height: 72px;
+    padding: 12px;
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+
+  .monthly-fullscreen-head {
+    min-height: 58px;
+    padding: 10px 12px;
+  }
+
+  .monthly-fullscreen-head button {
+    min-height: 36px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  .monthly-fullscreen-head strong {
+    font-size: 15px;
+  }
+
+  .monthly-fullscreen-head span {
+    font-size: 11px;
+  }
+
+  .monthly-fullscreen-body {
+    padding: 12px;
   }
 
   .date-group-head {
@@ -4528,6 +4671,18 @@ button.metric-card {
     justify-self: start;
   }
 
+  .profile-hero {
+    grid-template-columns: 64px minmax(0, 1fr) 38px;
+    min-height: 110px;
+    padding: 16px;
+  }
+
+  .profile-hero > button {
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
+  }
+
   .profile-calendar-grid {
     gap: 7px;
   }
@@ -4535,6 +4690,12 @@ button.metric-card {
   .profile-calendar-grid button {
     min-height: 44px;
     border-radius: 11px;
+  }
+
+  .documents-summary button {
+    min-height: 74px;
+    padding: 12px;
+    grid-template-columns: 48px minmax(0, 1fr);
   }
 
   .profile-calendar-grid button strong {
