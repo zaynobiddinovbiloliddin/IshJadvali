@@ -1,11 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { createRoot } from "react-dom/client";
 import {
   Bell,
   BriefcaseBusiness,
   CalendarDays,
-  Car,
   ChartColumn,
   Check,
   ChevronDown,
@@ -15,7 +13,6 @@ import {
   Coffee,
   Edit3,
   FileText,
-  Info,
   LogIn,
   LogOut,
   Menu,
@@ -39,7 +36,7 @@ import {
 import "./styles.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
-const DAY_TABS = ["Barcha kunlar", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba", "Yakshanba"];
+const DAY_TABS = ["Barcha kunlar", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"];
 const MONTH_NAMES = ["Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun", "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr"];
 const STATUS_OPTIONS = [
   { id: "working", code: "S", label: "Studiyada", metric: "working" },
@@ -48,8 +45,6 @@ const STATUS_OPTIONS = [
   { id: "tjk", code: "T", label: "TJK ishda", metric: "working" },
   { id: "backup", code: "Z", label: "Zaxira", metric: "working" },
   { id: "vacation", code: "M", label: "Mehnat ta'tili", metric: "rest" },
-  { id: "administration", code: "A", label: "Administratsiya", metric: "working" },
-  { id: "presidential", code: "P", label: "Prezidentskiy", metric: "working" },
   { id: "otpiska", code: "O", label: "Otpiska", metric: "rest" }
 ];
 const STATUS_META = Object.fromEntries(STATUS_OPTIONS.map((status) => [status.id, status]));
@@ -64,14 +59,12 @@ const OPERATOR_NAMES = [
 ];
 const SHIFT_LABELS = ["09:00-18:00", "09:00-22:00", "18:00-09:00", "Dam"];
 const MONTHLY_STATUS_OPTIONS = {
-  work: { label: "I", shift: "Ishda", hours: 9 },
+  work: { label: "K", shift: "Kundalik ish", hours: 9 },
   rest: { label: "D", shift: "Dam", hours: 0 },
   tjk: { label: "T", shift: "TJK guruhi", hours: 9 },
-  studio: { label: "S", shift: "Studiyada", hours: 9 },
-  administration: { label: "A", shift: "Administratsiya", hours: 9 },
-  presidential: { label: "P", shift: "Prezidentskiy", hours: 9 }
+  studio: { label: "S", shift: "Studiyada", hours: 9 }
 };
-const MONTHLY_STATUS_SEQUENCE = ["work", "rest", "tjk", "studio", "administration", "presidential"];
+const MONTHLY_STATUS_SEQUENCE = ["work", "rest", "tjk", "studio"];
 const DEPARTMENTS = [
   { id: "pull", label: "Pull xizmati", shortLabel: "Pull" },
   { id: "operator", label: "Oddiy operatorlar", shortLabel: "Operator" },
@@ -151,7 +144,7 @@ const SHOOTING_SCHEDULE = [
     reporters: ["AXMADOVA G.", "RO'ZIMURODOV J."]
   },
   {
-    equipment: "HD jamlanmasi, mikrofon, chiroq, avtotransport",
+    equipment: "HD jamlanmasi, mikrofon, chiroq, avtotransport", 
     camera: "11\n(568)",
     time: "10:30-18:00",
     operators: ["RUSTAMOV I."],
@@ -257,8 +250,7 @@ const emptyDashboard = {
   reports: [],
   notifications: [],
   attendance: { activeNow: 0, todayScans: 0, todayMinutes: 0, monthMinutes: 0, recent: [], rows: [] },
-  employees: [],
-  contacts: []
+  employees: []
 };
 
 async function api(path, options) {
@@ -337,59 +329,6 @@ function formatDateTime(value) {
   }).format(date);
 }
 
-function todayDayName() {
-  const days = DAY_TABS.slice(1);
-  const mondayBasedIndex = (new Date().getDay() + 6) % 7;
-  return days[mondayBasedIndex] || "Dushanba";
-}
-
-function normalizeLookupName(value) {
-  return String(value || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9'`.\s]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function toInputDate(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function monthlyStatusForEmployee(employee, date) {
-  const day = date.getDate();
-  const id = Number(employee?.id) || 1;
-  if ((id + day) % 7 === 0) return "rest";
-  if ((id * 7 + day) % 29 === 0) return "vacation";
-  if ((id * 5 + day) % 23 === 0) return "otpiska";
-  if ((id * 3 + day) % 17 === 0) return "trip";
-  if ((id * 2 + day) % 13 === 0) return "tjk";
-  if ((id * 3 + day) % 11 === 0) return "studio";
-  if ((id + day) % 19 === 0) return "administration";
-  if ((id + day) % 23 === 0) return "presidential";
-  return "work";
-}
-
-function findShootingAssignmentForEmployee(employee) {
-  const target = normalizeLookupName(employee?.name);
-  if (!target) return null;
-  return SHOOTING_SCHEDULE.find((row) => {
-    const people = [...(row.operators || []), ...(row.reporters || [])];
-    return people.some((name) => {
-      const normalized = normalizeLookupName(name);
-      return normalized === target || normalized.includes(target) || target.includes(normalized);
-    });
-  }) || null;
-}
-
-function extractDriverInfo(topic) {
-  return String(topic || "")
-    .split("\n")
-    .find((line) => line.toLowerCase().includes("haydovchi")) || "";
-}
-
 function App() {
   const [page, setPage] = useState("weekly");
   const [weekStart, setWeekStart] = useState("2026-01-29");
@@ -397,7 +336,6 @@ function App() {
   const [dashboard, setDashboard] = useState(emptyDashboard);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState("Yuklanmoqda...");
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [showAllOverview, setShowAllOverview] = useState(false);
@@ -458,8 +396,19 @@ function App() {
     notify("Tizimdan chiqildi");
   }
 
+  function updateCurrentUser(nextUser) {
+    const cleanUser = {
+      name: String(nextUser.name || "").trim() || "Administrator",
+      email: String(nextUser.email || "").trim() || "admin@uz24.local",
+      role: String(nextUser.role || "").trim() || "Jadval administratori",
+      avatar: nextUser.avatar || ""
+    };
+    window.localStorage.setItem("currentUser", JSON.stringify(cleanUser));
+    setCurrentUser(cleanUser);
+    notify("Profil ma'lumotlari saqlandi");
+  }
+
   async function createSchedule() {
-    setLoadingMessage("Jadval yaratilmoqda...");
     setGenerating(true);
     setError("");
 
@@ -481,7 +430,6 @@ function App() {
 
   async function deleteSchedule() {
     if (!window.confirm("Ushbu hafta jadvalini o'chirasizmi?")) return;
-    setLoadingMessage("Jadval o'chirilmoqda...");
     setGenerating(true);
     setError("");
 
@@ -511,7 +459,6 @@ function App() {
       return false;
     }
 
-    setLoadingMessage(employee.id ? "Xodim saqlanmoqda..." : "Xodim qo'shilmoqda...");
     setGenerating(true);
     setError("");
 
@@ -535,7 +482,6 @@ function App() {
 
   async function deleteEmployee(id) {
     if (!window.confirm("Xodimni ro'yxatdan o'chirasizmi?")) return;
-    setLoadingMessage("Xodim o'chirilmoqda...");
     setGenerating(true);
     setError("");
 
@@ -582,56 +528,7 @@ function App() {
     }
   }
 
-  async function saveContact(contact) {
-    if (!String(contact.name || contact.vehicle || "").trim()) {
-      notify("Ism yoki mashina raqamini kiriting.", "error");
-      return false;
-    }
-    if (!String(contact.phone || "").trim()) {
-      notify("Telefon raqamini kiriting.", "error");
-      return false;
-    }
-
-    setLoadingMessage("Kontakt saqlanmoqda...");
-    setGenerating(true);
-    setError("");
-
-    try {
-      const result = await api("/api/contacts", {
-        method: "POST",
-        body: JSON.stringify(contact)
-      });
-      setDashboard((current) => ({ ...current, contacts: result.contacts }));
-      notify("Kontakt saqlandi");
-      return true;
-    } catch (contactError) {
-      setError(contactError.message);
-      notify(contactError.message, "error");
-      return false;
-    } finally {
-      setGenerating(false);
-    }
-  }
-
-  async function deleteContact(id) {
-    setLoadingMessage("Kontakt o'chirilmoqda...");
-    setGenerating(true);
-    setError("");
-
-    try {
-      const result = await api(`/api/contacts/${encodeURIComponent(id)}`, { method: "DELETE" });
-      setDashboard((current) => ({ ...current, contacts: result.contacts }));
-      notify("Kontakt o'chirildi");
-    } catch (contactError) {
-      setError(contactError.message);
-      notify(contactError.message, "error");
-    } finally {
-      setGenerating(false);
-    }
-  }
-
   async function addStudioSchedule(payload) {
-    setLoadingMessage("Jadval qo'shilmoqda...");
     setGenerating(true);
     setError("");
 
@@ -661,7 +558,7 @@ function App() {
 
   const title = useMemo(() => {
     if (page === "studio") return "Studiyo jadvali";
-    if (page === "documents") return "Hujjatlar";
+    if (page === "documents") return "Oshkora ma'lumotlar";
     if (page === "monthly") return "Oylik grafik";
     if (page === "shooting") return "Tasvir jadvali";
     if (page === "reports") return "Hisobotlar";
@@ -680,7 +577,7 @@ function App() {
 
   return (
     <div className="app-shell">
-      {generating && <LoadingScreen message={loadingMessage} />}
+      {generating && <LoadingScreen />}
       <header className="topbar">
         <button className="icon-button" type="button" aria-label="Menyu" onClick={() => setMenuOpen((value) => !value)}>
           <Menu size={23} />
@@ -747,8 +644,7 @@ function App() {
                 onLogout={handleLogout}
                 onRefresh={loadDashboard}
                 onThemeChange={setTheme}
-                onSaveContact={saveContact}
-                onDeleteContact={deleteContact}
+                onUpdateUser={updateCurrentUser}
               />
             )}
           </>
@@ -1068,8 +964,6 @@ function MonthlyPage({ dashboard, weekStart }) {
     operators.forEach((operator) => {
       matrix[operator.id] = monthInfo.days.map((day) => {
         if ((operator.id + day) % 7 === 0) return "rest";
-        if ((operator.id + day) % 23 === 0) return "presidential";
-        if ((operator.id + day) % 19 === 0) return "administration";
         if ((operator.id * 2 + day) % 11 === 0) return "tjk";
         if ((operator.id * 3 + day) % 13 === 0) return "studio";
         return "work";
@@ -1093,14 +987,12 @@ function MonthlyPage({ dashboard, weekStart }) {
       rest: values.filter((value) => value === "rest").length,
       tjk: values.filter((value) => value === "tjk").length,
       studio: values.filter((value) => value === "studio").length,
-      administration: values.filter((value) => value === "administration").length,
-      presidential: values.filter((value) => value === "presidential").length,
       hours: values.reduce((sum, value) => sum + (MONTHLY_STATUS_OPTIONS[value]?.hours || 0), 0)
     };
   }, [matrix]);
 
   function getShift(operatorId, day, status) {
-    if (status !== "work") {
+    if (status === "rest" || status === "tjk" || status === "studio") {
       return MONTHLY_STATUS_OPTIONS[status].shift;
     }
     return SHIFT_LABELS[(operatorId + day) % 3];
@@ -1135,22 +1027,18 @@ function MonthlyPage({ dashboard, weekStart }) {
           <span><b>{totals.work}</b> ish</span>
           <span><b>{totals.tjk}</b> TJK</span>
           <span><b>{totals.studio}</b> studiya</span>
-          <span><b>{totals.administration}</b> admin</span>
-          <span><b>{totals.presidential}</b> prez</span>
           <span><b>{totals.rest}</b> dam</span>
           <span><b>{totals.hours}</b> soat</span>
         </div>
       </div>
 
       <div className="monthly-table-wrap" role="region" aria-label="Oylik operatorlar grafigi">
-        <div className="monthly-table" style={{ gridTemplateColumns: `132px repeat(${monthInfo.days.length}, 34px) 58px 58px 58px 58px 58px 58px 72px` }}>
+        <div className="monthly-table" style={{ gridTemplateColumns: `132px repeat(${monthInfo.days.length}, 34px) 58px 58px 58px 58px 72px` }}>
           <div className="month-sticky month-header">Operator</div>
           {monthInfo.days.map((day) => <div className="month-header day" key={day}>{day}</div>)}
-          <div className="month-header summary">I</div>
+          <div className="month-header summary">K</div>
           <div className="month-header summary">T</div>
           <div className="month-header summary">S</div>
-          <div className="month-header summary">A</div>
-          <div className="month-header summary">P</div>
           <div className="month-header summary">Dam</div>
           <div className="month-header summary">Soat</div>
 
@@ -1160,8 +1048,6 @@ function MonthlyPage({ dashboard, weekStart }) {
             const restCount = days.filter((value) => value === "rest").length;
             const tjkCount = days.filter((value) => value === "tjk").length;
             const studioCount = days.filter((value) => value === "studio").length;
-            const administrationCount = days.filter((value) => value === "administration").length;
-            const presidentialCount = days.filter((value) => value === "presidential").length;
             const hourCount = days.reduce((sum, value) => sum + (MONTHLY_STATUS_OPTIONS[value]?.hours || 0), 0);
 
             return (
@@ -1175,14 +1061,12 @@ function MonthlyPage({ dashboard, weekStart }) {
                     title={`${operator.name}, ${monthInfo.days[index]}-${MONTH_NAMES[new Date(`${weekStart}T00:00:00`).getMonth()]}`}
                     onClick={() => toggleCell(operator, index)}
                   >
-                    {MONTHLY_STATUS_OPTIONS[value]?.label || "I"}
+                    {MONTHLY_STATUS_OPTIONS[value]?.label || "K"}
                   </button>
                 ))}
                 <div className="month-total work">{workCount}</div>
                 <div className="month-total tjk">{tjkCount}</div>
                 <div className="month-total studio">{studioCount}</div>
-                <div className="month-total administration">{administrationCount}</div>
-                <div className="month-total presidential">{presidentialCount}</div>
                 <div className="month-total rest">{restCount}</div>
                 <div className="month-total hours">{hourCount}</div>
               </React.Fragment>
@@ -1208,8 +1092,6 @@ function MonthlyPage({ dashboard, weekStart }) {
         <LegendItem tone="rest" label="Qizil katak - dam kuni" />
         <LegendItem tone="tjk" label="Sariq katak - TJK guruhi" />
         <LegendItem tone="studio" label="Yashil katak - studiyada" />
-        <LegendItem tone="administration" label="A - Administratsiya" />
-        <LegendItem tone="presidential" label="P - Prezidentskiy" />
       </section>
     </section>
   );
@@ -1218,7 +1100,6 @@ function MonthlyPage({ dashboard, weekStart }) {
 function WeeklyPage({ activeDay, dashboard, navDirection, onCreate, onDeleteSchedule, onDayChange, onMoveWeek, onStatusChange }) {
   const [openMetric, setOpenMetric] = useState("");
   const [openGroups, setOpenGroups] = useState(() => new Set());
-  const [selectedPerson, setSelectedPerson] = useState(null);
   const filteredGroups = useMemo(() => {
     if (activeDay === "Barcha kunlar") return dashboard.groups;
     return dashboard.groups.filter((group) => group.day === activeDay);
@@ -1238,7 +1119,6 @@ function WeeklyPage({ activeDay, dashboard, navDirection, onCreate, onDeleteSche
   useEffect(() => {
     setOpenMetric("");
     setOpenGroups(new Set());
-    setSelectedPerson(null);
   }, [activeDay, dashboard.week.start]);
 
   function toggleGroup(groupId) {
@@ -1296,7 +1176,6 @@ function WeeklyPage({ activeDay, dashboard, navDirection, onCreate, onDeleteSche
             group={group}
             open={openGroups.has(group.id)}
             onToggle={() => toggleGroup(group.id)}
-            onPersonOpen={(person) => setSelectedPerson({ ...person, groupTitle: group.title, groupMeta: group.meta })}
             onStatusChange={onStatusChange}
           />
         )) : <EmptyCard text="Bu kunga jadval kiritilmagan" />}
@@ -1311,16 +1190,6 @@ function WeeklyPage({ activeDay, dashboard, navDirection, onCreate, onDeleteSche
           <Trash2 size={17} />
           Joriy jadvalni o'chirish
         </button>
-      )}
-
-      {selectedPerson && (
-        <PersonDetailScreen
-          person={selectedPerson}
-          assignments={dashboard.groups.flatMap((group) => group.people
-            .filter((person) => String(person.id) === String(selectedPerson.id))
-            .map((person) => ({ ...person, groupTitle: group.title, groupMeta: group.meta, day: group.day })))}
-          onClose={() => setSelectedPerson(null)}
-        />
       )}
     </>
   );
@@ -1394,6 +1263,8 @@ function StudioPage({ dashboard, showAllOverview, navDirection, onAddSchedule, o
 
       <AttendancePanel attendance={dashboard.attendance} employees={dashboard.employees} onScan={onScanAttendance} />
 
+      <ActiveEmployeeCarousel employees={dashboard.studioToday} attendance={dashboard.attendance} />
+
       <EmployeeManager employees={dashboard.employees} onDelete={onDeleteEmployee} onNotify={onNotify} onSave={onSaveEmployee} />
 
       <div className="section-head">
@@ -1417,16 +1288,6 @@ function StudioPage({ dashboard, showAllOverview, navDirection, onAddSchedule, o
         <LegendItem tone="work" label="Ish smenasi" />
         <LegendItem tone="rest" label="Dam olish kuni" />
         <LegendItem tone="empty" label="Jadvalga kiritilmagan" />
-      </section>
-
-      <section className="algorithm-card">
-        <div className="info-icon">
-          <Info size={18} />
-        </div>
-        <div>
-          <strong>Navbatma-navbat algoritmi</strong>
-          <p>So'nggi yaratish: {dashboard.week.generatedAt}</p>
-        </div>
       </section>
 
       {scheduleModalOpen && (
@@ -1500,86 +1361,41 @@ function StudioPage({ dashboard, showAllOverview, navDirection, onAddSchedule, o
   );
 }
 
-function PersonDetailScreen({ assignments, onClose, person }) {
-  const department = departmentMeta(person.department);
-  const phone = cleanPhone(person.phone);
-  const telegram = telegramHref(person.telegram);
-  const workingCount = assignments.filter((assignment) => STATUS_META[assignment.statusType]?.metric === "working").length;
-  const restCount = assignments.filter((assignment) => STATUS_META[assignment.statusType]?.metric === "rest").length;
-  const kpi = Math.min(96, Math.max(45, 52 + workingCount * 8 + assignments.length));
+function ActiveEmployeeCarousel({ employees = [], attendance = {} }) {
+  const activeIds = new Set((attendance.rows || []).filter((row) => row.active).map((row) => String(row.employeeId)));
+  const featured = employees
+    .filter((employee) => activeIds.size ? activeIds.has(String(employee.employeeId || employee.id)) : true)
+    .slice(0, 8);
+  const slides = featured.length ? [...featured, ...featured] : [];
 
-  return createPortal((
-    <div className="person-sheet-backdrop" role="dialog" aria-modal="true" aria-label={`${person.name} ma'lumotlari`}>
-      <section className="person-sheet">
-        <header className="person-sheet-top">
-          <button type="button" onClick={onClose}>
-            <ChevronLeft size={21} />
-            Orqaga
-          </button>
-          <span>{STATUS_META[person.statusType]?.code || "S"} - {STATUS_META[person.statusType]?.label || person.status}</span>
-          <button className="person-sheet-close" type="button" onClick={onClose} aria-label="Chiqish">×</button>
-        </header>
-
-        <div className="person-sheet-head">
-          <Avatar person={person} />
-          <div>
-            <strong>{person.name}</strong>
-            <span>{department.label}</span>
+  return (
+    <section className="active-carousel-card" aria-label="Aktiv xodimlar">
+      <div className="active-carousel-head">
+        <div>
+          <strong>Aktiv xodimlar</strong>
+          <span>Bugungi smenadagi jamoa</span>
+        </div>
+        <em>{featured.length} faol</em>
+      </div>
+      {slides.length ? (
+        <div className="active-carousel-window">
+          <div className="active-carousel-track">
+            {slides.map((employee, index) => (
+              <article className={`active-slide department-${employee.department || "operator"}`} key={`${employee.id}-${index}`}>
+                <Avatar person={employee} />
+                <div>
+                  <strong>{employee.name}</strong>
+                  <span>{employee.groupMeta || departmentMeta(employee.department).label}</span>
+                </div>
+              </article>
+            ))}
           </div>
         </div>
-
-        <section className="person-kpi">
-          <div>
-            <span>Samaradorlik</span>
-            <strong>{kpi}%</strong>
-          </div>
-          <i><b style={{ width: `${kpi}%` }} /></i>
-        </section>
-
-        <section className="person-stats-grid">
-          <div>
-            <strong>{assignments.length}</strong>
-            <span>Ushbu hafta smena</span>
-          </div>
-          <div>
-            <strong>{workingCount}</strong>
-            <span>Ishda</span>
-          </div>
-          <div>
-            <strong>{restCount}</strong>
-            <span>Dam/ta'til</span>
-          </div>
-        </section>
-
-        <section className="person-contact-grid">
-          <a className={!phone ? "disabled" : ""} href={phone ? `tel:${phone}` : undefined}>
-            <Phone size={17} />
-            <span>{person.phone || "Telefon yo'q"}</span>
-          </a>
-          <a className={!telegram ? "disabled" : ""} href={telegram || undefined} target="_blank" rel="noreferrer">
-            <Send size={17} />
-            <span>{telegram ? "Telegram" : "Telegram yo'q"}</span>
-          </a>
-        </section>
-
-        <section className="person-assignments">
-          <strong>Yaqin smenkalar</strong>
-          {assignments.length ? assignments.slice(0, 6).map((assignment) => {
-            const status = STATUS_META[assignment.statusType] || STATUS_META.working;
-            return (
-              <article key={`${assignment.groupTitle}-${assignment.groupMeta}-${assignment.statusType}`}>
-                <div>
-                  <span>{assignment.groupTitle}</span>
-                  <em>{assignment.groupMeta} • {assignment.time}</em>
-                </div>
-                <b className={assignment.statusType}>{status.code}</b>
-              </article>
-            );
-          }) : <EmptyCard text="Yaqin smenkalar topilmadi" />}
-        </section>
-      </section>
-    </div>
-  ), document.body);
+      ) : (
+        <p className="active-carousel-empty">Bugun aktiv xodimlar hali ko'rinmayapti.</p>
+      )}
+    </section>
+  );
 }
 
 function AttendancePanel({ attendance = {}, employees, onScan }) {
@@ -1658,7 +1474,7 @@ function AttendancePanel({ attendance = {}, employees, onScan }) {
   );
 }
 
-function StudioGroup({ group, open = true, onPersonOpen, onToggle, onStatusChange }) {
+function StudioGroup({ group, open = true, onToggle, onStatusChange }) {
   return (
     <article className="group-card">
       <button className={`group-head ${group.tone}`} type="button" onClick={onToggle} aria-expanded={open}>
@@ -1669,7 +1485,7 @@ function StudioGroup({ group, open = true, onPersonOpen, onToggle, onStatusChang
       {open && (
         <div className="group-people">
           {group.people.map((person) => (
-            <StaffRow key={person.id} groupId={group.id} person={person} onPersonOpen={onPersonOpen} onStatusChange={onStatusChange} />
+            <StaffRow key={person.id} groupId={group.id} person={person} onStatusChange={onStatusChange} />
           ))}
         </div>
       )}
@@ -1677,13 +1493,13 @@ function StudioGroup({ group, open = true, onPersonOpen, onToggle, onStatusChang
   );
 }
 
-function StaffRow({ groupId, person, onPersonOpen, onStatusChange }) {
+function StaffRow({ groupId, person, onStatusChange }) {
   const department = departmentMeta(person.department);
   const phone = cleanPhone(person.phone);
   const telegram = telegramHref(person.telegram);
 
   return (
-    <article className={`staff-row department-${department.id}`} onClick={() => onPersonOpen?.(person)}>
+    <article className={`staff-row department-${department.id}`}>
       <Avatar person={person} />
       <div>
         <strong>{person.name}</strong>
@@ -1691,7 +1507,7 @@ function StaffRow({ groupId, person, onPersonOpen, onStatusChange }) {
       </div>
       <ContactActions phone={phone} telegram={telegram} />
       {onStatusChange ? (
-        <select className={`status-select ${person.statusType}`} value={person.statusType} onClick={(event) => event.stopPropagation()} onChange={(event) => onStatusChange(groupId, person.id, event.target.value)} aria-label={`${person.name} statusi`}>
+        <select className={`status-select ${person.statusType}`} value={person.statusType} onChange={(event) => onStatusChange(groupId, person.id, event.target.value)} aria-label={`${person.name} statusi`}>
           {STATUS_OPTIONS.map((status) => (
             <option key={status.id} value={status.id}>{status.code} - {status.label}</option>
           ))}
@@ -1874,7 +1690,6 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
   const selectedEmployee = employees.find((employee) => String(employee.id) === String(selectedId)) || employees[0];
   const [draft, setDraft] = useState(selectedEmployee || null);
   const [saving, setSaving] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
   const formRef = useRef(null);
 
   useEffect(() => {
@@ -1933,7 +1748,6 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
     const saved = await onSaveEmployee(draft);
     setSaving(false);
     if (!saved) return;
-    setEditOpen(false);
   }
 
   if (!draft) return <EmptyCard text="Xodimlar ro'yxati bo'sh" />;
@@ -1942,7 +1756,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
     <section className="documents-page">
       <section className="documents-card">
         <div className="section-head">
-          <h2>Hujjatlar</h2>
+          <h2>Oshkora ma'lumotlar</h2>
           <span>{(draft.portfolio || []).length} video</span>
         </div>
         <label className="document-select">
@@ -1953,18 +1767,61 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
             ))}
           </select>
         </label>
-        <div className="document-profile">
-          <Avatar person={draft} />
-          <div>
-            <strong>{draft.name}</strong>
-            <span>{draft.role}</span>
+        <form ref={formRef} className="documents-form" onSubmit={submit}>
+          <div className="document-profile">
+            <Avatar person={draft} />
+            <div>
+              <strong>{draft.name}</strong>
+              <span>{draft.role}</span>
+            </div>
           </div>
-          <em>{departmentMeta(draft.department).shortLabel}</em>
-        </div>
-        <button className="document-edit-open" type="button" onClick={() => setEditOpen(true)}>
-          <Edit3 size={17} />
-          Ma'lumotlarni tahrirlash
-        </button>
+          <label>
+            Ism familiya
+            <input name="documents-name" value={draft.name || ""} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Abduqodirxo'jayev Izzat" />
+          </label>
+          <label>
+            Lavozimi
+            <input name="documents-role" value={draft.role || ""} onChange={(event) => setDraft({ ...draft, role: event.target.value })} placeholder="Tasvir yozish operatori" />
+          </label>
+          <div className="documents-field-grid">
+            <label>
+              Bo'lim
+              <select value={draft.department || "operator"} onChange={(event) => setDraft({ ...draft, department: event.target.value })}>
+                {DEPARTMENTS.map((department) => (
+                  <option key={department.id} value={department.id}>{department.label}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Telegram
+              <input name="documents-telegram" value={draft.telegram || ""} onChange={(event) => setDraft({ ...draft, telegram: event.target.value })} placeholder="@username" />
+            </label>
+          </div>
+          <section className="portfolio-editor">
+            <div className="section-head">
+              <h2>Portfolio</h2>
+              <button type="button" onClick={addPortfolioItem}>
+                <Plus size={15} />
+                Link
+              </button>
+            </div>
+            {(draft.portfolio || []).map((item, index) => (
+              <article className="portfolio-row" key={`${index}-${item.url}`}>
+                <input name={`portfolio-title-${index}`} value={item.title || ""} onChange={(event) => updatePortfolio(index, "title", event.target.value)} placeholder="Syomka nomi" />
+                <input name={`portfolio-url-${index}`} value={item.url || ""} onChange={(event) => updatePortfolio(index, "url", event.target.value)} placeholder="Video yoki efir linki" />
+                <input type="date" value={item.date || ""} onChange={(event) => updatePortfolio(index, "date", event.target.value)} />
+                <button type="button" aria-label="Portfolio linkni o'chirish" onClick={() => removePortfolioItem(index)}>
+                  <Trash2 size={15} />
+                </button>
+              </article>
+            ))}
+            {!(draft.portfolio || []).length && <p className="portfolio-empty">Efirga ketgan syomka linklarini shu yerda yig'ib borasiz.</p>}
+          </section>
+          <button className="documents-save-button" type="submit" disabled={saving}>
+            <Save size={17} />
+            {saving ? "Saqlanmoqda..." : "Ma'lumotlarni saqlash"}
+          </button>
+        </form>
       </section>
 
       <section className="documents-summary">
@@ -1978,62 +1835,6 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
           </button>
         ))}
       </section>
-      {editOpen && (
-        <div className="modal-backdrop" role="presentation">
-          <form ref={formRef} className="schedule-modal documents-modal" onSubmit={submit}>
-            <div className="modal-head">
-              <strong>Hujjatlarni tahrirlash</strong>
-              <button type="button" onClick={() => setEditOpen(false)}>×</button>
-            </div>
-            <label>
-              Ism familiya
-              <input name="documents-name" value={draft.name || ""} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Abduqodirxo'jayev Izzat" />
-            </label>
-            <label>
-              Lavozimi
-              <input name="documents-role" value={draft.role || ""} onChange={(event) => setDraft({ ...draft, role: event.target.value })} placeholder="Tasvir yozish operatori" />
-            </label>
-            <div className="documents-field-grid">
-              <label>
-                Bo'lim
-                <select value={draft.department || "operator"} onChange={(event) => setDraft({ ...draft, department: event.target.value })}>
-                  {DEPARTMENTS.map((department) => (
-                    <option key={department.id} value={department.id}>{department.label}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Telegram
-                <input name="documents-telegram" value={draft.telegram || ""} onChange={(event) => setDraft({ ...draft, telegram: event.target.value })} placeholder="@username" />
-              </label>
-            </div>
-            <section className="portfolio-editor modal-portfolio">
-              <div className="section-head">
-                <h2>Portfolio</h2>
-                <button type="button" onClick={addPortfolioItem}>
-                  <Plus size={15} />
-                  Link
-                </button>
-              </div>
-              {(draft.portfolio || []).map((item, index) => (
-                <article className="portfolio-row" key={`${index}-${item.url}`}>
-                  <input name={`portfolio-title-${index}`} value={item.title || ""} onChange={(event) => updatePortfolio(index, "title", event.target.value)} placeholder="Syomka nomi" />
-                  <input name={`portfolio-url-${index}`} value={item.url || ""} onChange={(event) => updatePortfolio(index, "url", event.target.value)} placeholder="Video yoki efir linki" />
-                  <input type="date" value={item.date || ""} onChange={(event) => updatePortfolio(index, "date", event.target.value)} />
-                  <button type="button" aria-label="Portfolio linkni o'chirish" onClick={() => removePortfolioItem(index)}>
-                    <Trash2 size={15} />
-                  </button>
-                </article>
-              ))}
-              {!(draft.portfolio || []).length && <p className="portfolio-empty">Efirga ketgan syomka linklarini shu yerda yig'ib borasiz.</p>}
-            </section>
-            <button className="documents-save-button" type="submit" disabled={saving}>
-              <Save size={17} />
-              {saving ? "Saqlanmoqda..." : "Ma'lumotlarni saqlash"}
-            </button>
-          </form>
-        </div>
-      )}
     </section>
   );
 }
@@ -2104,57 +1905,22 @@ function WeeklyOverview({ rows, days }) {
 
 function ReportsPage({ dashboard }) {
   const max = Math.max(...dashboard.reports.map((item) => item.value), 1);
-  const active = dashboard.reports.find((item) => item.label === "Ishlayotganlar")?.value || dashboard.metrics.working;
-  const rest = dashboard.reports.find((item) => item.label === "Dam olish kuni")?.value || dashboard.metrics.rest;
-  const trip = dashboard.reports.find((item) => item.label === "Komandirovka")?.value || 0;
-  const today = dashboard.reports.find((item) => item.label === "Bugungi smena")?.value || 0;
-  const kpis = [
-    { label: "Ishlayotganlar", value: active, note: "Haftalik smenada", icon: UserCheck },
-    { label: "Damdagilar", value: rest, note: "Dam / ta'til", icon: Coffee },
-    { label: "Komandirovka", value: trip, note: "Tashqi topshiriq", icon: BriefcaseBusiness },
-    { label: "Bugungi smena", value: today, note: "Bugun jadvalda", icon: CalendarDays }
-  ];
 
   return (
     <section className="reports-page">
-      <section className="report-hero">
-        <div>
-          <span>Haftalik hisobot</span>
-          <strong>{active} ishda</strong>
-          <p>{dashboard.week.range} • {dashboard.metrics.total} ta xodim bo'yicha jamlanma.</p>
-        </div>
-        <ChartColumn size={30} />
-      </section>
-
-      <section className="report-kpi-grid">
-        {kpis.map((item) => {
-          const Icon = item.icon;
-          return (
-            <article className="report-kpi" key={item.label}>
-              <span><Icon size={19} /></span>
-              <strong>{item.value}</strong>
-              <em>{item.label}</em>
-              <small>{item.note}</small>
-            </article>
-          );
-        })}
-      </section>
-
-      <section className="report-card">
-        <div className="section-head">
-          <h2>Statuslar</h2>
-          <span>{dashboard.reports.length} tur</span>
-        </div>
+      <div className="section-head">
+        <h2>Haftalik hisobot</h2>
+        <span>{dashboard.week.range}</span>
+      </div>
+      <div className="report-card">
         {dashboard.reports.map((item) => (
           <div className="report-row" key={item.label}>
-            <div>
-              <span>{item.label}</span>
-              <i><b style={{ width: `${(item.value / max) * 100}%` }} /></i>
-            </div>
+            <span>{item.label}</span>
             <strong>{item.value}</strong>
+            <i style={{ width: `${(item.value / max) * 100}%` }} />
           </div>
         ))}
-      </section>
+      </div>
       <div className="profile-card">
         <ChartColumn size={28} />
         <div>
@@ -2166,140 +1932,95 @@ function ReportsPage({ dashboard }) {
   );
 }
 
-function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThemeChange, onSaveContact, onDeleteContact }) {
+function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThemeChange, onUpdateUser }) {
   const [notify, setNotify] = useState(true);
-  const [todaySlide, setTodaySlide] = useState(0);
-  const [selectedDate, setSelectedDate] = useState(() => toInputDate(new Date()));
-  const [contactDraft, setContactDraft] = useState({ type: "Muxbir", name: "", vehicle: "", phone: "" });
-  const [contactFormOpen, setContactFormOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [draft, setDraft] = useState(currentUser);
+  const formRef = useRef(null);
   const operators = dashboard.employees.filter((employee) => employee.role.includes("Operator")).length;
   const reporters = dashboard.employees.filter((employee) => employee.role.includes("Muxbir")).length;
-  const contacts = dashboard.contacts || [];
-  const drivers = contacts.filter((contact) => contact.type === "Haydovchi").length;
-  const profileEmployee = useMemo(() => {
-    const userName = normalizeLookupName(currentUser.name);
-    return dashboard.employees.find((employee) => {
-      const employeeName = normalizeLookupName(employee.name);
-      return employeeName === userName || employeeName.includes(userName) || userName.includes(employeeName);
-    });
-  }, [currentUser.name, dashboard.employees]);
-  const calendarEmployee = profileEmployee || dashboard.employees[0] || null;
-  const shootingAssignment = useMemo(() => findShootingAssignmentForEmployee(calendarEmployee), [calendarEmployee]);
-  const todayAssignments = useMemo(() => {
-    if (!profileEmployee) return [];
-    return dashboard.groups
-      .filter((group) => group.day === todayDayName())
-      .flatMap((group) => group.people
-        .filter((person) => String(person.id) === String(profileEmployee.id))
-        .map((person) => ({ ...person, groupTitle: group.title, groupMeta: group.meta })));
-  }, [dashboard.groups, profileEmployee]);
-  const activeAssignment = todayAssignments[todaySlide % Math.max(todayAssignments.length, 1)];
-  const calendarInfo = useMemo(() => {
-    const base = new Date();
-    const year = base.getFullYear();
-    const month = base.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const totalDays = new Date(year, month + 1, 0).getDate();
-    const offset = (firstDay.getDay() + 6) % 7;
-    const blanks = Array.from({ length: offset }, () => null);
-    const days = Array.from({ length: totalDays }, (_, index) => {
-      const date = new Date(year, month, index + 1);
-      const dateText = toInputDate(date);
-      const status = monthlyStatusForEmployee(calendarEmployee, date);
-      return { dateText, day: index + 1, status, isToday: dateText === toInputDate(new Date()) };
-    });
-    return { title: `${MONTH_NAMES[month]} ${year}`, days: [...blanks, ...days] };
-  }, [calendarEmployee]);
-  const selectedDay = calendarInfo.days.find((day) => day?.dateText === selectedDate) || calendarInfo.days.find((day) => day?.isToday) || calendarInfo.days.find(Boolean);
-  const selectedStatusMeta = selectedDay ? (MONTHLY_STATUS_OPTIONS[selectedDay.status] || STATUS_META[selectedDay.status]) : null;
-  const showAssignmentDetail = selectedDay && !["rest", "vacation", "otpiska"].includes(selectedDay.status);
-  const driverInfo = extractDriverInfo(shootingAssignment?.topic);
-  const driverContact = contacts.find((contact) => contact.type === "Haydovchi");
 
   useEffect(() => {
-    setTodaySlide(0);
-  }, [profileEmployee?.id, dashboard.week.start]);
+    setDraft(currentUser);
+  }, [currentUser]);
 
-  useEffect(() => {
-    if (todayAssignments.length < 2) return undefined;
-    const timer = window.setInterval(() => {
-      setTodaySlide((value) => (value + 1) % todayAssignments.length);
-    }, 5000);
-    return () => window.clearInterval(timer);
-  }, [todayAssignments.length]);
-
-  async function submitContact(event) {
+  function submitProfile(event) {
     event.preventDefault();
-    const saved = await onSaveContact(contactDraft);
-    if (saved) {
-      setContactDraft({ type: "Muxbir", name: "", vehicle: "", phone: "" });
-      setContactFormOpen(false);
+    const invalid = [
+      ["profile-name", draft.name, "Ism familiyani kiriting."],
+      ["profile-email", draft.email, "Emailni kiriting."],
+      ["profile-role", draft.role, "Rolni kiriting."]
+    ].find(([, value]) => !String(value || "").trim());
+    if (invalid) {
+      formRef.current?.querySelector(`[name='${invalid[0]}']`)?.focus();
+      return;
     }
+    onUpdateUser(draft);
+    setEditOpen(false);
+  }
+
+  async function updateProfileAvatar(file) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return;
+    setDraft({ ...draft, avatar: await readImageFile(file) });
   }
 
   return (
     <section className="profile-page">
       <div className="profile-hero">
-        <span className="profile-avatar large"><User size={38} /></span>
+        <span className="profile-avatar large">
+          {currentUser.avatar ? <img src={currentUser.avatar} alt={currentUser.name} /> : <User size={38} />}
+        </span>
         <div>
           <strong>{currentUser.name}</strong>
           <p>{currentUser.role}</p>
           <em>{currentUser.email}</em>
         </div>
+        <button type="button" aria-label="Profilni tahrirlash" onClick={() => setEditOpen((value) => !value)}>
+          <Edit3 size={17} />
+        </button>
       </div>
 
-      <section className={`profile-today-banner ${activeAssignment?.statusType || "empty"}`}>
-        <div>
-          <span>Bugungi vazifa</span>
-          <strong>{activeAssignment ? activeAssignment.groupMeta : "Bugungi ish topilmadi"}</strong>
-          <p>{activeAssignment ? `${activeAssignment.groupTitle} • ${activeAssignment.time}` : "Profil F.I.Sh xodimlar ro'yxati bilan mos bo'lsa, bugungi smena shu yerda chiqadi."}</p>
-        </div>
-        <em>{activeAssignment ? `${STATUS_META[activeAssignment.statusType]?.code || "S"} - ${STATUS_META[activeAssignment.statusType]?.label || activeAssignment.status}` : "Bo'sh"}</em>
-      </section>
-
-      <section className="profile-calendar-card">
-        <div className="section-head">
-          <h2>Mening oylik kalendarim</h2>
-          <span>{calendarInfo.title}</span>
-        </div>
-        <div className="profile-calendar-weekdays">
-          {["Du", "Se", "Cho", "Pa", "Ju", "Sha", "Ya"].map((day) => <span key={day}>{day}</span>)}
-        </div>
-        <div className="profile-calendar-grid">
-          {calendarInfo.days.map((day, index) => day ? (
-            <button
-              className={`${day.status} ${day.isToday ? "today" : ""} ${selectedDate === day.dateText ? "selected" : ""}`}
-              type="button"
-              key={day.dateText}
-              onClick={() => setSelectedDate(day.dateText)}
-            >
-              <strong>{day.day}</strong>
-              <span>{MONTHLY_STATUS_OPTIONS[day.status]?.label || STATUS_META[day.status]?.code || "I"}</span>
-            </button>
-          ) : <i key={`blank-${index}`} />)}
-        </div>
-        {selectedDay && (
-          <article className={`profile-day-detail ${selectedDay.status}`}>
-            <div>
-              <span>{selectedDay.dateText}</span>
-              <strong>{selectedStatusMeta?.shift || selectedStatusMeta?.label || "Ish kuni"}</strong>
-              <p>{calendarEmployee ? `${calendarEmployee.name} uchun oylik status.` : "Umumiy oylik ko'rinish."}</p>
+      {editOpen && (
+        <section className="profile-edit-card">
+          <div className="section-head">
+            <h2>Profil tahrirlash</h2>
+            <span>Shaxsiy ma'lumotlar</span>
+          </div>
+          <form ref={formRef} className="profile-edit-form" onSubmit={submitProfile}>
+            <div className="avatar-upload-field profile-avatar-upload">
+              <div className="avatar-upload-preview">
+                {draft.avatar ? <img src={draft.avatar} alt="Profil rasmi" /> : <User size={28} />}
+              </div>
+              <div>
+                <strong>Profil rasmi</strong>
+                <span>{draft.avatar ? "Rasm tanlangan" : "Rasm yuklanmagan"}</span>
+              </div>
+              <label>
+                <Upload size={15} />
+                Yuklash
+                <input type="file" accept="image/*" onChange={(event) => updateProfileAvatar(event.target.files?.[0])} />
+              </label>
             </div>
-            <dl>
-              <div><dt>Status</dt><dd>{MONTHLY_STATUS_OPTIONS[selectedDay.status]?.label || STATUS_META[selectedDay.status]?.code || "I"}</dd></div>
-              <div><dt>Soat</dt><dd>{MONTHLY_STATUS_OPTIONS[selectedDay.status]?.hours ?? (STATUS_META[selectedDay.status]?.metric === "rest" ? 0 : 9)}</dd></div>
-              {showAssignmentDetail && (
-                <>
-                  <div><dt>Kamera</dt><dd>{shootingAssignment?.camera || "Kiritilmagan"}</dd></div>
-                  <div><dt>Mashina</dt><dd>{driverContact?.vehicle || shootingAssignment?.equipment || "Kiritilmagan"}</dd></div>
-                  <div><dt>Muxbir</dt><dd>{shootingAssignment?.reporters?.join(", ") || "Kiritilmagan"}</dd></div>
-                  <div><dt>Haydovchi</dt><dd>{driverInfo || driverContact?.name || "Kiritilmagan"}</dd></div>
-                </>
-              )}
-            </dl>
-          </article>
-        )}
-      </section>
+            <label>
+              Ism familiya
+              <input name="profile-name" value={draft.name || ""} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Administrator" />
+            </label>
+            <label>
+              Email
+              <input name="profile-email" type="email" value={draft.email || ""} onChange={(event) => setDraft({ ...draft, email: event.target.value })} placeholder="admin@uz24.local" />
+            </label>
+            <label>
+              Rol
+              <input name="profile-role" value={draft.role || ""} onChange={(event) => setDraft({ ...draft, role: event.target.value })} placeholder="Jadval administratori" />
+            </label>
+            <button type="submit">
+              <Save size={17} />
+              Saqlash
+            </button>
+          </form>
+        </section>
+      )}
 
       <section className="profile-stats">
         <article>
@@ -2314,96 +2035,7 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
           <strong>{reporters}</strong>
           <span>Muxbir</span>
         </article>
-        <article>
-          <strong>{drivers}</strong>
-          <span>Haydovchi</span>
-        </article>
       </section>
-
-      <section className="contacts-card">
-        <div className="contacts-head">
-          <div>
-            <Phone size={18} />
-            <strong>Haydovchilar va muxbirlar</strong>
-          </div>
-          <button type="button" onClick={() => setContactFormOpen(true)}>
-            <Plus size={16} />
-            Qo'shish
-          </button>
-        </div>
-
-        <div className="contact-list">
-          {contacts.length ? contacts.map((contact) => (
-            <article key={contact.id} className="contact-row">
-              <span className={contact.type === "Haydovchi" ? "driver" : ""}>
-                {contact.type === "Haydovchi" ? <Car size={16} /> : <User size={16} />}
-              </span>
-              <div>
-                <strong>{contact.type} {contact.name || contact.vehicle}</strong>
-                {contact.vehicle && contact.vehicle !== contact.name && <em>{contact.vehicle}</em>}
-                <a href={`tel:${contact.phone.replace(/\s/g, "")}`}>
-                  <Phone size={14} />
-                  {contact.phone}
-                </a>
-              </div>
-              <button type="button" aria-label="Kontaktni o'chirish" onClick={() => onDeleteContact(contact.id)}>
-                <Trash2 size={16} />
-              </button>
-            </article>
-          )) : <EmptyCard text="Kontaktlar hali kiritilmagan" />}
-        </div>
-      </section>
-
-      {contactFormOpen && (
-        <div className="modal-backdrop" role="presentation">
-          <form className="schedule-modal contact-modal" onSubmit={submitContact}>
-            <div className="modal-head">
-              <strong>Kontakt qo'shish</strong>
-              <button type="button" onClick={() => setContactFormOpen(false)}>×</button>
-            </div>
-            <label>
-              Kontakt turi
-              <select
-                value={contactDraft.type}
-                onChange={(event) => setContactDraft({ ...contactDraft, type: event.target.value })}
-                aria-label="Kontakt turi"
-              >
-                <option>Muxbir</option>
-                <option>Haydovchi</option>
-              </select>
-            </label>
-            <label>
-              Ism yoki mashina
-              <input
-                value={contactDraft.name}
-                onChange={(event) => setContactDraft({ ...contactDraft, name: event.target.value })}
-                placeholder={contactDraft.type === "Haydovchi" ? "Haydovchi yoki mashina nomi" : "Muxbir F.I.Sh"}
-              />
-            </label>
-            <label>
-              Mashina nomeri
-              <input
-                value={contactDraft.vehicle}
-                onChange={(event) => setContactDraft({ ...contactDraft, vehicle: event.target.value })}
-                placeholder="Mashina nomeri, masalan 142 Caddy"
-              />
-            </label>
-            <label>
-              Telefon
-              <input
-                value={contactDraft.phone}
-                onChange={(event) => setContactDraft({ ...contactDraft, phone: event.target.value })}
-                placeholder="+998 90 302 55 92"
-                inputMode="tel"
-              />
-            </label>
-            <button type="submit">
-              <Plus size={17} />
-              Qo'shish
-            </button>
-          </form>
-        </div>
-      )}
 
       <section className="settings-card">
         <div className="settings-head">
@@ -2439,7 +2071,7 @@ function LegendItem({ tone, label }) {
   return (
     <div className="legend-item">
       <span className={`legend-mark ${tone}`}>
-        {tone === "work" ? <Check size={15} /> : tone === "rest" ? "x" : tone === "tjk" ? "T" : tone === "studio" ? "S" : tone === "administration" ? "A" : tone === "presidential" ? "P" : null}
+        {tone === "work" ? <Check size={15} /> : tone === "rest" ? "x" : tone === "tjk" ? "T" : tone === "studio" ? "S" : null}
       </span>
       <p>{label}</p>
     </div>
@@ -2473,7 +2105,7 @@ function MenuPanel({ onClose, onPageChange }) {
   const links = [
     ["weekly", "Ish jadvali", CalendarDays],
     ["studio", "Jamoa va bo'limlar", UsersRound],
-    ["documents", "Hujjatlar", ShieldCheck],
+    ["documents", "Oshkora ma'lumotlar", ShieldCheck],
     ["monthly", "Oylik grafik", Clock3],
     ["shooting", "Tasvir jadvali", FileText],
     ["reports", "Hisobotlar", ChartColumn],
@@ -2520,10 +2152,10 @@ function SkeletonPage() {
   );
 }
 
-function LoadingScreen({ message = "Yuklanmoqda..." }) {
+function LoadingScreen() {
   return (
     <div className="loading-screen" role="status" aria-live="polite">
-      <strong>{message}</strong>
+      <strong>Yaratilmoqda...</strong>
     </div>
   );
 }
@@ -2547,7 +2179,7 @@ function BottomNav({ page, onPageChange }) {
   const items = [
     { id: "weekly", label: "Jadval", icon: CalendarDays },
     { id: "studio", label: "Jamoa", icon: UsersRound },
-    { id: "documents", label: "Hujjatlar", icon: ShieldCheck },
+    { id: "documents", label: "Oshkora", icon: ShieldCheck },
     { id: "profile", label: "Profil", icon: User }
   ];
 
