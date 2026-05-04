@@ -421,13 +421,33 @@ button:active {
 }
 
 .week-insight svg {
-  justify-self: end;
   width: 48px;
   height: 48px;
   padding: 10px;
   border-radius: 12px;
   color: #2563eb;
   background: rgba(255, 255, 255, 0.72);
+}
+
+.week-insight-action {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  align-self: center;
+  justify-self: end;
+  color: #2563eb;
+  background: transparent;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.week-insight-action svg {
+  width: 48px;
+  height: 48px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.12);
 }
 
 .week-nav {
@@ -990,7 +1010,7 @@ button.metric-card {
 .person-sheet-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 110;
+  z-index: 1000;
   display: block;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--primary) 10%, transparent), transparent 220px),
@@ -1002,7 +1022,7 @@ button.metric-card {
   display: grid;
   align-content: start;
   gap: 14px;
-  width: min(100%, 430px);
+  width: min(100vw, 430px);
   min-height: 100dvh;
   max-height: 100dvh;
   margin: 0 auto;
@@ -1038,6 +1058,15 @@ button.metric-card {
   background: var(--surface);
   box-shadow: inset 0 0 0 1px var(--border), var(--shadow-soft);
   font-weight: 900;
+}
+
+.person-sheet-top .person-sheet-close {
+  display: grid;
+  place-items: center;
+  flex: 0 0 40px;
+  width: 40px;
+  padding: 0;
+  font-size: 24px;
 }
 
 .person-sheet-top span {
@@ -2889,6 +2918,19 @@ button.metric-card {
   min-height: 58px;
 }
 
+.document-edit-open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 46px;
+  border-radius: 10px;
+  color: #ffffff;
+  background: #2563eb;
+  font-weight: 900;
+}
+
 .document-profile-button {
   grid-template-columns: 48px minmax(0, 1fr) auto;
   width: 100%;
@@ -3104,6 +3146,22 @@ button.metric-card {
   color: var(--text-muted);
   font-size: 12px;
   line-height: 1.35;
+}
+
+.documents-modal,
+.contact-modal {
+  width: min(100%, 390px);
+  max-height: min(86vh, 680px);
+  overflow-y: auto;
+}
+
+.modal-portfolio {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-soft);
 }
 
 .report-hero,
@@ -3656,6 +3714,10 @@ button.metric-card {
   background: #8b5cf6;
 }
 
+.profile-calendar-grid button.otpiska {
+  background: #ef4444;
+}
+
 .profile-calendar-grid button.trip {
   color: #713f12;
   background: #facc15;
@@ -3698,6 +3760,11 @@ button.metric-card {
 .profile-day-detail.sick {
   border-color: #ddd6fe;
   background: #f5f3ff;
+}
+
+.profile-day-detail.otpiska {
+  border-color: #fecaca;
+  background: #fef2f2;
 }
 
 .profile-day-detail.trip {
@@ -3827,6 +3894,19 @@ button.metric-card {
   color: var(--text-muted);
   font-size: 12px;
   font-weight: 800;
+}
+
+.contacts-head button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #2563eb;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .contact-form {

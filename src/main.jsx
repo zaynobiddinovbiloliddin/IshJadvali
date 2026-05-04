@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { createRoot } from "react-dom/client";
 import {
   Bell,
@@ -348,6 +349,26 @@ function normalizeLookupName(value) {
     .replace(/[^a-z0-9'`.\s]/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function toInputDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function monthlyStatusForEmployee(employee, date) {
+  if (!employee) return "rest";
+  const day = date.getDate();
+  const id = Number(employee.id) || 1;
+  if ((id + day) % 7 === 0) return "rest";
+  if ((id * 7 + day) % 29 === 0) return "vacation";
+  if ((id * 5 + day) % 23 === 0) return "otpiska";
+  if ((id * 3 + day) % 17 === 0) return "trip";
+  if ((id * 2 + day) % 13 === 0) return "tjk";
+  if ((id * 3 + day) % 11 === 0) return "studio";
+  return "work";
 }
 
 function App() {
@@ -1257,7 +1278,10 @@ function WeeklyPage({ activeDay, dashboard, onCreate, onDeleteSchedule, onDayCha
           <strong>{dayMetrics.working} ishda</strong>
           <p>{statusSummary}</p>
         </div>
-        <CalendarDays size={22} />
+        <button className="week-insight-action" type="button" onClick={() => setOpenMetric(openMetric === "total" ? "" : "total")} aria-label="Bugungi ro'yxatni ko'rish">
+          <CalendarDays size={22} />
+          <span>Ko'rish</span>
+        </button>
       </div>
 
       <section className="metric-grid">
@@ -1623,7 +1647,7 @@ function PersonDetailScreen({ assignments, onClose, person }) {
   const restCount = assignments.filter((assignment) => STATUS_META[assignment.statusType]?.metric === "rest").length;
   const kpi = Math.min(96, Math.max(45, 52 + workingCount * 8 + assignments.length));
 
-  return (
+  return createPortal((
     <div className="person-sheet-backdrop" role="dialog" aria-modal="true" aria-label={`${person.name} ma'lumotlari`}>
       <section className="person-sheet">
         <header className="person-sheet-top">
@@ -1632,6 +1656,7 @@ function PersonDetailScreen({ assignments, onClose, person }) {
             Orqaga
           </button>
           <span>{STATUS_META[person.statusType]?.code || "S"} - {STATUS_META[person.statusType]?.label || person.status}</span>
+          <button className="person-sheet-close" type="button" onClick={onClose} aria-label="Chiqish">×</button>
         </header>
 
         <div className="person-sheet-head">
@@ -1693,7 +1718,7 @@ function PersonDetailScreen({ assignments, onClose, person }) {
         </section>
       </section>
     </div>
-  );
+  ), document.body);
 }
 
 function PeopleListPanel({ title, people }) {
@@ -1863,6 +1888,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
   const [selectedId, setSelectedId] = useState(employees[0]?.id || "");
   const selectedEmployee = employees.find((employee) => String(employee.id) === String(selectedId)) || employees[0];
   const [draft, setDraft] = useState(selectedEmployee || null);
+  const [editOpen, setEditOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const formRef = useRef(null);
 
@@ -1922,6 +1948,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
     const saved = await onSaveEmployee(draft);
     setSaving(false);
     if (!saved) return;
+    setEditOpen(false);
   }
 
   if (!draft) return <EmptyCard text="Xodimlar ro'yxati bo'sh" />;
@@ -1941,61 +1968,17 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
             ))}
           </select>
         </label>
-        <form ref={formRef} className="documents-form" onSubmit={submit}>
-          <div className="document-profile">
-            <Avatar person={draft} />
-            <div>
-              <strong>{draft.name}</strong>
-              <span>{draft.role}</span>
-            </div>
+        <div className="document-profile">
+          <Avatar person={draft} />
+          <div>
+            <strong>{draft.name}</strong>
+            <span>{draft.role}</span>
           </div>
-          <label>
-            Ism familiya
-            <input name="documents-name" value={draft.name || ""} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Abduqodirxo'jayev Izzat" />
-          </label>
-          <label>
-            Lavozimi
-            <input name="documents-role" value={draft.role || ""} onChange={(event) => setDraft({ ...draft, role: event.target.value })} placeholder="Tasvir yozish operatori" />
-          </label>
-          <div className="documents-field-grid">
-            <label>
-              Bo'lim
-              <select value={draft.department || "operator"} onChange={(event) => setDraft({ ...draft, department: event.target.value })}>
-                {DEPARTMENTS.map((department) => (
-                  <option key={department.id} value={department.id}>{department.label}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Telegram
-              <input name="documents-telegram" value={draft.telegram || ""} onChange={(event) => setDraft({ ...draft, telegram: event.target.value })} placeholder="@username" />
-            </label>
-          </div>
-          <section className="portfolio-editor">
-            <div className="section-head">
-              <h2>Portfolio</h2>
-              <button type="button" onClick={addPortfolioItem}>
-                <Plus size={15} />
-                Link
-              </button>
-            </div>
-            {(draft.portfolio || []).map((item, index) => (
-              <article className="portfolio-row" key={`${index}-${item.url}`}>
-                <input name={`portfolio-title-${index}`} value={item.title || ""} onChange={(event) => updatePortfolio(index, "title", event.target.value)} placeholder="Syomka nomi" />
-                <input name={`portfolio-url-${index}`} value={item.url || ""} onChange={(event) => updatePortfolio(index, "url", event.target.value)} placeholder="Video yoki efir linki" />
-                <input type="date" value={item.date || ""} onChange={(event) => updatePortfolio(index, "date", event.target.value)} />
-                <button type="button" aria-label="Portfolio linkni o'chirish" onClick={() => removePortfolioItem(index)}>
-                  <Trash2 size={15} />
-                </button>
-              </article>
-            ))}
-            {!(draft.portfolio || []).length && <p className="portfolio-empty">Efirga ketgan syomka linklarini shu yerda yig'ib borasiz.</p>}
-          </section>
-          <button className="documents-save-button" type="submit" disabled={saving}>
-            <Save size={17} />
-            {saving ? "Saqlanmoqda..." : "Ma'lumotlarni saqlash"}
-          </button>
-        </form>
+        </div>
+        <button className="document-edit-open" type="button" onClick={() => setEditOpen(true)}>
+          <Edit3 size={17} />
+          Ma'lumotlarni tahrirlash
+        </button>
       </section>
 
       <section className="documents-summary">
@@ -2009,6 +1992,62 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
           </button>
         ))}
       </section>
+      {editOpen && (
+        <div className="modal-backdrop" role="presentation">
+          <form ref={formRef} className="schedule-modal documents-modal" onSubmit={submit}>
+            <div className="modal-head">
+              <strong>Oshkora ma'lumotlarni tahrirlash</strong>
+              <button type="button" onClick={() => setEditOpen(false)}>×</button>
+            </div>
+            <label>
+              Ism familiya
+              <input name="documents-name" value={draft.name || ""} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Abduqodirxo'jayev Izzat" />
+            </label>
+            <label>
+              Lavozimi
+              <input name="documents-role" value={draft.role || ""} onChange={(event) => setDraft({ ...draft, role: event.target.value })} placeholder="Tasvir yozish operatori" />
+            </label>
+            <div className="modal-grid two">
+              <label>
+                Bo'lim
+                <select value={draft.department || "operator"} onChange={(event) => setDraft({ ...draft, department: event.target.value })}>
+                  {DEPARTMENTS.map((department) => (
+                    <option key={department.id} value={department.id}>{department.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Telegram
+                <input name="documents-telegram" value={draft.telegram || ""} onChange={(event) => setDraft({ ...draft, telegram: event.target.value })} placeholder="@username" />
+              </label>
+            </div>
+            <section className="portfolio-editor modal-portfolio">
+              <div className="section-head">
+                <h2>Portfolio</h2>
+                <button type="button" onClick={addPortfolioItem}>
+                  <Plus size={15} />
+                  Link
+                </button>
+              </div>
+              {(draft.portfolio || []).map((item, index) => (
+                <article className="portfolio-row" key={`${index}-${item.url}`}>
+                  <input name={`portfolio-title-${index}`} value={item.title || ""} onChange={(event) => updatePortfolio(index, "title", event.target.value)} placeholder="Syomka nomi" />
+                  <input name={`portfolio-url-${index}`} value={item.url || ""} onChange={(event) => updatePortfolio(index, "url", event.target.value)} placeholder="Video yoki efir linki" />
+                  <input type="date" value={item.date || ""} onChange={(event) => updatePortfolio(index, "date", event.target.value)} />
+                  <button type="button" aria-label="Portfolio linkni o'chirish" onClick={() => removePortfolioItem(index)}>
+                    <Trash2 size={15} />
+                  </button>
+                </article>
+              ))}
+              {!(draft.portfolio || []).length && <p className="portfolio-empty">Efirga ketgan syomka linklarini shu yerda yig'ib borasiz.</p>}
+            </section>
+            <button type="submit" disabled={saving}>
+              <Save size={17} />
+              {saving ? "Saqlanmoqda..." : "Ma'lumotlarni saqlash"}
+            </button>
+          </form>
+        </div>
+      )}
     </section>
   );
 }
@@ -2109,7 +2148,9 @@ function ReportsPage({ dashboard }) {
 function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThemeChange, onSaveContact, onDeleteContact }) {
   const [notify, setNotify] = useState(true);
   const [contactDraft, setContactDraft] = useState({ type: "Muxbir", name: "", vehicle: "", phone: "" });
+  const [contactFormOpen, setContactFormOpen] = useState(false);
   const [todaySlide, setTodaySlide] = useState(0);
+  const [selectedDate, setSelectedDate] = useState(() => toInputDate(new Date()));
   const operators = dashboard.employees.filter((employee) => employee.role.includes("Operator")).length;
   const reporters = dashboard.employees.filter((employee) => employee.role.includes("Muxbir")).length;
   const contacts = dashboard.contacts || [];
@@ -2130,6 +2171,33 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
         .map((person) => ({ ...person, groupTitle: group.title, groupMeta: group.meta })));
   }, [dashboard.groups, profileEmployee]);
   const activeAssignment = todayAssignments[todaySlide % Math.max(todayAssignments.length, 1)];
+  const calendarInfo = useMemo(() => {
+    const base = new Date();
+    const year = base.getFullYear();
+    const month = base.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    const offset = (firstDay.getDay() + 6) % 7;
+    const blanks = Array.from({ length: offset }, () => null);
+    const days = Array.from({ length: totalDays }, (_, index) => {
+      const date = new Date(year, month, index + 1);
+      const dateText = toInputDate(date);
+      const status = monthlyStatusForEmployee(profileEmployee, date);
+      return {
+        date,
+        dateText,
+        day: index + 1,
+        status,
+        isToday: dateText === toInputDate(new Date())
+      };
+    });
+    return {
+      title: `${MONTH_NAMES[month]} ${year}`,
+      days: [...blanks, ...days]
+    };
+  }, [profileEmployee]);
+  const selectedDay = calendarInfo.days.find((day) => day?.dateText === selectedDate) || calendarInfo.days.find((day) => day?.isToday) || calendarInfo.days.find(Boolean);
+  const selectedStatusMeta = selectedDay ? (MONTHLY_STATUS_OPTIONS[selectedDay.status] || STATUS_META[selectedDay.status]) : null;
 
   useEffect(() => {
     setTodaySlide(0);
@@ -2146,7 +2214,10 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
   async function submitContact(event) {
     event.preventDefault();
     const saved = await onSaveContact(contactDraft);
-    if (saved) setContactDraft({ type: "Muxbir", name: "", vehicle: "", phone: "" });
+    if (saved) {
+      setContactDraft({ type: "Muxbir", name: "", vehicle: "", phone: "" });
+      setContactFormOpen(false);
+    }
   }
 
   return (
@@ -2167,6 +2238,42 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
           <p>{activeAssignment ? `${activeAssignment.groupTitle} • ${activeAssignment.time}` : "Profil nomi xodimlar ro'yxatidagi F.I.Sh bilan mos bo'lsa, bugungi smena shu yerda chiqadi."}</p>
         </div>
         <em>{activeAssignment ? `${STATUS_META[activeAssignment.statusType]?.code || "S"} - ${STATUS_META[activeAssignment.statusType]?.label || activeAssignment.status}` : "Bo'sh"}</em>
+      </section>
+
+      <section className="profile-calendar-card">
+        <div className="section-head">
+          <h2>Mening oylik kalendarim</h2>
+          <span>{calendarInfo.title}</span>
+        </div>
+        <div className="profile-calendar-weekdays">
+          {["Du", "Se", "Cho", "Pa", "Ju", "Sha", "Ya"].map((day) => <span key={day}>{day}</span>)}
+        </div>
+        <div className="profile-calendar-grid">
+          {calendarInfo.days.map((day, index) => day ? (
+            <button
+              className={`${day.status} ${day.isToday ? "today" : ""} ${selectedDate === day.dateText ? "selected" : ""}`}
+              type="button"
+              key={day.dateText}
+              onClick={() => setSelectedDate(day.dateText)}
+            >
+              <strong>{day.day}</strong>
+              <span>{MONTHLY_STATUS_OPTIONS[day.status]?.label || STATUS_META[day.status]?.code || "K"}</span>
+            </button>
+          ) : <i key={`blank-${index}`} />)}
+        </div>
+        {selectedDay && (
+          <article className={`profile-day-detail ${selectedDay.status}`}>
+            <div>
+              <span>{selectedDay.dateText}</span>
+              <strong>{selectedStatusMeta?.shift || selectedStatusMeta?.label || "Ish kuni"}</strong>
+              <p>{profileEmployee ? `${profileEmployee.name} uchun oylik status.` : "Profil xodimga ulanmagan."}</p>
+            </div>
+            <dl>
+              <div><dt>Status</dt><dd>{MONTHLY_STATUS_OPTIONS[selectedDay.status]?.label || STATUS_META[selectedDay.status]?.code || "K"}</dd></div>
+              <div><dt>Soat</dt><dd>{MONTHLY_STATUS_OPTIONS[selectedDay.status]?.hours ?? (STATUS_META[selectedDay.status]?.metric === "rest" ? 0 : 9)}</dd></div>
+            </dl>
+          </article>
+        )}
       </section>
 
       <section className="profile-stats">
@@ -2194,39 +2301,11 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
             <Phone size={18} />
             <strong>Haydovchilar va muxbirlar</strong>
           </div>
-          <span>{contacts.length} kontakt</span>
-        </div>
-
-        <form className="contact-form" onSubmit={submitContact}>
-          <select
-            value={contactDraft.type}
-            onChange={(event) => setContactDraft({ ...contactDraft, type: event.target.value })}
-            aria-label="Kontakt turi"
-          >
-            <option>Muxbir</option>
-            <option>Haydovchi</option>
-          </select>
-          <input
-            value={contactDraft.name}
-            onChange={(event) => setContactDraft({ ...contactDraft, name: event.target.value })}
-            placeholder={contactDraft.type === "Haydovchi" ? "Haydovchi yoki mashina nomi" : "Muxbir F.I.Sh"}
-          />
-          <input
-            value={contactDraft.vehicle}
-            onChange={(event) => setContactDraft({ ...contactDraft, vehicle: event.target.value })}
-            placeholder="Mashina nomeri, masalan 142 Caddy"
-          />
-          <input
-            value={contactDraft.phone}
-            onChange={(event) => setContactDraft({ ...contactDraft, phone: event.target.value })}
-            placeholder="+998 90 302 55 92"
-            inputMode="tel"
-          />
-          <button type="submit">
-            <Plus size={17} />
+          <button type="button" onClick={() => setContactFormOpen(true)}>
+            <Plus size={16} />
             Qo'shish
           </button>
-        </form>
+        </div>
 
         <div className="contact-list">
           {contacts.length ? contacts.map((contact) => (
@@ -2249,6 +2328,57 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
           )) : <EmptyCard text="Kontaktlar hali kiritilmagan" />}
         </div>
       </section>
+
+      {contactFormOpen && (
+        <div className="modal-backdrop" role="presentation">
+          <form className="schedule-modal contact-modal" onSubmit={submitContact}>
+            <div className="modal-head">
+              <strong>Kontakt qo'shish</strong>
+              <button type="button" onClick={() => setContactFormOpen(false)}>×</button>
+            </div>
+            <label>
+              Kontakt turi
+              <select
+                value={contactDraft.type}
+                onChange={(event) => setContactDraft({ ...contactDraft, type: event.target.value })}
+                aria-label="Kontakt turi"
+              >
+                <option>Muxbir</option>
+                <option>Haydovchi</option>
+              </select>
+            </label>
+            <label>
+              Ism yoki mashina
+              <input
+                value={contactDraft.name}
+                onChange={(event) => setContactDraft({ ...contactDraft, name: event.target.value })}
+                placeholder={contactDraft.type === "Haydovchi" ? "Haydovchi yoki mashina nomi" : "Muxbir F.I.Sh"}
+              />
+            </label>
+            <label>
+              Mashina nomeri
+              <input
+                value={contactDraft.vehicle}
+                onChange={(event) => setContactDraft({ ...contactDraft, vehicle: event.target.value })}
+                placeholder="Mashina nomeri, masalan 142 Caddy"
+              />
+            </label>
+            <label>
+              Telefon
+              <input
+                value={contactDraft.phone}
+                onChange={(event) => setContactDraft({ ...contactDraft, phone: event.target.value })}
+                placeholder="+998 90 302 55 92"
+                inputMode="tel"
+              />
+            </label>
+            <button type="submit">
+              <Plus size={17} />
+              Qo'shish
+            </button>
+          </form>
+        </div>
+      )}
 
       <section className="settings-card">
         <div className="settings-head">
