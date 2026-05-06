@@ -25,6 +25,7 @@ import {
   Plus,
   RefreshCcw,
   Save,
+  Search,
   Send,
   Settings,
   ShieldCheck,
@@ -749,7 +750,7 @@ function App() {
   }
 
   const title = useMemo(() => {
-    if (page === "studio") return "Studiyo jadvali";
+    if (page === "studio") return "Jamoa";
     if (page === "documents") return "Hujjatlar";
     if (page === "monthly") return "Oylik grafik";
     if (page === "shooting") return "Tasvir jadvali";
@@ -1098,7 +1099,10 @@ function ShootingPage({ onNotify }) {
           <form ref={addFormRef} className="schedule-modal" onSubmit={addRow}>
             <div className="modal-head">
               <strong>Yangi jadval qo'shish</strong>
-              <button type="button" onClick={() => setAddOpen(false)}>×</button>
+              <button type="button" onClick={() => setAddOpen(false)}>
+                <LogOut size={15} />
+                Chiqish
+              </button>
             </div>
             <label>
               Kamera raqami
@@ -1480,177 +1484,254 @@ function WeeklyPage({ activeDay, dashboard, onCreate, onDeleteSchedule, onDayCha
   );
 }
 
-function StudioPage({ dashboard, showAllOverview, navDirection, onAddSchedule, onCreate, onDeleteEmployee, onNotify, onSaveEmployee, onMoveWeek, onScanAttendance, onToggleOverview }) {
-  const overviewRows = showAllOverview ? dashboard.overviewRows : dashboard.overviewRows.slice(0, 5);
-  const scheduleBlank = {
-    day: "Dushanba",
-    meta: "3 Studiya",
-    time: "09:00 - 18:00",
-    statusType: "working",
-    tone: "purple",
-    employeeIds: ["", "", ""]
-  };
+function StudioPage({ dashboard, onCreate, onDeleteEmployee, onNotify, onSaveEmployee }) {
+  const blankEmployee = { name: "", role: "", phone: "", telegram: "", department: "operator", avatar: "", portfolio: [] };
+  const [activeDepartment, setActiveDepartment] = useState("all");
+  const [search, setSearch] = useState("");
+  const [selectedPerson, setSelectedPerson] = useState(null);
+  const [employeeModalOpen, setEmployeeModalOpen] = useState(false);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
-  const [scheduleDraft, setScheduleDraft] = useState(scheduleBlank);
+  const [draft, setDraft] = useState(blankEmployee);
+  const [editingId, setEditingId] = useState(null);
+  const formRef = useRef(null);
+  const today = dashboard.studioToday?.[0];
+  const visibleEmployees = dashboard.employees.filter((employee) => {
+    const query = search.trim().toLowerCase();
+    const matchesDepartment = activeDepartment === "all" || employee.department === activeDepartment;
+    const matchesSearch = !query || [employee.name, employee.role, employee.phone, departmentMeta(employee.department).label]
+      .join(" ")
+      .toLowerCase()
+      .includes(query);
+    return matchesDepartment && matchesSearch;
+  });
 
-  async function submitSchedule(event) {
+  function openAddEmployee() {
+    setDraft(blankEmployee);
+    setEditingId(null);
+    setEmployeeModalOpen(true);
+  }
+
+  function openEditEmployee(employee) {
+    setDraft({ ...blankEmployee, ...employee });
+    setEditingId(employee.id);
+    setSelectedPerson(null);
+    setEmployeeModalOpen(true);
+  }
+
+  async function submitEmployee(event) {
     event.preventDefault();
-    if (!scheduleDraft.meta.trim()) {
-      onNotify("Studiya yoki joy nomini kiriting.", "error");
-      event.currentTarget.querySelector("[name='schedule-meta']")?.focus();
+    const invalid = [
+      ["name", "F.I.Sh ni kiriting."],
+      ["role", "Lavozimni kiriting."],
+      ["phone", "Telefon raqamini kiriting."]
+    ].find(([field]) => !String(draft[field] || "").trim());
+    if (invalid) {
+      onNotify(invalid[1], "error");
+      formRef.current?.querySelector(`[name='team-${invalid[0]}']`)?.focus();
       return;
     }
-    if (!scheduleDraft.time.trim()) {
-      onNotify("Ish vaqtini kiriting.", "error");
-      event.currentTarget.querySelector("[name='schedule-time']")?.focus();
-      return;
-    }
-    if (!scheduleDraft.employeeIds.some(Boolean)) {
-      onNotify("Kamida bitta xodim tanlang.", "error");
-      event.currentTarget.querySelector("[name='schedule-employee']")?.focus();
-      return;
-    }
-    const saved = await onAddSchedule({
-      ...scheduleDraft,
-      employeeIds: scheduleDraft.employeeIds.filter(Boolean)
-    });
+
+    const saved = await onSaveEmployee({ ...draft, id: editingId || draft.id });
     if (!saved) return;
-    setScheduleDraft(scheduleBlank);
-    setScheduleModalOpen(false);
+    setEmployeeModalOpen(false);
+    setEditingId(null);
+    setDraft(blankEmployee);
+  }
+
+  async function updateAvatar(file) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      onNotify("Faqat rasm faylini yuklang.", "error");
+      return;
+    }
+    setDraft({ ...draft, avatar: await readImageFile(file) });
   }
 
   return (
-    <>
-      <section className="studio-panel">
-        <div className="studio-period">
-          <button className={`icon-button dark ${navDirection === "prev" ? "nav-active" : ""}`} type="button" aria-label="Oldingi hafta" onClick={() => onMoveWeek(-7)}>
-            <ChevronLeft size={23} />
-          </button>
-          <div>
-            <h2>{dashboard.week.title}</h2>
-            <p>{dashboard.week.range}</p>
-          </div>
-          <button className={`icon-button dark ${navDirection === "next" ? "nav-active" : ""}`} type="button" aria-label="Keyingi hafta" onClick={() => onMoveWeek(7)}>
-            <ChevronRight size={23} />
-          </button>
-        </div>
-        <button className="create-button flat" type="button" onClick={() => setScheduleModalOpen(true)}>
-          <Plus size={17} />
-          Jadval yaratish
-        </button>
-      </section>
-
-      <section className="metric-grid studio">
-        <MetricCard icon={<UsersRound size={20} />} value={dashboard.metrics.total} label="Xodimlar" tone="purple" />
-        <MetricCard icon={<BriefcaseBusiness size={19} />} value={dashboard.metrics.workingToday} label="Ishlayotgan" tone="green" />
-        <MetricCard icon={<Coffee size={19} />} value={dashboard.metrics.restToday} label="Bugun damda" tone="orange" />
-      </section>
-
-      <AttendancePanel attendance={dashboard.attendance} employees={dashboard.employees} onScan={onScanAttendance} />
-
-      <EmployeeManager employees={dashboard.employees} onDelete={onDeleteEmployee} onNotify={onNotify} onSave={onSaveEmployee} />
-
-      <div className="section-head">
-        <h2>Bugungi jadval</h2>
-        <span>{dashboard.week.todayLabel}</span>
-      </div>
-      <section className="today-card">
-        {dashboard.studioToday.map((person) => (
-          <CompactStaffCard key={person.id} person={person} />
-        ))}
-      </section>
-
-      <div className="section-head overview">
-        <h2>Haftalik umumiy ko'rinish</h2>
-        <button type="button" onClick={onToggleOverview}>{showAllOverview ? "Yopish" : "Hammasini ko'rish"}</button>
-      </div>
-      <WeeklyOverview rows={overviewRows} days={dashboard.week.shortDays} />
-
-      <section className="legend-card">
-        <h3>Belgilar izohi</h3>
-        <LegendItem tone="work" label="Ish smenasi" />
-        <LegendItem tone="rest" label="Dam olish kuni" />
-        <LegendItem tone="empty" label="Jadvalga kiritilmagan" />
-      </section>
-
-      <section className="algorithm-card">
-        <div className="info-icon">
-          <Info size={18} />
-        </div>
+    <section className="team-page" aria-label="Jamoa bo'limi">
+      <section className="team-daily-card">
         <div>
-          <strong>Navbatma-navbat algoritmi</strong>
-          <p>So'nggi yaratish: {dashboard.week.generatedAt}</p>
+          <strong>KUNLIK JADVAL</strong>
+          <span>BUGUN: 7-May, 2026</span>
+          <span>Navbatchilik: Dron & TJK</span>
+          <span>Bosh Operator: {today?.name || "A. Valiyev"}</span>
         </div>
+        <button type="button">BATAFSIL</button>
       </section>
 
-      {scheduleModalOpen && (
-        <div className="modal-backdrop studio-modal-backdrop" role="presentation">
-          <form className="schedule-modal studio-schedule-modal" onSubmit={submitSchedule}>
+      <label className="team-search">
+        <span><Search size={15} /></span>
+        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Jamoa azolarini ism yoki bo'lim bo'yicha qidirish..." />
+      </label>
+
+      <div className="team-actions">
+        <button type="button" onClick={openAddEmployee}>
+          <Plus size={15} />
+          Yangi Xodim Qo'shish
+        </button>
+        <button className="primary" type="button" onClick={() => setScheduleModalOpen(true)}>
+          <CalendarDays size={15} />
+          Yangi Jadval Yaratish
+        </button>
+      </div>
+
+      <div className="team-tabs" role="tablist" aria-label="Bo'lim filterlari">
+        <button className={activeDepartment === "all" ? "active" : ""} type="button" onClick={() => setActiveDepartment("all")}>[HAMMASI]</button>
+        {DEPARTMENTS.map((department) => (
+          <button className={activeDepartment === department.id ? "active" : ""} type="button" key={department.id} onClick={() => setActiveDepartment(department.id)}>
+            [{department.shortLabel.toUpperCase()}]
+          </button>
+        ))}
+      </div>
+
+      <section className="team-list">
+        {visibleEmployees.length ? visibleEmployees.map((employee) => {
+          const department = departmentMeta(employee.department);
+          return (
+            <button className="team-member-row" type="button" key={employee.id} onClick={() => setSelectedPerson(employee)}>
+              <Avatar person={employee} />
+              <div className="team-member-main">
+                <strong>{employee.name}</strong>
+                <span>{employee.role || "Operator"}</span>
+                <em>Faol</em>
+              </div>
+              <span>{department.shortLabel}</span>
+              <span>{department.label}</span>
+            </button>
+          );
+        }) : <EmptyCard text="Bu bo'limda xodim yo'q" />}
+      </section>
+
+      {selectedPerson && (
+        <TeamPersonModal
+          person={selectedPerson}
+          onClose={() => setSelectedPerson(null)}
+          onDelete={(id) => {
+            setSelectedPerson(null);
+            onDeleteEmployee(id);
+          }}
+          onEdit={openEditEmployee}
+        />
+      )}
+
+      {employeeModalOpen && createPortal((
+        <div className="modal-backdrop team-modal-backdrop" role="dialog" aria-modal="true" aria-label={editingId ? "Xodimni tahrirlash" : "Yangi xodim qo'shish"}>
+          <form ref={formRef} className="schedule-modal team-edit-modal" onSubmit={submitEmployee}>
             <div className="modal-head">
-              <strong>Studio jadvali yaratish</strong>
-              <button type="button" onClick={() => setScheduleModalOpen(false)}>×</button>
-            </div>
-            <div className="modal-grid two">
-              <label>
-                Kun
-                <select value={scheduleDraft.day} onChange={(event) => setScheduleDraft({ ...scheduleDraft, day: event.target.value })}>
-                  {WEEK_DAYS.map((day) => <option key={day} value={day}>{day}</option>)}
-                </select>
-              </label>
-              <label>
-                Rang
-                <select value={scheduleDraft.tone} onChange={(event) => setScheduleDraft({ ...scheduleDraft, tone: event.target.value })}>
-                  <option value="purple">Binafsha</option>
-                  <option value="blue">Ko'k</option>
-                </select>
-              </label>
+              <strong>{editingId ? "Xodimni tahrirlash" : "Yangi xodim qo'shish"}</strong>
+              <button type="button" onClick={() => setEmployeeModalOpen(false)}>
+                <LogOut size={15} />
+                Chiqish
+              </button>
             </div>
             <label>
-              Studiya / joy
-              <input name="schedule-meta" value={scheduleDraft.meta} onChange={(event) => setScheduleDraft({ ...scheduleDraft, meta: event.target.value })} placeholder="3 Studiya" />
+              F.I.Sh
+              <input name="team-name" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Ali Valiyev" />
             </label>
-            <div className="modal-grid two">
+            <label>
+              Lavozim
+              <input name="team-role" value={draft.role} onChange={(event) => setDraft({ ...draft, role: event.target.value })} placeholder="Operator" />
+            </label>
+            <label>
+              Bo'lim
+              <select value={draft.department || "operator"} onChange={(event) => setDraft({ ...draft, department: event.target.value })}>
+                {DEPARTMENTS.map((department) => (
+                  <option key={department.id} value={department.id}>{department.label}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Telefon
+              <input name="team-phone" value={draft.phone} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} placeholder="+998 90 123 45 67" />
+            </label>
+            <label>
+              Telegram
+              <input value={draft.telegram || ""} onChange={(event) => setDraft({ ...draft, telegram: event.target.value })} placeholder="@username yoki link" />
+            </label>
+            <div className="avatar-upload-field">
+              <div className="avatar-upload-preview">
+                {draft.avatar ? <img src={draft.avatar} alt="Xodim rasmi" /> : <User size={28} />}
+              </div>
+              <div>
+                <strong>Xodim rasmi</strong>
+                <span>{draft.avatar ? "Rasm tanlangan" : "Rasm yuklanmagan"}</span>
+              </div>
               <label>
-                Ish vaqti
-                <input name="schedule-time" value={scheduleDraft.time} onChange={(event) => setScheduleDraft({ ...scheduleDraft, time: event.target.value })} placeholder="09:00 - 18:00" />
-              </label>
-              <label>
-                Status
-                <select value={scheduleDraft.statusType} onChange={(event) => setScheduleDraft({ ...scheduleDraft, statusType: event.target.value })}>
-                  {STATUS_OPTIONS.map((status) => (
-                    <option key={status.id} value={status.id}>{status.code} - {status.label}</option>
-                  ))}
-                </select>
+                <Upload size={15} />
+                Yuklash
+                <input type="file" accept="image/*" onChange={(event) => updateAvatar(event.target.files?.[0])} />
               </label>
             </div>
-            {[0, 1, 2].map((index) => (
-              <label key={index}>
-                Xodim {index + 1}
-                <select name="schedule-employee" value={scheduleDraft.employeeIds[index]} onChange={(event) => {
-                  const employeeIds = [...scheduleDraft.employeeIds];
-                  employeeIds[index] = event.target.value;
-                  setScheduleDraft({ ...scheduleDraft, employeeIds });
-                }}>
-                  <option value="">Tanlang</option>
-                  {dashboard.employees.map((employee) => (
-                    <option key={employee.id} value={employee.id}>{employee.name} - {employee.role}</option>
-                  ))}
-                </select>
-              </label>
-            ))}
             <button type="submit">
               <Save size={17} />
-              Jadvalga qo'shish
-            </button>
-            <button className="secondary-modal-button" type="button" onClick={onCreate}>
-              <RefreshCcw size={17} />
-              Avtomatik jadval yaratish
+              Saqlash
             </button>
           </form>
         </div>
-      )}
-    </>
+      ), document.body)}
+
+      {scheduleModalOpen && createPortal((
+        <div className="modal-backdrop team-modal-backdrop" role="dialog" aria-modal="true" aria-label="Yangi jadval yaratish">
+          <section className="schedule-modal team-edit-modal">
+            <div className="modal-head">
+              <strong>Yangi jadval yaratish</strong>
+              <button type="button" onClick={() => setScheduleModalOpen(false)}>
+                <LogOut size={15} />
+                Chiqish
+              </button>
+            </div>
+            <p className="team-modal-copy">Jadval avtomatik yaratiladi va mavjud hafta ma'lumotlari yangilanadi.</p>
+            <button type="button" onClick={() => {
+              setScheduleModalOpen(false);
+              onCreate();
+            }}>
+              <RefreshCcw size={17} />
+              Yaratish
+            </button>
+          </section>
+        </div>
+      ), document.body)}
+    </section>
   );
+}
+
+function TeamPersonModal({ onClose, onDelete, onEdit, person }) {
+  const department = departmentMeta(person.department);
+
+  return createPortal((
+    <div className="team-person-backdrop" role="dialog" aria-modal="true" aria-label={`Xodimlarni boshqarish: ${person.name}`}>
+      <button className="team-modal-exit" type="button" onClick={onClose}>
+        <LogOut size={16} />
+        Chiqish
+      </button>
+      <section className="team-person-sheet">
+        <div className="team-sheet-handle" />
+        <h2>Xodimlarni Boshqarish: {person.name}</h2>
+        <article className="team-person-card">
+          <div className="team-person-head">
+            <Avatar person={person} />
+            <strong>{person.name}</strong>
+          </div>
+          <dl>
+            <div><dt>Lavozimi:</dt><dd>{person.role || "Operator"}</dd></div>
+            <div><dt>Bo'lim:</dt><dd>{department.label}</dd></div>
+            <div><dt>Telefon:</dt><dd>{person.phone || "+998 90 123 45 67"}</dd></div>
+            <div><dt>Faoliyat:</dt><dd>Faol</dd></div>
+          </dl>
+          <div className="team-person-actions">
+            <button type="button" onClick={() => onEdit(person)}>
+              <Edit3 size={15} />
+              TAHRIRLASH
+            </button>
+            <button className="danger" type="button" onClick={() => onDelete(person.id)}>
+              <Trash2 size={15} />
+              O'CHIRISH
+            </button>
+          </div>
+        </article>
+      </section>
+    </div>
+  ), document.body);
 }
 
 function AttendancePanel({ attendance = {}, employees, onScan }) {
@@ -1789,9 +1870,9 @@ function PersonDetailScreen({ assignments, onClose, person }) {
     <div className="person-sheet-backdrop" role="dialog" aria-modal="true" aria-label={`${person.name} ma'lumotlari`}>
       <section className="person-sheet">
         <header className="person-sheet-top">
-          <button type="button" onClick={onClose}>
-            <ChevronLeft size={21} />
-            Orqaga
+          <button className="person-sheet-exit" type="button" onClick={onClose}>
+            <LogOut size={18} />
+            Chiqish
           </button>
           <span>{STATUS_META[person.statusType]?.code || "S"} - {STATUS_META[person.statusType]?.label || person.status}</span>
           <button className="person-sheet-close" type="button" onClick={onClose} aria-label="Chiqish">×</button>
@@ -1971,7 +2052,10 @@ function EmployeeManager({ employees, onDelete, onNotify, onSave }) {
           <form ref={formRef} className="schedule-modal employee-modal" onSubmit={submit}>
             <div className="modal-head">
               <strong>{editingId ? "Xodimni tahrirlash" : "Yangi xodim qo'shish"}</strong>
-              <button type="button" onClick={() => setModalOpen(false)}>×</button>
+              <button type="button" onClick={() => setModalOpen(false)}>
+                <LogOut size={15} />
+                Chiqish
+              </button>
             </div>
             <label>
               F.I.Sh
@@ -2135,7 +2219,10 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
           <form ref={formRef} className="schedule-modal documents-modal" onSubmit={submit}>
             <div className="modal-head">
               <strong>Hujjatlarni tahrirlash</strong>
-              <button type="button" onClick={() => setEditOpen(false)}>×</button>
+              <button type="button" onClick={() => setEditOpen(false)}>
+                <LogOut size={15} />
+                Chiqish
+              </button>
             </div>
             <label>
               Ism familiya
@@ -2577,7 +2664,10 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
           <form className="schedule-modal contact-modal" onSubmit={submitContact}>
             <div className="modal-head">
               <strong>Kontakt qo'shish</strong>
-              <button type="button" onClick={() => setContactFormOpen(false)}>×</button>
+              <button type="button" onClick={() => setContactFormOpen(false)}>
+                <LogOut size={15} />
+                Chiqish
+              </button>
             </div>
             <label>
               Kontakt turi
