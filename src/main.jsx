@@ -446,6 +446,11 @@ function formatHourLabel(hours) {
   return `${String(value).padStart(2, "0")}:00`;
 }
 
+function calculateEfficiency(assignments = []) {
+  const workingCount = assignments.filter((assignment) => STATUS_META[assignment.statusType]?.metric === "working").length;
+  return Math.min(96, Math.max(45, 52 + workingCount * 8 + assignments.length));
+}
+
 function App() {
   const [page, setPage] = useState("weekly");
   const [previousPage, setPreviousPage] = useState("weekly");
@@ -464,6 +469,10 @@ function App() {
   const [navDirection, setNavDirection] = useState("next");
   const [toasts, setToasts] = useState([]);
   const hasLoadedDashboard = useRef(false);
+  const menuButtonRef = useRef(null);
+  const notificationsButtonRef = useRef(null);
+  const menuPanelRef = useRef(null);
+  const notificationsPanelRef = useRef(null);
 
   const notify = useCallback((message, type = "success") => {
     const id = Date.now() + Math.random();
@@ -507,6 +516,31 @@ function App() {
     document.body.style.overflow = "";
     return undefined;
   }, [page]);
+
+  useEffect(() => {
+    if (!menuOpen && !notificationsOpen) return undefined;
+
+    function closeFloatingPanels(event) {
+      const target = event.target;
+      const clickedInsideMenu = menuPanelRef.current?.contains(target) || menuButtonRef.current?.contains(target);
+      const clickedInsideNotifications = notificationsPanelRef.current?.contains(target) || notificationsButtonRef.current?.contains(target);
+      if (!clickedInsideMenu) setMenuOpen(false);
+      if (!clickedInsideNotifications) setNotificationsOpen(false);
+    }
+
+    function closeOnEscape(event) {
+      if (event.key !== "Escape") return;
+      setMenuOpen(false);
+      setNotificationsOpen(false);
+    }
+
+    document.addEventListener("pointerdown", closeFloatingPanels);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeFloatingPanels);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [menuOpen, notificationsOpen]);
 
   function handleAuth(user) {
     const nextUser = persistCurrentUser({
@@ -673,8 +707,12 @@ function App() {
   }
 
   async function saveContact(contact) {
-    if (!String(contact.name || contact.vehicle || "").trim()) {
-      notify("Ism yoki mashina raqamini kiriting.", "error");
+    if (!String(contact.name || "").trim()) {
+      notify(contact.type === "Haydovchi" ? "Shofyor F.I.Sh ni kiriting." : "Muxbir F.I.Sh ni kiriting.", "error");
+      return false;
+    }
+    if (contact.type === "Haydovchi" && !String(contact.vehicle || "").trim()) {
+      notify("Mashina raqamini kiriting.", "error");
       return false;
     }
     if (!String(contact.phone || "").trim()) {
@@ -772,7 +810,10 @@ function App() {
     <div className="app-shell">
       {generating && <LoadingScreen message={loadingMessage} />}
       <header className="topbar">
-        <button className="icon-button" type="button" aria-label="Menyu" onClick={() => setMenuOpen((value) => !value)}>
+        <button ref={menuButtonRef} className="icon-button" type="button" aria-label="Menyu" onClick={() => {
+          setMenuOpen((value) => !value);
+          setNotificationsOpen(false);
+        }}>
           <Menu size={23} />
         </button>
         <div className="topbar-title">
@@ -783,13 +824,16 @@ function App() {
           )}
           <h1>{title}</h1>
         </div>
-        <button className="icon-button" type="button" aria-label="Bildirishnomalar" onClick={() => setNotificationsOpen((value) => !value)}>
+        <button ref={notificationsButtonRef} className="icon-button" type="button" aria-label="Bildirishnomalar" onClick={() => {
+          setNotificationsOpen((value) => !value);
+          setMenuOpen(false);
+        }}>
           <Bell size={20} fill="currentColor" />
         </button>
       </header>
 
-      {menuOpen && <MenuPanel onClose={() => setMenuOpen(false)} onPageChange={setPage} onOpenMonthly={openMonthly} />}
-      {notificationsOpen && <NotificationsPanel items={dashboard.notifications} />}
+      {menuOpen && <MenuPanel panelRef={menuPanelRef} onClose={() => setMenuOpen(false)} onPageChange={setPage} onOpenMonthly={openMonthly} />}
+      {notificationsOpen && <NotificationsPanel panelRef={notificationsPanelRef} items={dashboard.notifications} />}
 
       <main className="content">
         {error && <div className="error-banner">{error}</div>}
@@ -1094,9 +1138,9 @@ function ShootingPage({ onNotify }) {
         </div>
       </article>
 
-      {addOpen && (
-        <div className="modal-backdrop" role="presentation">
-          <form ref={addFormRef} className="schedule-modal" onSubmit={addRow}>
+      {addOpen && createPortal((
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Yangi jadval qo'shish" onClick={() => setAddOpen(false)}>
+          <form ref={addFormRef} className="schedule-modal" onSubmit={addRow} onClick={(event) => event.stopPropagation()}>
             <div className="modal-head">
               <strong>Yangi jadval qo'shish</strong>
               <button type="button" onClick={() => setAddOpen(false)}>
@@ -1134,7 +1178,7 @@ function ShootingPage({ onNotify }) {
             </button>
           </form>
         </div>
-      )}
+      ), document.body)}
     </section>
   );
 }
@@ -1605,6 +1649,9 @@ function StudioPage({ dashboard, onCreate, onDeleteEmployee, onNotify, onSaveEmp
       {selectedPerson && (
         <TeamPersonModal
           person={selectedPerson}
+          assignments={dashboard.groups.flatMap((group) => group.people
+            .filter((person) => String(person.id) === String(selectedPerson.id))
+            .map((person) => ({ ...person, groupTitle: group.title, groupMeta: group.meta, day: group.day })))}
           onClose={() => setSelectedPerson(null)}
           onDelete={(id) => {
             setSelectedPerson(null);
@@ -1615,8 +1662,8 @@ function StudioPage({ dashboard, onCreate, onDeleteEmployee, onNotify, onSaveEmp
       )}
 
       {employeeModalOpen && createPortal((
-        <div className="modal-backdrop team-modal-backdrop" role="dialog" aria-modal="true" aria-label={editingId ? "Xodimni tahrirlash" : "Yangi xodim qo'shish"}>
-          <form ref={formRef} className="schedule-modal team-edit-modal" onSubmit={submitEmployee}>
+        <div className="modal-backdrop team-modal-backdrop" role="dialog" aria-modal="true" aria-label={editingId ? "Xodimni tahrirlash" : "Yangi xodim qo'shish"} onClick={() => setEmployeeModalOpen(false)}>
+          <form ref={formRef} className="schedule-modal team-edit-modal" onSubmit={submitEmployee} onClick={(event) => event.stopPropagation()}>
             <div className="modal-head">
               <strong>{editingId ? "Xodimni tahrirlash" : "Yangi xodim qo'shish"}</strong>
               <button type="button" onClick={() => setEmployeeModalOpen(false)}>
@@ -1671,8 +1718,8 @@ function StudioPage({ dashboard, onCreate, onDeleteEmployee, onNotify, onSaveEmp
       ), document.body)}
 
       {scheduleModalOpen && createPortal((
-        <div className="modal-backdrop team-modal-backdrop" role="dialog" aria-modal="true" aria-label="Yangi jadval yaratish">
-          <section className="schedule-modal team-edit-modal">
+        <div className="modal-backdrop team-modal-backdrop" role="dialog" aria-modal="true" aria-label="Yangi jadval yaratish" onClick={() => setScheduleModalOpen(false)}>
+          <section className="schedule-modal team-edit-modal" onClick={(event) => event.stopPropagation()}>
             <div className="modal-head">
               <strong>Yangi jadval yaratish</strong>
               <button type="button" onClick={() => setScheduleModalOpen(false)}>
@@ -1695,16 +1742,17 @@ function StudioPage({ dashboard, onCreate, onDeleteEmployee, onNotify, onSaveEmp
   );
 }
 
-function TeamPersonModal({ onClose, onDelete, onEdit, person }) {
+function TeamPersonModal({ assignments = [], onClose, onDelete, onEdit, person }) {
   const department = departmentMeta(person.department);
+  const kpi = calculateEfficiency(assignments);
 
   return createPortal((
-    <div className="team-person-backdrop" role="dialog" aria-modal="true" aria-label={`Xodimlarni boshqarish: ${person.name}`}>
+    <div className="team-person-backdrop" role="dialog" aria-modal="true" aria-label={`Xodimlarni boshqarish: ${person.name}`} onClick={onClose}>
       <button className="team-modal-exit" type="button" onClick={onClose}>
         <LogOut size={16} />
         Chiqish
       </button>
-      <section className="team-person-sheet">
+      <section className="team-person-sheet" onClick={(event) => event.stopPropagation()}>
         <div className="team-sheet-handle" />
         <h2>Xodimlarni Boshqarish: {person.name}</h2>
         <article className="team-person-card">
@@ -1718,6 +1766,13 @@ function TeamPersonModal({ onClose, onDelete, onEdit, person }) {
             <div><dt>Telefon:</dt><dd>{person.phone || "+998 90 123 45 67"}</dd></div>
             <div><dt>Faoliyat:</dt><dd>Faol</dd></div>
           </dl>
+          <section className="team-person-kpi" aria-label="Joriy oy samaradorligi">
+            <div>
+              <span>Joriy oy samaradorligi</span>
+              <strong>{kpi}%</strong>
+            </div>
+            <i><b style={{ width: `${kpi}%` }} /></i>
+          </section>
           <div className="team-person-actions">
             <button type="button" onClick={() => onEdit(person)}>
               <Edit3 size={15} />
@@ -1864,11 +1919,11 @@ function PersonDetailScreen({ assignments, onClose, person }) {
   const telegram = telegramHref(person.telegram);
   const workingCount = assignments.filter((assignment) => STATUS_META[assignment.statusType]?.metric === "working").length;
   const restCount = assignments.filter((assignment) => STATUS_META[assignment.statusType]?.metric === "rest").length;
-  const kpi = Math.min(96, Math.max(45, 52 + workingCount * 8 + assignments.length));
+  const kpi = calculateEfficiency(assignments);
 
   return createPortal((
-    <div className="person-sheet-backdrop" role="dialog" aria-modal="true" aria-label={`${person.name} ma'lumotlari`}>
-      <section className="person-sheet">
+    <div className="person-sheet-backdrop" role="dialog" aria-modal="true" aria-label={`${person.name} ma'lumotlari`} onClick={onClose}>
+      <section className="person-sheet" onClick={(event) => event.stopPropagation()}>
         <header className="person-sheet-top">
           <button className="person-sheet-exit" type="button" onClick={onClose}>
             <LogOut size={18} />
@@ -1888,7 +1943,7 @@ function PersonDetailScreen({ assignments, onClose, person }) {
 
         <section className="person-kpi">
           <div>
-            <span>Samaradorlik</span>
+            <span>Joriy oy samaradorligi</span>
             <strong>{kpi}%</strong>
           </div>
           <i><b style={{ width: `${kpi}%` }} /></i>
@@ -2047,9 +2102,9 @@ function EmployeeManager({ employees, onDelete, onNotify, onSave }) {
           </article>
         ))}
       </div>
-      {modalOpen && (
-        <div className="modal-backdrop employee-modal-backdrop" role="presentation">
-          <form ref={formRef} className="schedule-modal employee-modal" onSubmit={submit}>
+      {modalOpen && createPortal((
+        <div className="modal-backdrop employee-modal-backdrop" role="dialog" aria-modal="true" aria-label={editingId ? "Xodimni tahrirlash" : "Yangi xodim qo'shish"} onClick={() => setModalOpen(false)}>
+          <form ref={formRef} className="schedule-modal employee-modal" onSubmit={submit} onClick={(event) => event.stopPropagation()}>
             <div className="modal-head">
               <strong>{editingId ? "Xodimni tahrirlash" : "Yangi xodim qo'shish"}</strong>
               <button type="button" onClick={() => setModalOpen(false)}>
@@ -2101,7 +2156,7 @@ function EmployeeManager({ employees, onDelete, onNotify, onSave }) {
             </button>
           </form>
         </div>
-      )}
+      ), document.body)}
     </section>
   );
 }
@@ -2214,9 +2269,9 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
           </button>
         ))}
       </section>
-      {editOpen && (
-        <div className="modal-backdrop" role="presentation">
-          <form ref={formRef} className="schedule-modal documents-modal" onSubmit={submit}>
+      {editOpen && createPortal((
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Hujjatlarni tahrirlash" onClick={() => setEditOpen(false)}>
+          <form ref={formRef} className="schedule-modal documents-modal" onSubmit={submit} onClick={(event) => event.stopPropagation()}>
             <div className="modal-head">
               <strong>Hujjatlarni tahrirlash</strong>
               <button type="button" onClick={() => setEditOpen(false)}>
@@ -2272,7 +2327,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
             </button>
           </form>
         </div>
-      )}
+      ), document.body)}
     </section>
   );
 }
@@ -2475,7 +2530,11 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
 
   async function submitContact(event) {
     event.preventDefault();
-    const saved = await onSaveContact(contactDraft);
+    const normalizedContact = {
+      ...contactDraft,
+      vehicle: contactDraft.type === "Haydovchi" ? contactDraft.vehicle : ""
+    };
+    const saved = await onSaveContact(normalizedContact);
     if (saved) {
       setContactDraft({ type: "Muxbir", name: "", vehicle: "", phone: "" });
       setContactFormOpen(false);
@@ -2659,9 +2718,9 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
         </div>
       </section>
 
-      {contactFormOpen && (
-        <div className="modal-backdrop" role="presentation">
-          <form className="schedule-modal contact-modal" onSubmit={submitContact}>
+      {contactFormOpen && createPortal((
+        <div className="modal-backdrop contact-modal-backdrop" role="dialog" aria-modal="true" aria-label="Kontakt qo'shish" onClick={() => setContactFormOpen(false)}>
+          <form className="schedule-modal contact-modal" onSubmit={submitContact} onClick={(event) => event.stopPropagation()}>
             <div className="modal-head">
               <strong>Kontakt qo'shish</strong>
               <button type="button" onClick={() => setContactFormOpen(false)}>
@@ -2673,29 +2732,35 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
               Kontakt turi
               <select
                 value={contactDraft.type}
-                onChange={(event) => setContactDraft({ ...contactDraft, type: event.target.value })}
+                onChange={(event) => setContactDraft({
+                  ...contactDraft,
+                  type: event.target.value,
+                  vehicle: event.target.value === "Haydovchi" ? contactDraft.vehicle : ""
+                })}
                 aria-label="Kontakt turi"
               >
                 <option>Muxbir</option>
-                <option>Haydovchi</option>
+                <option value="Haydovchi">Mashina</option>
               </select>
             </label>
             <label>
-              Ism yoki mashina
+              {contactDraft.type === "Haydovchi" ? "Shofyor F.I.Sh" : "Muxbir F.I.Sh"}
               <input
                 value={contactDraft.name}
                 onChange={(event) => setContactDraft({ ...contactDraft, name: event.target.value })}
-                placeholder={contactDraft.type === "Haydovchi" ? "Haydovchi yoki mashina nomi" : "Muxbir F.I.Sh"}
+                placeholder={contactDraft.type === "Haydovchi" ? "Shofyor F.I.Sh" : "Muxbir F.I.Sh"}
               />
             </label>
-            <label>
-              Mashina nomeri
-              <input
-                value={contactDraft.vehicle}
-                onChange={(event) => setContactDraft({ ...contactDraft, vehicle: event.target.value })}
-                placeholder="Mashina nomeri, masalan 142 Caddy"
-              />
-            </label>
+            {contactDraft.type === "Haydovchi" && (
+              <label>
+                Mashina nomeri
+                <input
+                  value={contactDraft.vehicle}
+                  onChange={(event) => setContactDraft({ ...contactDraft, vehicle: event.target.value })}
+                  placeholder="Mashina nomeri, masalan 142 Caddy"
+                />
+              </label>
+            )}
             <label>
               Telefon
               <input
@@ -2711,7 +2776,7 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
             </button>
           </form>
         </div>
-      )}
+      ), document.body)}
 
       <section className="settings-card">
         <div className="settings-head">
@@ -2777,7 +2842,7 @@ function EmptyCard({ text }) {
   return <div className="empty-card">{text}</div>;
 }
 
-function MenuPanel({ onClose, onPageChange, onOpenMonthly }) {
+function MenuPanel({ onClose, onPageChange, onOpenMonthly, panelRef }) {
   const links = [
     ["weekly", "Ish jadvali", CalendarDays],
     ["studio", "Jamoa va bo'limlar", UsersRound],
@@ -2789,7 +2854,7 @@ function MenuPanel({ onClose, onPageChange, onOpenMonthly }) {
   ];
 
   return (
-    <aside className="floating-panel menu-panel">
+    <aside ref={panelRef} className="floating-panel menu-panel">
       <strong>Bo'limlar</strong>
       {links.map(([id, label, Icon]) => (
         <button
@@ -2809,9 +2874,9 @@ function MenuPanel({ onClose, onPageChange, onOpenMonthly }) {
   );
 }
 
-function NotificationsPanel({ items }) {
+function NotificationsPanel({ items, panelRef }) {
   return (
-    <aside className="floating-panel notification-panel">
+    <aside ref={panelRef} className="floating-panel notification-panel">
       <strong>Bildirishnomalar</strong>
       {items.map((item) => <p key={item}>{item}</p>)}
     </aside>

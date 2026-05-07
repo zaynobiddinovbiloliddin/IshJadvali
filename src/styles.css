@@ -2655,6 +2655,50 @@ button.metric-card {
   font-weight: 800;
 }
 
+.team-person-kpi {
+  display: grid;
+  gap: 8px;
+  padding: 9px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.team-person-kpi > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.team-person-kpi span {
+  min-width: 0;
+  color: #a8b2bf;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.team-person-kpi strong {
+  flex: 0 0 auto;
+  color: #ffffff;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.team-person-kpi i {
+  display: block;
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #2b3744;
+}
+
+.team-person-kpi b {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(135deg, #22c55e, #3b82f6);
+}
+
 .team-person-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -3570,6 +3614,20 @@ button.metric-card {
   overflow-y: auto;
 }
 
+.contact-modal-backdrop {
+  z-index: 2000;
+  align-items: center;
+  justify-items: center;
+  padding: max(12px, env(safe-area-inset-top, 0px)) 12px max(12px, env(safe-area-inset-bottom, 0px));
+}
+
+.contact-modal {
+  position: fixed;
+  inset: auto;
+  width: min(calc(100vw - 24px), 430px);
+  max-height: calc(100dvh - 24px);
+}
+
 .modal-portfolio {
   display: grid;
   gap: 10px;
@@ -3577,6 +3635,31 @@ button.metric-card {
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--surface-soft);
+}
+
+@media (max-width: 520px) {
+  .modal-backdrop {
+    padding: 0;
+  }
+
+  .modal-backdrop .schedule-modal {
+    width: 100vw;
+    max-height: 100dvh;
+    min-height: 100dvh;
+    border-radius: 0;
+  }
+
+  .contact-modal-backdrop {
+    padding: 0;
+  }
+
+  .contact-modal {
+    inset: 0;
+    width: 100vw;
+    max-height: 100dvh;
+    min-height: 100dvh;
+    border-radius: 0;
+  }
 }
 
 .report-hero,
