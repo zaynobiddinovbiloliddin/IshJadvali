@@ -13,7 +13,9 @@ import {
   ChevronRight,
   Clock3,
   Coffee,
+  Download,
   Edit3,
+  FileSpreadsheet,
   FileText,
   Info,
   LogIn,
@@ -991,6 +993,199 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
+function escapeXml(value) {
+  return escapeHtml(value).replaceAll("'", "&apos;");
+}
+
+function safeFileName(value) {
+  return String(value || "xodim")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48) || "xodim";
+}
+
+function employeeDocumentModel(employee, assignments = []) {
+  const department = departmentMeta(employee.department);
+  const portfolio = employee.portfolio || [];
+  const activeAssignments = assignments.filter((assignment) => STATUS_META[assignment.statusType]?.metric === "working");
+  const restAssignments = assignments.filter((assignment) => STATUS_META[assignment.statusType]?.metric === "rest");
+
+  return {
+    id: employee.id,
+    name: employee.name || "Xodim",
+    role: employee.role || "Operator",
+    department: department.label,
+    departmentShort: department.shortLabel,
+    phone: employee.phone || "Kiritilmagan",
+    telegram: employee.telegram || "Kiritilmagan",
+    status: "Faol",
+    generatedAt: new Date().toLocaleString("uz-UZ", { dateStyle: "medium", timeStyle: "short" }),
+    assignments,
+    portfolio,
+    summary: [
+      ["Xodim ID", `EMP-${String(employee.id || 0).padStart(3, "0")}`],
+      ["F.I.Sh", employee.name || "Kiritilmagan"],
+      ["Lavozim", employee.role || "Kiritilmagan"],
+      ["Bo'lim", department.label],
+      ["Telefon", employee.phone || "Kiritilmagan"],
+      ["Telegram", employee.telegram || "Kiritilmagan"],
+      ["Holat", "Faol"],
+      ["Haftalik smenalar", `${assignments.length} ta`],
+      ["Ishdagi smenalar", `${activeAssignments.length} ta`],
+      ["Dam/ta'til", `${restAssignments.length} ta`],
+      ["Portfolio", `${portfolio.length} ta video`]
+    ]
+  };
+}
+
+function crc32(bytes) {
+  let crc = -1;
+  for (let index = 0; index < bytes.length; index += 1) {
+    crc ^= bytes[index];
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+    }
+  }
+  return (crc ^ -1) >>> 0;
+}
+
+function writeUint16(view, offset, value) {
+  view.setUint16(offset, value, true);
+}
+
+function writeUint32(view, offset, value) {
+  view.setUint32(offset, value, true);
+}
+
+function createZipBlob(files, type) {
+  const encoder = new TextEncoder();
+  const chunks = [];
+  const central = [];
+  let offset = 0;
+
+  files.forEach((file) => {
+    const name = encoder.encode(file.name);
+    const data = typeof file.content === "string" ? encoder.encode(file.content) : file.content;
+    const checksum = crc32(data);
+    const header = new Uint8Array(30 + name.length);
+    const view = new DataView(header.buffer);
+    writeUint32(view, 0, 0x04034b50);
+    writeUint16(view, 4, 20);
+    writeUint16(view, 6, 0);
+    writeUint16(view, 8, 0);
+    writeUint32(view, 14, checksum);
+    writeUint32(view, 18, data.length);
+    writeUint32(view, 22, data.length);
+    writeUint16(view, 26, name.length);
+    header.set(name, 30);
+    chunks.push(header, data);
+
+    const centralHeader = new Uint8Array(46 + name.length);
+    const centralView = new DataView(centralHeader.buffer);
+    writeUint32(centralView, 0, 0x02014b50);
+    writeUint16(centralView, 4, 20);
+    writeUint16(centralView, 6, 20);
+    writeUint16(centralView, 8, 0);
+    writeUint16(centralView, 10, 0);
+    writeUint32(centralView, 16, checksum);
+    writeUint32(centralView, 20, data.length);
+    writeUint32(centralView, 24, data.length);
+    writeUint16(centralView, 28, name.length);
+    writeUint32(centralView, 42, offset);
+    centralHeader.set(name, 46);
+    central.push(centralHeader);
+    offset += header.length + data.length;
+  });
+
+  const centralSize = central.reduce((sum, item) => sum + item.length, 0);
+  const end = new Uint8Array(22);
+  const endView = new DataView(end.buffer);
+  writeUint32(endView, 0, 0x06054b50);
+  writeUint16(endView, 8, files.length);
+  writeUint16(endView, 10, files.length);
+  writeUint32(endView, 12, centralSize);
+  writeUint32(endView, 16, offset);
+
+  return new Blob([...chunks, ...central, end], { type });
+}
+
+function downloadBlob(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function buildDocxBlob(model) {
+  const rows = model.summary.map(([label, value]) => `
+    <w:tr><w:tc><w:p><w:r><w:rPr><w:b/></w:rPr><w:t>${escapeXml(label)}</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>${escapeXml(value)}</w:t></w:r></w:p></w:tc></w:tr>`).join("");
+  const assignmentRows = model.assignments.length ? model.assignments.map((assignment) => `
+    <w:tr><w:tc><w:p><w:r><w:t>${escapeXml(assignment.groupTitle || assignment.day || "-")}</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>${escapeXml(assignment.groupMeta || "-")}</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>${escapeXml(assignment.time || "-")}</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>${escapeXml(STATUS_META[assignment.statusType]?.label || assignment.status || "-")}</w:t></w:r></w:p></w:tc></w:tr>`).join("") : `
+    <w:tr><w:tc><w:p><w:r><w:t>Haftalik smena topilmadi</w:t></w:r></w:p></w:tc><w:tc/><w:tc/><w:tc/></w:tr>`;
+
+  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    <w:body>
+      <w:p><w:r><w:rPr><w:b/><w:sz w:val="32"/></w:rPr><w:t>Xodim shaxsiy ma'lumotnomasi</w:t></w:r></w:p>
+      <w:p><w:r><w:t>${escapeXml(model.name)} - ${escapeXml(model.role)}</w:t></w:r></w:p>
+      <w:p><w:r><w:t>Generatsiya qilingan: ${escapeXml(model.generatedAt)}</w:t></w:r></w:p>
+      <w:tbl>${rows}</w:tbl>
+      <w:p><w:r><w:rPr><w:b/><w:sz w:val="24"/></w:rPr><w:t>Haftalik smena ma'lumotlari</w:t></w:r></w:p>
+      <w:tbl>${assignmentRows}</w:tbl>
+      <w:p><w:r><w:t>Hujjat tizim tomonidan avtomatik shakllantirildi.</w:t></w:r></w:p>
+    </w:body>
+  </w:document>`;
+
+  return createZipBlob([
+    { name: "[Content_Types].xml", content: `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>` },
+    { name: "_rels/.rels", content: `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>` },
+    { name: "word/document.xml", content: documentXml },
+    { name: "docProps/core.xml", content: `<?xml version="1.0" encoding="UTF-8"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>${escapeXml(model.name)}</dc:title><dc:creator>Ish jadvali dashboard</dc:creator></cp:coreProperties>` },
+    { name: "docProps/app.xml", content: `<?xml version="1.0" encoding="UTF-8"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Ish jadvali dashboard</Application></Properties>` }
+  ], "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+}
+
+function buildXlsxBlob(model) {
+  const rows = [
+    ["Maydon", "Qiymat"],
+    ...model.summary,
+    [],
+    ["Smena", "Bo'lim", "Vaqt", "Status"],
+    ...(model.assignments.length ? model.assignments.map((assignment) => [
+      assignment.groupTitle || assignment.day || "-",
+      assignment.groupMeta || "-",
+      assignment.time || "-",
+      STATUS_META[assignment.statusType]?.label || assignment.status || "-"
+    ]) : [["Haftalik smena topilmadi", "-", "-", "-"]])
+  ];
+  const rowXml = rows.map((row, rowIndex) => `<row r="${rowIndex + 1}">${row.map((cell, cellIndex) => {
+    const column = String.fromCharCode(65 + cellIndex);
+    return `<c r="${column}${rowIndex + 1}" t="inlineStr"><is><t>${escapeXml(cell)}</t></is></c>`;
+  }).join("")}</row>`).join("");
+
+  return createZipBlob([
+    { name: "[Content_Types].xml", content: `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>` },
+    { name: "_rels/.rels", content: `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>` },
+    { name: "xl/workbook.xml", content: `<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Xodim" sheetId="1" r:id="rId1"/></sheets></workbook>` },
+    { name: "xl/_rels/workbook.xml.rels", content: `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>` },
+    { name: "xl/worksheets/sheet1.xml", content: `<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${rowXml}</sheetData></worksheet>` },
+    { name: "docProps/core.xml", content: `<?xml version="1.0" encoding="UTF-8"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>${escapeXml(model.name)}</dc:title><dc:creator>Ish jadvali dashboard</dc:creator></cp:coreProperties>` },
+    { name: "docProps/app.xml", content: `<?xml version="1.0" encoding="UTF-8"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Ish jadvali dashboard</Application></Properties>` }
+  ], "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+}
+
+function downloadEmployeeFiles(employee, assignments = []) {
+  const model = employeeDocumentModel(employee, assignments);
+  const fileName = safeFileName(model.name);
+  downloadBlob(buildDocxBlob(model), `${fileName}.docx`);
+  window.setTimeout(() => downloadBlob(buildXlsxBlob(model), `${fileName}.xlsx`), 120);
+}
+
 function ShootingPage({ onNotify }) {
   const blankRow = {
     camera: "",
@@ -1745,6 +1940,7 @@ function StudioPage({ dashboard, onCreate, onDeleteEmployee, onNotify, onSaveEmp
 function TeamPersonModal({ assignments = [], onClose, onDelete, onEdit, person }) {
   const department = departmentMeta(person.department);
   const kpi = calculateEfficiency(assignments);
+  const [documentMode, setDocumentMode] = useState("word");
 
   return createPortal((
     <div className="team-person-backdrop" role="dialog" aria-modal="true" aria-label={`Xodimlarni boshqarish: ${person.name}`} onClick={onClose}>
@@ -1755,6 +1951,20 @@ function TeamPersonModal({ assignments = [], onClose, onDelete, onEdit, person }
       <section className="team-person-sheet" onClick={(event) => event.stopPropagation()}>
         <div className="team-sheet-handle" />
         <h2>Xodimlarni Boshqarish: {person.name}</h2>
+        <div className="document-view-actions team-document-actions">
+          <button className={documentMode === "word" ? "active" : ""} type="button" onClick={() => setDocumentMode("word")}>
+            <FileText size={16} />
+            Word ko'rish
+          </button>
+          <button className={documentMode === "excel" ? "active" : ""} type="button" onClick={() => setDocumentMode("excel")}>
+            <FileSpreadsheet size={16} />
+            Excel ko'rish
+          </button>
+          <button type="button" onClick={() => downloadEmployeeFiles(person, assignments)}>
+            <Download size={16} />
+            Yuklab olish
+          </button>
+        </div>
         <article className="team-person-card">
           <div className="team-person-head">
             <Avatar person={person} />
@@ -1784,6 +1994,7 @@ function TeamPersonModal({ assignments = [], onClose, onDelete, onEdit, person }
             </button>
           </div>
         </article>
+        <EmployeeDocumentView employee={person} assignments={assignments} mode={documentMode} />
       </section>
     </div>
   ), document.body);
@@ -2166,6 +2377,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
   const selectedEmployee = employees.find((employee) => String(employee.id) === String(selectedId)) || employees[0];
   const [draft, setDraft] = useState(selectedEmployee || null);
   const [editOpen, setEditOpen] = useState(false);
+  const [documentMode, setDocumentMode] = useState("word");
   const [saving, setSaving] = useState(false);
   const formRef = useRef(null);
 
@@ -2252,11 +2464,27 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
             <span>{draft.role}</span>
           </div>
         </div>
+        <div className="document-view-actions">
+          <button className={documentMode === "word" ? "active" : ""} type="button" onClick={() => setDocumentMode("word")}>
+            <FileText size={16} />
+            Word ko'rish
+          </button>
+          <button className={documentMode === "excel" ? "active" : ""} type="button" onClick={() => setDocumentMode("excel")}>
+            <FileSpreadsheet size={16} />
+            Excel ko'rish
+          </button>
+          <button type="button" onClick={() => downloadEmployeeFiles(draft)}>
+            <Download size={16} />
+            Yuklab olish
+          </button>
+        </div>
         <button className="document-edit-open" type="button" onClick={() => setEditOpen(true)}>
           <Edit3 size={17} />
           Ma'lumotlarni tahrirlash
         </button>
       </section>
+
+      <EmployeeDocumentView employee={draft} mode={documentMode} />
 
       <section className="documents-summary">
         {employees.map((employee) => (
@@ -2332,6 +2560,87 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
   );
 }
 
+function EmployeeDocumentView({ assignments = [], employee, mode = "word" }) {
+  const model = employeeDocumentModel(employee, assignments);
+
+  if (mode === "excel") {
+    return (
+      <section className="employee-document excel-mode" aria-label={`${model.name} Excel ko'rinishi`}>
+        <div className="excel-document-head">
+          <FileSpreadsheet size={18} />
+          <strong>{model.name}</strong>
+          <span>{model.generatedAt}</span>
+        </div>
+        <div className="employee-excel-table">
+          {model.summary.map(([label, value]) => (
+            <React.Fragment key={label}>
+              <span>{label}</span>
+              <strong>{value}</strong>
+            </React.Fragment>
+          ))}
+        </div>
+        <div className="employee-excel-table assignments">
+          <span>Smena</span>
+          <span>Bo'lim</span>
+          <span>Vaqt</span>
+          <span>Status</span>
+          {model.assignments.length ? model.assignments.map((assignment) => (
+            <React.Fragment key={`${assignment.groupTitle}-${assignment.groupMeta}-${assignment.statusType}`}>
+              <strong>{assignment.groupTitle || assignment.day}</strong>
+              <strong>{assignment.groupMeta}</strong>
+              <strong>{assignment.time}</strong>
+              <strong>{STATUS_META[assignment.statusType]?.label || assignment.status}</strong>
+            </React.Fragment>
+          )) : (
+            <>
+              <strong>Haftalik smena topilmadi</strong>
+              <strong>-</strong>
+              <strong>-</strong>
+              <strong>-</strong>
+            </>
+          )}
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="employee-document word-mode" aria-label={`${model.name} Word ko'rinishi`}>
+      <header>
+        <span>Rasmiy ma'lumotnoma</span>
+        <strong>Xodim shaxsiy ma'lumotnomasi</strong>
+        <p>{model.generatedAt} da avtomatik shakllantirildi</p>
+      </header>
+      <div className="word-document-profile">
+        <Avatar person={employee} />
+        <div>
+          <strong>{model.name}</strong>
+          <span>{model.role} • {model.department}</span>
+        </div>
+        <em>{model.status}</em>
+      </div>
+      <dl className="word-document-grid">
+        {model.summary.map(([label, value]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <section className="word-document-section">
+        <strong>Haftalik smena ma'lumotlari</strong>
+        {model.assignments.length ? model.assignments.slice(0, 8).map((assignment) => (
+          <article key={`${assignment.groupTitle}-${assignment.groupMeta}-${assignment.statusType}`}>
+            <span>{assignment.groupTitle || assignment.day}</span>
+            <p>{assignment.groupMeta} • {assignment.time}</p>
+            <em>{STATUS_META[assignment.statusType]?.label || assignment.status}</em>
+          </article>
+        )) : <p>Haftalik smena topilmadi.</p>}
+      </section>
+    </section>
+  );
+}
+
 function ContactActions({ phone, telegram }) {
   return (
     <div className="contact-actions">
@@ -2397,30 +2706,129 @@ function WeeklyOverview({ rows, days }) {
 }
 
 function ReportsPage({ dashboard }) {
-  const max = Math.max(...dashboard.reports.map((item) => item.value), 1);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const reportItems = dashboard.reports || [];
+  const max = Math.max(...reportItems.map((item) => item.value), 1);
+  const allPeople = dashboard.groups.flatMap((group) => group.people.map((person) => ({
+    ...person,
+    groupTitle: group.title,
+    groupMeta: group.meta,
+    day: group.day
+  })));
+  const filteredPeople = allPeople.filter((person) => {
+    const searchText = [person.name, person.role, person.groupTitle, person.groupMeta, STATUS_META[person.statusType]?.label]
+      .join(" ")
+      .toLowerCase();
+    const matchesQuery = !query.trim() || searchText.includes(query.trim().toLowerCase());
+    const matchesStatus = statusFilter === "all" || person.statusType === statusFilter;
+    return matchesQuery && matchesStatus;
+  });
+  const departmentCounts = DEPARTMENTS.map((department) => ({
+    ...department,
+    value: dashboard.employees.filter((employee) => employee.department === department.id).length
+  }));
+  const coverage = Math.round((dashboard.metrics.working / Math.max(dashboard.metrics.total, 1)) * 100);
+  const statusSummary = [
+    { label: "Ishda", value: dashboard.metrics.working, tone: "success" },
+    { label: "Dam/ta'til", value: dashboard.metrics.rest, tone: "danger" },
+    { label: "Safarda", value: dashboard.metrics.trip, tone: "warning" },
+    { label: "TJK", value: dashboard.metrics.tjk, tone: "info" }
+  ];
 
   return (
     <section className="reports-page">
-      <div className="section-head">
-        <h2>Haftalik hisobot</h2>
-        <span>{dashboard.week.range}</span>
-      </div>
-      <div className="report-card">
-        {dashboard.reports.map((item) => (
-          <div className="report-row" key={item.label}>
+      <section className="reports-dashboard-hero">
+        <div>
+          <span>Haftalik hisobot</span>
+          <strong>{dashboard.week.range}</strong>
+          <p>{dashboard.metrics.total} xodim, {dashboard.groups.length} smena guruhi va real vaqt statuslari.</p>
+        </div>
+        <div className="reports-coverage" style={{ background: `conic-gradient(var(--success) ${coverage}%, color-mix(in srgb, var(--border) 70%, transparent) 0)` }}>
+          <b>{coverage}%</b>
+          <span>qamrov</span>
+        </div>
+      </section>
+
+      <section className="reports-kpi-row">
+        {statusSummary.map((item) => (
+          <article className={`reports-kpi-card ${item.tone}`} key={item.label}>
             <span>{item.label}</span>
             <strong>{item.value}</strong>
-            <i style={{ width: `${(item.value / max) * 100}%` }} />
-          </div>
+            <i><b style={{ width: `${(item.value / Math.max(dashboard.metrics.total, 1)) * 100}%` }} /></i>
+          </article>
         ))}
-      </div>
-      <div className="profile-card">
-        <ChartColumn size={28} />
-        <div>
-          <strong>Kunlik qamrov</strong>
-          <p>{dashboard.metrics.working} ta xodim haftalik smenaga biriktirilgan.</p>
+      </section>
+
+      <section className="reports-toolbar">
+        <label>
+          <Search size={16} />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Xodim, smena yoki bo'lim bo'yicha qidirish" />
+        </label>
+        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Status bo'yicha filter">
+          <option value="all">Barcha statuslar</option>
+          {STATUS_OPTIONS.map((status) => (
+            <option key={status.id} value={status.id}>{status.label}</option>
+          ))}
+        </select>
+      </section>
+
+      <section className="reports-grid">
+        <article className="reports-panel">
+          <div className="reports-panel-head">
+            <strong>Statuslar taqsimoti</strong>
+            <span>{reportItems.length} ko'rsatkich</span>
+          </div>
+          <div className="report-chart-list">
+            {reportItems.map((item) => (
+              <div className="report-chart-row" key={item.label}>
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+                <i><b style={{ width: `${(item.value / max) * 100}%` }} /></i>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="reports-panel">
+          <div className="reports-panel-head">
+            <strong>Bo'limlar kesimi</strong>
+            <span>{dashboard.employees.length} xodim</span>
+          </div>
+          <div className="department-chart">
+            {departmentCounts.map((department) => (
+              <div key={department.id}>
+                <span>{department.shortLabel}</span>
+                <i><b style={{ height: `${Math.max(12, (department.value / Math.max(dashboard.employees.length, 1)) * 100)}%` }} /></i>
+                <strong>{department.value}</strong>
+              </div>
+            ))}
+          </div>
+        </article>
+      </section>
+
+      <section className="reports-panel reports-table-panel">
+        <div className="reports-panel-head">
+          <strong>Tezkor status ro'yxati</strong>
+          <span>{filteredPeople.length} natija</span>
         </div>
-      </div>
+        <div className="reports-table">
+          {filteredPeople.slice(0, 18).map((person) => {
+            const status = STATUS_META[person.statusType] || STATUS_META.working;
+            return (
+              <article key={`${person.groupTitle}-${person.id}-${person.statusType}`}>
+                <Avatar person={person} />
+                <div>
+                  <strong>{person.name}</strong>
+                  <span>{person.groupTitle} • {person.groupMeta}</span>
+                </div>
+                <em className={person.statusType}>{status.code} - {status.label}</em>
+              </article>
+            );
+          })}
+          {!filteredPeople.length && <EmptyCard text="Filter bo'yicha natija topilmadi" />}
+        </div>
+      </section>
     </section>
   );
 }

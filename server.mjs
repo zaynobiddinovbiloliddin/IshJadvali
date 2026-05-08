@@ -170,8 +170,26 @@ function cleanPortfolio(portfolio) {
     .slice(0, 100);
 }
 
-function normalizeEmployee(employee) {
+function documentSlug(employee) {
+  return String(employee.name || `employee-${employee.id || Date.now()}`)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48) || `employee-${employee.id || Date.now()}`;
+}
+
+function createEmployeeDocumentView(employee, existing = {}) {
   return {
+    slug: documentSlug(employee),
+    wordFile: `${documentSlug(employee)}.docx`,
+    excelFile: `${documentSlug(employee)}.xlsx`,
+    generatedAt: existing.generatedAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function normalizeEmployee(employee) {
+  const normalized = {
     ...employee,
     phone: employee.phone || "+998 90 000 00 00",
     telegram: employee.telegram || "",
@@ -179,6 +197,10 @@ function normalizeEmployee(employee) {
     address: employee.address || "",
     documents: cleanDocuments(employee.documents),
     portfolio: cleanPortfolio(employee.portfolio)
+  };
+  return {
+    ...normalized,
+    documentView: createEmployeeDocumentView(normalized, employee.documentView)
   };
 }
 
@@ -484,7 +506,7 @@ function cleanDocuments(documents) {
 }
 
 function cleanEmployeePayload(payload, existing = {}) {
-  return normalizeEmployee({
+  const normalized = normalizeEmployee({
     ...existing,
     id: payload.id ?? existing.id,
     name: payload.name?.trim() || existing.name,
@@ -497,6 +519,10 @@ function cleanEmployeePayload(payload, existing = {}) {
     documents: {},
     portfolio: payload.portfolio || existing.portfolio
   });
+  return {
+    ...normalized,
+    documentView: createEmployeeDocumentView(normalized, existing.documentView)
+  };
 }
 
 async function createEmployee(payload) {

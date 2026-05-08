@@ -1,18 +1,6 @@
 {
-  "generation": 12,
+  "generation": 13,
   "employees": [
-    {
-      "id": 1,
-      "name": "Abdug'afforov A.",
-      "role": "Operator va texnik xodim",
-      "phone": "+998 90 000 00 00",
-      "avatar": "https://i.pravatar.cc/160?u=Abdug'afforov%20A.",
-      "telegram": "",
-      "department": "pull",
-      "address": "",
-      "documents": {},
-      "portfolio": []
-    },
     {
       "id": 2,
       "name": "JO'RAYEV S.",
@@ -55,18 +43,6 @@
       "role": "Operator va texnik xodim",
       "phone": "+998 90 000 00 00",
       "avatar": "https://i.pravatar.cc/160?u=QUDRATOV%20X.",
-      "telegram": "",
-      "department": "pull",
-      "address": "",
-      "documents": {},
-      "portfolio": []
-    },
-    {
-      "id": 6,
-      "name": "TO'XTASINOV M.",
-      "role": "Operator va texnik xodim",
-      "phone": "+998 90 000 00 00",
-      "avatar": "https://i.pravatar.cc/160?u=TO'XTASINOV%20M.",
       "telegram": "",
       "department": "pull",
       "address": "",
@@ -802,12 +778,20 @@
         "saved": true
       },
       "metrics": {
-        "total": 64,
-        "working": 49,
+        "total": 62,
+        "working": 53,
         "rest": 9,
-        "backup": 5,
+        "backup": 4,
         "workingToday": 7,
-        "restToday": 1
+        "restToday": 1,
+        "trip": 0,
+        "tjk": 0,
+        "vacation": 0,
+        "administration": 0,
+        "presidential": 0,
+        "sick": 0,
+        "tripToday": 0,
+        "tjkToday": 0
       },
       "groups": [
         {
@@ -827,21 +811,6 @@
               "employeeId": "",
               "status": "Ishlamoqda",
               "statusType": "working",
-              "telegram": "",
-              "department": "pull",
-              "address": "",
-              "portfolio": []
-            },
-            {
-              "id": 6,
-              "name": "TO'XTASINOV M.",
-              "role": "Operator va texnik xodim",
-              "phone": "+998 90 000 00 00",
-              "avatar": "https://i.pravatar.cc/160?u=TO'XTASINOV%20M.",
-              "time": "9:00 - 22:00",
-              "employeeId": "",
-              "status": "Zaxira",
-              "statusType": "backup",
               "telegram": "",
               "department": "pull",
               "address": "",
@@ -1962,21 +1931,6 @@
           "portfolio": []
         },
         {
-          "id": 6,
-          "name": "TO'XTASINOV M.",
-          "role": "Operator va texnik xodim",
-          "phone": "+998 90 000 00 00",
-          "avatar": "https://i.pravatar.cc/160?u=TO'XTASINOV%20M.",
-          "time": "9:00 - 22:00",
-          "employeeId": "",
-          "status": "Working",
-          "statusType": "backup",
-          "telegram": "",
-          "department": "pull",
-          "address": "",
-          "portfolio": []
-        },
-        {
           "id": 7,
           "name": "FAYZIYEV F.",
           "role": "Operator va texnik xodim",
@@ -1990,21 +1944,30 @@
           "department": "pull",
           "address": "",
           "portfolio": []
+        },
+        {
+          "id": 8,
+          "name": "SATTOROV I.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=SATTOROV%20I.",
+          "time": "9:00 - 18:00",
+          "employeeId": "",
+          "status": "Working",
+          "statusType": "working",
+          "telegram": "",
+          "department": "pull",
+          "address": "",
+          "portfolio": []
         }
       ],
       "overviewRows": [
         {
-          "name": "Abdug'afforov A.",
-          "days": [
-            "empty",
-            "empty",
-            "empty",
-            "empty"
-          ]
-        },
-        {
           "name": "JO'RAYEV S.",
           "days": [
+            "empty",
+            "empty",
+            "empty",
             "empty",
             "empty",
             "empty",
@@ -2017,12 +1980,18 @@
             "empty",
             "empty",
             "empty",
+            "empty",
+            "empty",
+            "empty",
             "empty"
           ]
         },
         {
           "name": "BOSITXONOV B.",
           "days": [
+            "empty",
+            "empty",
+            "empty",
             "empty",
             "empty",
             "empty",
@@ -2035,13 +2004,7 @@
             "work",
             "empty",
             "empty",
-            "empty"
-          ]
-        },
-        {
-          "name": "TO'XTASINOV M.",
-          "days": [
-            "work",
+            "empty",
             "empty",
             "empty",
             "empty"
@@ -2053,6 +2016,9 @@
             "work",
             "work",
             "empty",
+            "empty",
+            "empty",
+            "empty",
             "empty"
           ]
         },
@@ -2062,6 +2028,33 @@
             "work",
             "work",
             "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty"
+          ]
+        },
+        {
+          "name": "Saidnasimov S.",
+          "days": [
+            "work",
+            "rest",
+            "work",
+            "empty",
+            "empty",
+            "empty",
+            "empty"
+          ]
+        },
+        {
+          "name": "ZAMONOV I.",
+          "days": [
+            "rest",
+            "work",
+            "work",
+            "empty",
+            "empty",
+            "empty",
             "empty"
           ]
         }
@@ -2069,39 +2062,57 @@
       "reports": [
         {
           "label": "Ishlayotganlar",
-          "value": 49
+          "value": 53
         },
         {
           "label": "Dam olish kuni",
           "value": 9
         },
         {
+          "label": "Komandirovka",
+          "value": 0
+        },
+        {
+          "label": "TJK guruhi",
+          "value": 0
+        },
+        {
           "label": "Zaxira",
-          "value": 5
+          "value": 4
+        },
+        {
+          "label": "Mehnat ta'tili",
+          "value": 0
+        },
+        {
+          "label": "Administratsiya",
+          "value": 0
+        },
+        {
+          "label": "Prezidentskiy",
+          "value": 0
+        },
+        {
+          "label": "Balnishniy",
+          "value": 0
         },
         {
           "label": "Bugungi smena",
-          "value": 9
+          "value": 8
         }
       ],
       "notifications": [
         "Jadval ma'lumotlari yangilandi.",
         "9 ta dam olish kuni belgilangan.",
-        "5 ta xodim zaxirada."
+        "0 ta komandirovkada.",
+        "0 ta TJK guruhida.",
+        "0 ta mehnat ta'tilida.",
+        "0 ta administratsiyada.",
+        "0 ta prezidentskiyda.",
+        "0 ta balnishniy.",
+        "4 ta xodim zaxirada."
       ],
       "employees": [
-        {
-          "id": 1,
-          "name": "Abdug'afforov A.",
-          "role": "Operator va texnik xodim",
-          "phone": "+998 90 000 00 00",
-          "avatar": "https://i.pravatar.cc/160?u=Abdug'afforov%20A.",
-          "telegram": "",
-          "department": "pull",
-          "address": "",
-          "documents": {},
-          "portfolio": []
-        },
         {
           "id": 2,
           "name": "JO'RAYEV S.",
@@ -2110,8 +2121,6 @@
           "avatar": "https://i.pravatar.cc/160?u=JO'RAYEV%20S.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2122,8 +2131,6 @@
           "avatar": "https://i.pravatar.cc/160?u=Shermuhammedov%20D.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2134,8 +2141,6 @@
           "avatar": "https://i.pravatar.cc/160?u=BOSITXONOV%20B.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2146,20 +2151,6 @@
           "avatar": "https://i.pravatar.cc/160?u=QUDRATOV%20X.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
-          "portfolio": []
-        },
-        {
-          "id": 6,
-          "name": "TO'XTASINOV M.",
-          "role": "Operator va texnik xodim",
-          "phone": "+998 90 000 00 00",
-          "avatar": "https://i.pravatar.cc/160?u=TO'XTASINOV%20M.",
-          "telegram": "",
-          "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2170,8 +2161,6 @@
           "avatar": "https://i.pravatar.cc/160?u=FAYZIYEV%20F.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2182,8 +2171,6 @@
           "avatar": "https://i.pravatar.cc/160?u=SATTOROV%20I.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2194,8 +2181,6 @@
           "avatar": "https://i.pravatar.cc/160?u=Saidnasimov%20S.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2206,8 +2191,6 @@
           "avatar": "https://i.pravatar.cc/160?u=ZAMONOV%20I.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2218,8 +2201,6 @@
           "avatar": "https://i.pravatar.cc/160?u=ILMURZIN%20A.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2230,8 +2211,6 @@
           "avatar": "https://i.pravatar.cc/160?u=RASULOV%20B.%2Fdron",
           "telegram": "",
           "department": "dron",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2242,8 +2221,6 @@
           "avatar": "https://i.pravatar.cc/160?u=Turdialiyev%20I.%2Fdron",
           "telegram": "",
           "department": "dron",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2254,8 +2231,6 @@
           "avatar": "https://i.pravatar.cc/160?u=MENAYEV%20T.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2266,8 +2241,6 @@
           "avatar": "https://i.pravatar.cc/160?u=MAXMUDOV%20J.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2278,8 +2251,6 @@
           "avatar": "https://i.pravatar.cc/160?u=Ulug'murodov%20U.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2290,8 +2261,6 @@
           "avatar": "https://i.pravatar.cc/160?u=Eshonxo'jayev%20F.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2302,8 +2271,6 @@
           "avatar": "https://i.pravatar.cc/160?u=RUSTAMOV%20I.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2314,8 +2281,6 @@
           "avatar": "https://i.pravatar.cc/160?u=ZIKRILLAYEV%20A.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2326,8 +2291,6 @@
           "avatar": "https://i.pravatar.cc/160?u=HAMIDOV%20D.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2338,8 +2301,6 @@
           "avatar": "https://i.pravatar.cc/160?u=NURMATOV%20B.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2350,8 +2311,6 @@
           "avatar": "https://i.pravatar.cc/160?u=LUTFULLAYEV%20S.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2362,8 +2321,6 @@
           "avatar": "https://i.pravatar.cc/160?u=XAYDAROV%20X.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2374,8 +2331,6 @@
           "avatar": "https://i.pravatar.cc/160?u=KOMILOV%20M.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2386,8 +2341,6 @@
           "avatar": "https://i.pravatar.cc/160?u=XOLIQULOV%20S.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2398,8 +2351,6 @@
           "avatar": "https://i.pravatar.cc/160?u=Abdurahmonov%20D.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2410,8 +2361,6 @@
           "avatar": "https://i.pravatar.cc/160?u=TOIROV%20B.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2422,8 +2371,6 @@
           "avatar": "https://i.pravatar.cc/160?u=ZAXIDOV%20M.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2434,8 +2381,6 @@
           "avatar": "https://i.pravatar.cc/160?u=Abdusattorov%20A.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2446,8 +2391,6 @@
           "avatar": "https://i.pravatar.cc/160?u=RAHMONOV%20S.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2458,8 +2401,6 @@
           "avatar": "https://i.pravatar.cc/160?u=SOLIBOYEV%20I.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2470,8 +2411,6 @@
           "avatar": "https://i.pravatar.cc/160?u=AZIMOV%20E.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2482,8 +2421,6 @@
           "avatar": "https://i.pravatar.cc/160?u=RUSTAMOV%20E.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2494,8 +2431,6 @@
           "avatar": "https://i.pravatar.cc/160?u=SOLIBOYEV%20Y.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2506,8 +2441,6 @@
           "avatar": "https://i.pravatar.cc/160?u=UMAROV%20J.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2518,8 +2451,6 @@
           "avatar": "https://i.pravatar.cc/160?u=IBROHIMOV%20A.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2530,8 +2461,6 @@
           "avatar": "https://i.pravatar.cc/160?u=O'TAYEVA%20S.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2542,8 +2471,6 @@
           "avatar": "https://i.pravatar.cc/160?u=SHUKUROVA%20R.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2554,8 +2481,6 @@
           "avatar": "https://i.pravatar.cc/160?u=HAYITOV%20D.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2566,8 +2491,6 @@
           "avatar": "https://i.pravatar.cc/160?u=QURBONOV%20D.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2578,8 +2501,6 @@
           "avatar": "https://i.pravatar.cc/160?u=JOVLIYEV%20G'.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2590,8 +2511,6 @@
           "avatar": "https://i.pravatar.cc/160?u=HAMROYEVA%20O.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2602,8 +2521,6 @@
           "avatar": "https://i.pravatar.cc/160?u=SOATOV%20J.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2614,8 +2531,6 @@
           "avatar": "https://i.pravatar.cc/160?u=QALANDAROVA%20M.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2626,8 +2541,6 @@
           "avatar": "https://i.pravatar.cc/160?u=NIZAMUDINOVA%20K.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2638,8 +2551,6 @@
           "avatar": "https://i.pravatar.cc/160?u=Xudoyberdiyeva%20O.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2650,8 +2561,6 @@
           "avatar": "https://i.pravatar.cc/160?u=AXMADOVA%20G.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2662,8 +2571,6 @@
           "avatar": "https://i.pravatar.cc/160?u=RO'ZIMURODOV%20J.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2674,8 +2581,6 @@
           "avatar": "https://i.pravatar.cc/160?u=YUNUSOVA%20M.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2686,8 +2591,6 @@
           "avatar": "https://i.pravatar.cc/160?u=ESHBOYEV%20I.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2698,8 +2601,6 @@
           "avatar": "https://i.pravatar.cc/160?u=ZARIPXAN%20K.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2710,8 +2611,6 @@
           "avatar": "https://i.pravatar.cc/160?u=MIRSADIQOVA%20A.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2722,8 +2621,6 @@
           "avatar": "https://i.pravatar.cc/160?u=MATYOQUBOVA%20I.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2734,8 +2631,6 @@
           "avatar": "https://i.pravatar.cc/160?u=MARDONOV%20J.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2746,8 +2641,6 @@
           "avatar": "https://i.pravatar.cc/160?u=QUDRATOVA%20M.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2758,8 +2651,6 @@
           "avatar": "https://i.pravatar.cc/160?u=AKTAMOVA%20N.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2770,8 +2661,6 @@
           "avatar": "https://i.pravatar.cc/160?u=QODIROV%20I.%2Frej.",
           "telegram": "",
           "department": "tjk",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2782,8 +2671,6 @@
           "avatar": "https://i.pravatar.cc/160?u=QODIROV%20X.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2794,8 +2681,6 @@
           "avatar": "https://i.pravatar.cc/160?u=IMINOVA%20M.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2806,8 +2691,6 @@
           "avatar": "https://i.pravatar.cc/160?u=QOSIMOV%20M.%2Frej.",
           "telegram": "",
           "department": "tjk",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2818,8 +2701,6 @@
           "avatar": "https://i.pravatar.cc/160?u=CHORIYEV%20SH.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2830,8 +2711,6 @@
           "avatar": "https://i.pravatar.cc/160?u=Mambetsharipova%20N.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2842,8 +2721,6 @@
           "avatar": "https://i.pravatar.cc/160?u=QIYOSOVA%20A.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -2854,8 +2731,6 @@
           "avatar": "https://i.pravatar.cc/160?u=REYIMOVA%20D.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         }
       ]
@@ -2891,12 +2766,20 @@
         "saved": true
       },
       "metrics": {
-        "total": 64,
-        "working": 49,
+        "total": 62,
+        "working": 54,
         "rest": 9,
         "backup": 5,
-        "workingToday": 7,
-        "restToday": 1
+        "workingToday": 8,
+        "restToday": 1,
+        "trip": 0,
+        "tjk": 0,
+        "vacation": 0,
+        "administration": 0,
+        "presidential": 0,
+        "sick": 0,
+        "tripToday": 0,
+        "tjkToday": 0
       },
       "groups": [
         {
@@ -4083,17 +3966,11 @@
       ],
       "overviewRows": [
         {
-          "name": "Abdug'afforov A.",
-          "days": [
-            "empty",
-            "empty",
-            "empty",
-            "empty"
-          ]
-        },
-        {
           "name": "JO'RAYEV S.",
           "days": [
+            "empty",
+            "empty",
+            "empty",
             "empty",
             "empty",
             "empty",
@@ -4106,12 +3983,18 @@
             "empty",
             "empty",
             "empty",
+            "empty",
+            "empty",
+            "empty",
             "empty"
           ]
         },
         {
           "name": "BOSITXONOV B.",
           "days": [
+            "empty",
+            "empty",
+            "empty",
             "empty",
             "empty",
             "empty",
@@ -4124,12 +4007,6 @@
             "empty",
             "empty",
             "empty",
-            "empty"
-          ]
-        },
-        {
-          "name": "TO'XTASINOV M.",
-          "days": [
             "empty",
             "empty",
             "empty",
@@ -4142,12 +4019,42 @@
             "empty",
             "empty",
             "empty",
+            "empty",
+            "empty",
+            "empty",
             "empty"
           ]
         },
         {
           "name": "SATTOROV I.",
           "days": [
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty"
+          ]
+        },
+        {
+          "name": "Saidnasimov S.",
+          "days": [
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty"
+          ]
+        },
+        {
+          "name": "ZAMONOV I.",
+          "days": [
+            "empty",
+            "empty",
+            "empty",
             "empty",
             "empty",
             "empty",
@@ -4158,15 +4065,39 @@
       "reports": [
         {
           "label": "Ishlayotganlar",
-          "value": 49
+          "value": 54
         },
         {
           "label": "Dam olish kuni",
           "value": 9
         },
         {
+          "label": "Komandirovka",
+          "value": 0
+        },
+        {
+          "label": "TJK guruhi",
+          "value": 0
+        },
+        {
           "label": "Zaxira",
           "value": 5
+        },
+        {
+          "label": "Mehnat ta'tili",
+          "value": 0
+        },
+        {
+          "label": "Administratsiya",
+          "value": 0
+        },
+        {
+          "label": "Prezidentskiy",
+          "value": 0
+        },
+        {
+          "label": "Balnishniy",
+          "value": 0
         },
         {
           "label": "Bugungi smena",
@@ -4176,21 +4107,15 @@
       "notifications": [
         "Jadval ma'lumotlari yangilandi.",
         "9 ta dam olish kuni belgilangan.",
+        "0 ta komandirovkada.",
+        "0 ta TJK guruhida.",
+        "0 ta mehnat ta'tilida.",
+        "0 ta administratsiyada.",
+        "0 ta prezidentskiyda.",
+        "0 ta balnishniy.",
         "5 ta xodim zaxirada."
       ],
       "employees": [
-        {
-          "id": 1,
-          "name": "Abdug'afforov A.",
-          "role": "Operator va texnik xodim",
-          "phone": "+998 90 000 00 00",
-          "avatar": "https://i.pravatar.cc/160?u=Abdug'afforov%20A.",
-          "telegram": "",
-          "department": "pull",
-          "address": "",
-          "documents": {},
-          "portfolio": []
-        },
         {
           "id": 2,
           "name": "JO'RAYEV S.",
@@ -4199,8 +4124,6 @@
           "avatar": "https://i.pravatar.cc/160?u=JO'RAYEV%20S.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4211,8 +4134,6 @@
           "avatar": "https://i.pravatar.cc/160?u=Shermuhammedov%20D.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4223,8 +4144,6 @@
           "avatar": "https://i.pravatar.cc/160?u=BOSITXONOV%20B.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4235,20 +4154,6 @@
           "avatar": "https://i.pravatar.cc/160?u=QUDRATOV%20X.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
-          "portfolio": []
-        },
-        {
-          "id": 6,
-          "name": "TO'XTASINOV M.",
-          "role": "Operator va texnik xodim",
-          "phone": "+998 90 000 00 00",
-          "avatar": "https://i.pravatar.cc/160?u=TO'XTASINOV%20M.",
-          "telegram": "",
-          "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4259,8 +4164,6 @@
           "avatar": "https://i.pravatar.cc/160?u=FAYZIYEV%20F.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4271,8 +4174,6 @@
           "avatar": "https://i.pravatar.cc/160?u=SATTOROV%20I.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4283,8 +4184,6 @@
           "avatar": "https://i.pravatar.cc/160?u=Saidnasimov%20S.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4295,8 +4194,6 @@
           "avatar": "https://i.pravatar.cc/160?u=ZAMONOV%20I.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4307,8 +4204,6 @@
           "avatar": "https://i.pravatar.cc/160?u=ILMURZIN%20A.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4319,8 +4214,6 @@
           "avatar": "https://i.pravatar.cc/160?u=RASULOV%20B.%2Fdron",
           "telegram": "",
           "department": "dron",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4331,8 +4224,6 @@
           "avatar": "https://i.pravatar.cc/160?u=Turdialiyev%20I.%2Fdron",
           "telegram": "",
           "department": "dron",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4343,8 +4234,6 @@
           "avatar": "https://i.pravatar.cc/160?u=MENAYEV%20T.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4355,8 +4244,6 @@
           "avatar": "https://i.pravatar.cc/160?u=MAXMUDOV%20J.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4367,8 +4254,6 @@
           "avatar": "https://i.pravatar.cc/160?u=Ulug'murodov%20U.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4379,8 +4264,6 @@
           "avatar": "https://i.pravatar.cc/160?u=Eshonxo'jayev%20F.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4391,8 +4274,6 @@
           "avatar": "https://i.pravatar.cc/160?u=RUSTAMOV%20I.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4403,8 +4284,6 @@
           "avatar": "https://i.pravatar.cc/160?u=ZIKRILLAYEV%20A.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4415,8 +4294,6 @@
           "avatar": "https://i.pravatar.cc/160?u=HAMIDOV%20D.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4427,8 +4304,6 @@
           "avatar": "https://i.pravatar.cc/160?u=NURMATOV%20B.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4439,8 +4314,6 @@
           "avatar": "https://i.pravatar.cc/160?u=LUTFULLAYEV%20S.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4451,8 +4324,6 @@
           "avatar": "https://i.pravatar.cc/160?u=XAYDAROV%20X.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4463,8 +4334,6 @@
           "avatar": "https://i.pravatar.cc/160?u=KOMILOV%20M.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4475,8 +4344,6 @@
           "avatar": "https://i.pravatar.cc/160?u=XOLIQULOV%20S.",
           "telegram": "",
           "department": "pull",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4487,8 +4354,6 @@
           "avatar": "https://i.pravatar.cc/160?u=Abdurahmonov%20D.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4499,8 +4364,6 @@
           "avatar": "https://i.pravatar.cc/160?u=TOIROV%20B.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4511,8 +4374,6 @@
           "avatar": "https://i.pravatar.cc/160?u=ZAXIDOV%20M.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4523,8 +4384,6 @@
           "avatar": "https://i.pravatar.cc/160?u=Abdusattorov%20A.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4535,8 +4394,6 @@
           "avatar": "https://i.pravatar.cc/160?u=RAHMONOV%20S.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4547,8 +4404,6 @@
           "avatar": "https://i.pravatar.cc/160?u=SOLIBOYEV%20I.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4559,8 +4414,6 @@
           "avatar": "https://i.pravatar.cc/160?u=AZIMOV%20E.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4571,8 +4424,6 @@
           "avatar": "https://i.pravatar.cc/160?u=RUSTAMOV%20E.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4583,8 +4434,6 @@
           "avatar": "https://i.pravatar.cc/160?u=SOLIBOYEV%20Y.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4595,8 +4444,6 @@
           "avatar": "https://i.pravatar.cc/160?u=UMAROV%20J.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4607,8 +4454,6 @@
           "avatar": "https://i.pravatar.cc/160?u=IBROHIMOV%20A.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4619,8 +4464,6 @@
           "avatar": "https://i.pravatar.cc/160?u=O'TAYEVA%20S.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4631,8 +4474,6 @@
           "avatar": "https://i.pravatar.cc/160?u=SHUKUROVA%20R.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4643,8 +4484,6 @@
           "avatar": "https://i.pravatar.cc/160?u=HAYITOV%20D.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4655,8 +4494,6 @@
           "avatar": "https://i.pravatar.cc/160?u=QURBONOV%20D.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4667,8 +4504,6 @@
           "avatar": "https://i.pravatar.cc/160?u=JOVLIYEV%20G'.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4679,8 +4514,6 @@
           "avatar": "https://i.pravatar.cc/160?u=HAMROYEVA%20O.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4691,8 +4524,6 @@
           "avatar": "https://i.pravatar.cc/160?u=SOATOV%20J.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4703,8 +4534,6 @@
           "avatar": "https://i.pravatar.cc/160?u=QALANDAROVA%20M.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4715,8 +4544,6 @@
           "avatar": "https://i.pravatar.cc/160?u=NIZAMUDINOVA%20K.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4727,8 +4554,6 @@
           "avatar": "https://i.pravatar.cc/160?u=Xudoyberdiyeva%20O.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4739,8 +4564,6 @@
           "avatar": "https://i.pravatar.cc/160?u=AXMADOVA%20G.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4751,8 +4574,6 @@
           "avatar": "https://i.pravatar.cc/160?u=RO'ZIMURODOV%20J.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4763,8 +4584,6 @@
           "avatar": "https://i.pravatar.cc/160?u=YUNUSOVA%20M.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4775,8 +4594,6 @@
           "avatar": "https://i.pravatar.cc/160?u=ESHBOYEV%20I.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4787,8 +4604,6 @@
           "avatar": "https://i.pravatar.cc/160?u=ZARIPXAN%20K.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4799,8 +4614,6 @@
           "avatar": "https://i.pravatar.cc/160?u=MIRSADIQOVA%20A.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4811,8 +4624,6 @@
           "avatar": "https://i.pravatar.cc/160?u=MATYOQUBOVA%20I.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4823,8 +4634,6 @@
           "avatar": "https://i.pravatar.cc/160?u=MARDONOV%20J.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4835,8 +4644,6 @@
           "avatar": "https://i.pravatar.cc/160?u=QUDRATOVA%20M.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4847,8 +4654,6 @@
           "avatar": "https://i.pravatar.cc/160?u=AKTAMOVA%20N.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4859,8 +4664,6 @@
           "avatar": "https://i.pravatar.cc/160?u=QODIROV%20I.%2Frej.",
           "telegram": "",
           "department": "tjk",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4871,8 +4674,6 @@
           "avatar": "https://i.pravatar.cc/160?u=QODIROV%20X.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4883,8 +4684,6 @@
           "avatar": "https://i.pravatar.cc/160?u=IMINOVA%20M.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4895,8 +4694,6 @@
           "avatar": "https://i.pravatar.cc/160?u=QOSIMOV%20M.%2Frej.",
           "telegram": "",
           "department": "tjk",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4907,8 +4704,6 @@
           "avatar": "https://i.pravatar.cc/160?u=CHORIYEV%20SH.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4919,8 +4714,6 @@
           "avatar": "https://i.pravatar.cc/160?u=Mambetsharipova%20N.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4931,8 +4724,6 @@
           "avatar": "https://i.pravatar.cc/160?u=QIYOSOVA%20A.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         },
         {
@@ -4943,8 +4734,6 @@
           "avatar": "https://i.pravatar.cc/160?u=REYIMOVA%20D.",
           "telegram": "",
           "department": "operator",
-          "address": "",
-          "documents": {},
           "portfolio": []
         }
       ],
@@ -4995,62 +4784,2062 @@
         ],
         "rows": []
       }
+    },
+    "2026-01-26": {
+      "week": {
+        "start": "2026-01-26",
+        "end": "2026-02-01",
+        "startLabel": "Yan 26",
+        "number": 6,
+        "title": "Hafta 6, 2026",
+        "range": "Yan 26 - Fev 1",
+        "todayLabel": "May 7",
+        "shortDays": [
+          {
+            "label": "Dush",
+            "date": 26
+          },
+          {
+            "label": "Sey",
+            "date": 27
+          },
+          {
+            "label": "Chor",
+            "date": 28
+          },
+          {
+            "label": "Pay",
+            "date": 29
+          },
+          {
+            "label": "Jum",
+            "date": 30
+          },
+          {
+            "label": "Shan",
+            "date": 31
+          },
+          {
+            "label": "Yak",
+            "date": 1
+          }
+        ],
+        "generatedAt": "00:57",
+        "saved": true
+      },
+      "metrics": {
+        "total": 62,
+        "working": 51,
+        "rest": 9,
+        "backup": 4,
+        "trip": 3,
+        "tjk": 18,
+        "vacation": 0,
+        "administration": 0,
+        "presidential": 0,
+        "sick": 0,
+        "workingToday": 7,
+        "restToday": 2,
+        "tripToday": 0,
+        "tjkToday": 3
+      },
+      "groups": [
+        {
+          "id": "0-3 Studiya",
+          "day": "Dushanba",
+          "title": "Dushanba, Yan 26",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 14,
+              "name": "MENAYEV T.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=MENAYEV%20T.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            },
+            {
+              "id": 15,
+              "name": "MAXMUDOV J.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=MAXMUDOV%20J.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            },
+            {
+              "id": 16,
+              "name": "Ulug'murodov U.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=Ulug'murodov%20U.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "0-35 TJK",
+          "day": "Dushanba",
+          "title": "Dushanba, Yan 26",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 17,
+              "name": "Eshonxo'jayev F.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=Eshonxo'jayev%20F.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "TJK ishda",
+              "statusType": "tjk"
+            },
+            {
+              "id": 18,
+              "name": "RUSTAMOV I.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=RUSTAMOV%20I.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "TJK ishda",
+              "statusType": "tjk"
+            },
+            {
+              "id": 19,
+              "name": "ZIKRILLAYEV A.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=ZIKRILLAYEV%20A.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "TJK ishda",
+              "statusType": "tjk"
+            }
+          ]
+        },
+        {
+          "id": "0-3 Tongi dastur",
+          "day": "Dushanba",
+          "title": "Dushanba, Yan 26",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 20,
+              "name": "HAMIDOV D.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=HAMIDOV%20D.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Zaxira",
+              "statusType": "backup"
+            },
+            {
+              "id": 21,
+              "name": "NURMATOV B.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=NURMATOV%20B.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            },
+            {
+              "id": 22,
+              "name": "LUTFULLAYEV S.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=LUTFULLAYEV%20S.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            }
+          ]
+        },
+        {
+          "id": "1-3 Studiya",
+          "day": "Seshanba",
+          "title": "Seshanba, Yan 27",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 16,
+              "name": "Ulug'murodov U.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=Ulug'murodov%20U.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            },
+            {
+              "id": 17,
+              "name": "Eshonxo'jayev F.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=Eshonxo'jayev%20F.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            },
+            {
+              "id": 18,
+              "name": "RUSTAMOV I.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=RUSTAMOV%20I.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Zaxira",
+              "statusType": "backup"
+            }
+          ]
+        },
+        {
+          "id": "1-35 TJK",
+          "day": "Seshanba",
+          "title": "Seshanba, Yan 27",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 19,
+              "name": "ZIKRILLAYEV A.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=ZIKRILLAYEV%20A.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "TJK ishda",
+              "statusType": "tjk"
+            },
+            {
+              "id": 20,
+              "name": "HAMIDOV D.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=HAMIDOV%20D.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "TJK ishda",
+              "statusType": "tjk"
+            },
+            {
+              "id": 21,
+              "name": "NURMATOV B.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=NURMATOV%20B.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            }
+          ]
+        },
+        {
+          "id": "1-3 Tongi dastur",
+          "day": "Seshanba",
+          "title": "Seshanba, Yan 27",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 22,
+              "name": "LUTFULLAYEV S.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=LUTFULLAYEV%20S.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            },
+            {
+              "id": 23,
+              "name": "XAYDAROV X.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=XAYDAROV%20X.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            },
+            {
+              "id": 24,
+              "name": "KOMILOV M.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=KOMILOV%20M.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "2-3 Studiya",
+          "day": "Chorshanba",
+          "title": "Chorshanba, Yan 28",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 18,
+              "name": "RUSTAMOV I.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=RUSTAMOV%20I.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            },
+            {
+              "id": 19,
+              "name": "ZIKRILLAYEV A.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=ZIKRILLAYEV%20A.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Zaxira",
+              "statusType": "backup"
+            },
+            {
+              "id": 20,
+              "name": "HAMIDOV D.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=HAMIDOV%20D.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            }
+          ]
+        },
+        {
+          "id": "2-35 TJK",
+          "day": "Chorshanba",
+          "title": "Chorshanba, Yan 28",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 21,
+              "name": "NURMATOV B.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=NURMATOV%20B.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "TJK ishda",
+              "statusType": "tjk"
+            },
+            {
+              "id": 22,
+              "name": "LUTFULLAYEV S.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=LUTFULLAYEV%20S.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "TJK ishda",
+              "statusType": "tjk"
+            },
+            {
+              "id": 23,
+              "name": "XAYDAROV X.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=XAYDAROV%20X.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "TJK ishda",
+              "statusType": "tjk"
+            }
+          ]
+        },
+        {
+          "id": "2-3 Tongi dastur",
+          "day": "Chorshanba",
+          "title": "Chorshanba, Yan 28",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 24,
+              "name": "KOMILOV M.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=KOMILOV%20M.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Komandirovka",
+              "statusType": "trip"
+            },
+            {
+              "id": 25,
+              "name": "XOLIQULOV S.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=XOLIQULOV%20S.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            },
+            {
+              "id": 26,
+              "name": "Abdurahmonov D.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=Abdurahmonov%20D.",
+              "telegram": "",
+              "department": "operator",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "3-3 Studiya",
+          "day": "Payshanba",
+          "title": "Payshanba, Yan 29",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 20,
+              "name": "HAMIDOV D.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=HAMIDOV%20D.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Zaxira",
+              "statusType": "backup"
+            },
+            {
+              "id": 21,
+              "name": "NURMATOV B.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=NURMATOV%20B.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            },
+            {
+              "id": 22,
+              "name": "LUTFULLAYEV S.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=LUTFULLAYEV%20S.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "3-35 TJK",
+          "day": "Payshanba",
+          "title": "Payshanba, Yan 29",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 23,
+              "name": "XAYDAROV X.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=XAYDAROV%20X.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "TJK ishda",
+              "statusType": "tjk"
+            },
+            {
+              "id": 24,
+              "name": "KOMILOV M.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=KOMILOV%20M.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "TJK ishda",
+              "statusType": "tjk"
+            },
+            {
+              "id": 25,
+              "name": "XOLIQULOV S.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=XOLIQULOV%20S.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "TJK ishda",
+              "statusType": "tjk"
+            }
+          ]
+        },
+        {
+          "id": "3-3 Tongi dastur",
+          "day": "Payshanba",
+          "title": "Payshanba, Yan 29",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 26,
+              "name": "Abdurahmonov D.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=Abdurahmonov%20D.",
+              "telegram": "",
+              "department": "operator",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            },
+            {
+              "id": 27,
+              "name": "TOIROV B.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=TOIROV%20B.",
+              "telegram": "",
+              "department": "operator",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            },
+            {
+              "id": 28,
+              "name": "ZAXIDOV M.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=ZAXIDOV%20M.",
+              "telegram": "",
+              "department": "operator",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "4-3 Studiya",
+          "day": "Juma",
+          "title": "Juma, Yan 30",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 22,
+              "name": "LUTFULLAYEV S.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=LUTFULLAYEV%20S.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Komandirovka",
+              "statusType": "trip"
+            },
+            {
+              "id": 23,
+              "name": "XAYDAROV X.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=XAYDAROV%20X.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            },
+            {
+              "id": 24,
+              "name": "KOMILOV M.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=KOMILOV%20M.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "4-35 TJK",
+          "day": "Juma",
+          "title": "Juma, Yan 30",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 25,
+              "name": "XOLIQULOV S.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=XOLIQULOV%20S.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            },
+            {
+              "id": 26,
+              "name": "Abdurahmonov D.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=Abdurahmonov%20D.",
+              "telegram": "",
+              "department": "operator",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "TJK ishda",
+              "statusType": "tjk"
+            },
+            {
+              "id": 27,
+              "name": "TOIROV B.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=TOIROV%20B.",
+              "telegram": "",
+              "department": "operator",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "TJK ishda",
+              "statusType": "tjk"
+            }
+          ]
+        },
+        {
+          "id": "4-3 Tongi dastur",
+          "day": "Juma",
+          "title": "Juma, Yan 30",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 28,
+              "name": "ZAXIDOV M.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=ZAXIDOV%20M.",
+              "telegram": "",
+              "department": "operator",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            },
+            {
+              "id": 29,
+              "name": "Abdusattorov A.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=Abdusattorov%20A.",
+              "telegram": "",
+              "department": "operator",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            },
+            {
+              "id": 30,
+              "name": "RAHMONOV S.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=RAHMONOV%20S.",
+              "telegram": "",
+              "department": "operator",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "5-3 Studiya",
+          "day": "Shanba",
+          "title": "Shanba, Yan 31",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 24,
+              "name": "KOMILOV M.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=KOMILOV%20M.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            },
+            {
+              "id": 25,
+              "name": "XOLIQULOV S.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=XOLIQULOV%20S.",
+              "telegram": "",
+              "department": "pull",
+              "portfolio": [],
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            },
+            {
+              "id": 26,
+              "name": "Abdurahmonov D.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=Abdurahmonov%20D.",
+              "telegram": "",
+              "department": "operator",
+              "portfolio": [],
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "5-35 TJK",
+          "day": "Shanba",
+          "title": "Shanba, Yan 31",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 27,
+              "name": "TOIROV B.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=TOIROV%20B.",
+              "telegram": "",
+              "department": "operator",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "TJK ishda",
+              "statusType": "tjk"
+            },
+            {
+              "id": 28,
+              "name": "ZAXIDOV M.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=ZAXIDOV%20M.",
+              "telegram": "",
+              "department": "operator",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "TJK ishda",
+              "statusType": "tjk"
+            },
+            {
+              "id": 29,
+              "name": "Abdusattorov A.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=Abdusattorov%20A.",
+              "telegram": "",
+              "department": "operator",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "TJK ishda",
+              "statusType": "tjk"
+            }
+          ]
+        },
+        {
+          "id": "5-3 Tongi dastur",
+          "day": "Shanba",
+          "title": "Shanba, Yan 31",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 30,
+              "name": "RAHMONOV S.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=RAHMONOV%20S.",
+              "telegram": "",
+              "department": "operator",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            },
+            {
+              "id": 31,
+              "name": "SOLIBOYEV I.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=SOLIBOYEV%20I.",
+              "telegram": "",
+              "department": "operator",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            },
+            {
+              "id": 32,
+              "name": "AZIMOV E.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=AZIMOV%20E.",
+              "telegram": "",
+              "department": "operator",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Komandirovka",
+              "statusType": "trip"
+            }
+          ]
+        },
+        {
+          "id": "6-3 Studiya",
+          "day": "Yakshanba",
+          "title": "Yakshanba, Fev 1",
+          "meta": "3 Studiya",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 26,
+              "name": "Abdurahmonov D.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=Abdurahmonov%20D.",
+              "telegram": "",
+              "department": "operator",
+              "portfolio": [],
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            },
+            {
+              "id": 27,
+              "name": "TOIROV B.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=TOIROV%20B.",
+              "telegram": "",
+              "department": "operator",
+              "portfolio": [],
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            },
+            {
+              "id": 28,
+              "name": "ZAXIDOV M.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=ZAXIDOV%20M.",
+              "telegram": "",
+              "department": "operator",
+              "portfolio": [],
+              "time": "9:00 - 22:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            }
+          ]
+        },
+        {
+          "id": "6-35 TJK",
+          "day": "Yakshanba",
+          "title": "Yakshanba, Fev 1",
+          "meta": "35 TJK",
+          "tone": "purple",
+          "people": [
+            {
+              "id": 29,
+              "name": "Abdusattorov A.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=Abdusattorov%20A.",
+              "telegram": "",
+              "department": "operator",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "TJK ishda",
+              "statusType": "tjk"
+            },
+            {
+              "id": 30,
+              "name": "RAHMONOV S.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=RAHMONOV%20S.",
+              "telegram": "",
+              "department": "operator",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Damda",
+              "statusType": "rest"
+            },
+            {
+              "id": 31,
+              "name": "SOLIBOYEV I.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=SOLIBOYEV%20I.",
+              "telegram": "",
+              "department": "operator",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "TJK ishda",
+              "statusType": "tjk"
+            }
+          ]
+        },
+        {
+          "id": "6-3 Tongi dastur",
+          "day": "Yakshanba",
+          "title": "Yakshanba, Fev 1",
+          "meta": "3 Tongi dastur",
+          "tone": "blue",
+          "people": [
+            {
+              "id": 32,
+              "name": "AZIMOV E.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=AZIMOV%20E.",
+              "telegram": "",
+              "department": "operator",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            },
+            {
+              "id": 33,
+              "name": "RUSTAMOV E.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=RUSTAMOV%20E.",
+              "telegram": "",
+              "department": "operator",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            },
+            {
+              "id": 34,
+              "name": "SOLIBOYEV Y.",
+              "role": "Operator va texnik xodim",
+              "phone": "+998 90 000 00 00",
+              "avatar": "https://i.pravatar.cc/160?u=SOLIBOYEV%20Y.",
+              "telegram": "",
+              "department": "operator",
+              "portfolio": [],
+              "time": "9:00 - 18:00",
+              "employeeId": "",
+              "status": "Studiyada",
+              "statusType": "working"
+            }
+          ]
+        }
+      ],
+      "studioToday": [
+        {
+          "id": 14,
+          "name": "MENAYEV T.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=MENAYEV%20T.",
+          "telegram": "",
+          "department": "pull",
+          "portfolio": [],
+          "time": "9:00 - 22:00",
+          "employeeId": "",
+          "status": "Working",
+          "statusType": "working"
+        },
+        {
+          "id": 16,
+          "name": "Ulug'murodov U.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=Ulug'murodov%20U.",
+          "telegram": "",
+          "department": "pull",
+          "portfolio": [],
+          "time": "9:00 - 22:00",
+          "employeeId": "",
+          "status": "Working",
+          "statusType": "working"
+        },
+        {
+          "id": 17,
+          "name": "Eshonxo'jayev F.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=Eshonxo'jayev%20F.",
+          "telegram": "",
+          "department": "pull",
+          "portfolio": [],
+          "time": "9:00 - 18:00",
+          "employeeId": "",
+          "status": "Working",
+          "statusType": "tjk"
+        }
+      ],
+      "overviewRows": [
+        {
+          "name": "JO'RAYEV S.",
+          "days": [
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty"
+          ]
+        },
+        {
+          "name": "Shermuhammedov D.",
+          "days": [
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty"
+          ]
+        },
+        {
+          "name": "BOSITXONOV B.",
+          "days": [
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty"
+          ]
+        },
+        {
+          "name": "QUDRATOV X.",
+          "days": [
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty"
+          ]
+        },
+        {
+          "name": "FAYZIYEV F.",
+          "days": [
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty"
+          ]
+        },
+        {
+          "name": "SATTOROV I.",
+          "days": [
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty"
+          ]
+        },
+        {
+          "name": "Saidnasimov S.",
+          "days": [
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty"
+          ]
+        },
+        {
+          "name": "ZAMONOV I.",
+          "days": [
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty",
+            "empty"
+          ]
+        }
+      ],
+      "reports": [
+        {
+          "label": "Ishlayotganlar",
+          "value": 51
+        },
+        {
+          "label": "Dam olish kuni",
+          "value": 9
+        },
+        {
+          "label": "Komandirovka",
+          "value": 3
+        },
+        {
+          "label": "TJK guruhi",
+          "value": 18
+        },
+        {
+          "label": "Zaxira",
+          "value": 4
+        },
+        {
+          "label": "Mehnat ta'tili",
+          "value": 0
+        },
+        {
+          "label": "Administratsiya",
+          "value": 0
+        },
+        {
+          "label": "Prezidentskiy",
+          "value": 0
+        },
+        {
+          "label": "Balnishniy",
+          "value": 0
+        },
+        {
+          "label": "Bugungi smena",
+          "value": 9
+        }
+      ],
+      "notifications": [
+        "Jadval ma'lumotlari yangilandi.",
+        "9 ta dam olish kuni belgilangan.",
+        "3 ta komandirovkada.",
+        "18 ta TJK guruhida.",
+        "0 ta mehnat ta'tilida.",
+        "0 ta administratsiyada.",
+        "0 ta prezidentskiyda.",
+        "0 ta balnishniy.",
+        "4 ta xodim zaxirada."
+      ],
+      "employees": [
+        {
+          "id": 2,
+          "name": "JO'RAYEV S.",
+          "role": "Operator / muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=JO'RAYEV%20S.",
+          "telegram": "",
+          "department": "pull",
+          "portfolio": []
+        },
+        {
+          "id": 3,
+          "name": "Shermuhammedov D.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=Shermuhammedov%20D.",
+          "telegram": "",
+          "department": "pull",
+          "portfolio": []
+        },
+        {
+          "id": 4,
+          "name": "BOSITXONOV B.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=BOSITXONOV%20B.",
+          "telegram": "",
+          "department": "pull",
+          "portfolio": []
+        },
+        {
+          "id": 5,
+          "name": "QUDRATOV X.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=QUDRATOV%20X.",
+          "telegram": "",
+          "department": "pull",
+          "portfolio": []
+        },
+        {
+          "id": 7,
+          "name": "FAYZIYEV F.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=FAYZIYEV%20F.",
+          "telegram": "",
+          "department": "pull",
+          "portfolio": []
+        },
+        {
+          "id": 8,
+          "name": "SATTOROV I.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=SATTOROV%20I.",
+          "telegram": "",
+          "department": "pull",
+          "portfolio": []
+        },
+        {
+          "id": 9,
+          "name": "Saidnasimov S.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=Saidnasimov%20S.",
+          "telegram": "",
+          "department": "pull",
+          "portfolio": []
+        },
+        {
+          "id": 10,
+          "name": "ZAMONOV I.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=ZAMONOV%20I.",
+          "telegram": "",
+          "department": "pull",
+          "portfolio": []
+        },
+        {
+          "id": 11,
+          "name": "ILMURZIN A.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=ILMURZIN%20A.",
+          "telegram": "",
+          "department": "pull",
+          "portfolio": []
+        },
+        {
+          "id": 12,
+          "name": "RASULOV B./dron",
+          "role": "Operator / dron",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=RASULOV%20B.%2Fdron",
+          "telegram": "",
+          "department": "dron",
+          "portfolio": []
+        },
+        {
+          "id": 13,
+          "name": "Turdialiyev I./dron",
+          "role": "Operator / dron",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=Turdialiyev%20I.%2Fdron",
+          "telegram": "",
+          "department": "dron",
+          "portfolio": []
+        },
+        {
+          "id": 14,
+          "name": "MENAYEV T.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=MENAYEV%20T.",
+          "telegram": "",
+          "department": "pull",
+          "portfolio": []
+        },
+        {
+          "id": 15,
+          "name": "MAXMUDOV J.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=MAXMUDOV%20J.",
+          "telegram": "",
+          "department": "pull",
+          "portfolio": []
+        },
+        {
+          "id": 16,
+          "name": "Ulug'murodov U.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=Ulug'murodov%20U.",
+          "telegram": "",
+          "department": "pull",
+          "portfolio": []
+        },
+        {
+          "id": 17,
+          "name": "Eshonxo'jayev F.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=Eshonxo'jayev%20F.",
+          "telegram": "",
+          "department": "pull",
+          "portfolio": []
+        },
+        {
+          "id": 18,
+          "name": "RUSTAMOV I.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=RUSTAMOV%20I.",
+          "telegram": "",
+          "department": "pull",
+          "portfolio": []
+        },
+        {
+          "id": 19,
+          "name": "ZIKRILLAYEV A.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=ZIKRILLAYEV%20A.",
+          "telegram": "",
+          "department": "pull",
+          "portfolio": []
+        },
+        {
+          "id": 20,
+          "name": "HAMIDOV D.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=HAMIDOV%20D.",
+          "telegram": "",
+          "department": "pull",
+          "portfolio": []
+        },
+        {
+          "id": 21,
+          "name": "NURMATOV B.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=NURMATOV%20B.",
+          "telegram": "",
+          "department": "pull",
+          "portfolio": []
+        },
+        {
+          "id": 22,
+          "name": "LUTFULLAYEV S.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=LUTFULLAYEV%20S.",
+          "telegram": "",
+          "department": "pull",
+          "portfolio": []
+        },
+        {
+          "id": 23,
+          "name": "XAYDAROV X.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=XAYDAROV%20X.",
+          "telegram": "",
+          "department": "pull",
+          "portfolio": []
+        },
+        {
+          "id": 24,
+          "name": "KOMILOV M.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=KOMILOV%20M.",
+          "telegram": "",
+          "department": "pull",
+          "portfolio": []
+        },
+        {
+          "id": 25,
+          "name": "XOLIQULOV S.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=XOLIQULOV%20S.",
+          "telegram": "",
+          "department": "pull",
+          "portfolio": []
+        },
+        {
+          "id": 26,
+          "name": "Abdurahmonov D.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=Abdurahmonov%20D.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 27,
+          "name": "TOIROV B.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=TOIROV%20B.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 28,
+          "name": "ZAXIDOV M.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=ZAXIDOV%20M.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 29,
+          "name": "Abdusattorov A.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=Abdusattorov%20A.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 30,
+          "name": "RAHMONOV S.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=RAHMONOV%20S.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 31,
+          "name": "SOLIBOYEV I.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=SOLIBOYEV%20I.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 32,
+          "name": "AZIMOV E.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=AZIMOV%20E.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 33,
+          "name": "RUSTAMOV E.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=RUSTAMOV%20E.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 34,
+          "name": "SOLIBOYEV Y.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=SOLIBOYEV%20Y.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 35,
+          "name": "UMAROV J.",
+          "role": "Operator va texnik xodim",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=UMAROV%20J.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 36,
+          "name": "IBROHIMOV A.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=IBROHIMOV%20A.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 37,
+          "name": "O'TAYEVA S.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=O'TAYEVA%20S.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 38,
+          "name": "SHUKUROVA R.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=SHUKUROVA%20R.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 39,
+          "name": "HAYITOV D.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=HAYITOV%20D.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 40,
+          "name": "QURBONOV D.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=QURBONOV%20D.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 41,
+          "name": "JOVLIYEV G'.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=JOVLIYEV%20G'.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 42,
+          "name": "HAMROYEVA O.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=HAMROYEVA%20O.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 43,
+          "name": "SOATOV J.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=SOATOV%20J.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 44,
+          "name": "QALANDAROVA M.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=QALANDAROVA%20M.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 45,
+          "name": "NIZAMUDINOVA K.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=NIZAMUDINOVA%20K.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 46,
+          "name": "Xudoyberdiyeva O.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=Xudoyberdiyeva%20O.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 47,
+          "name": "AXMADOVA G.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=AXMADOVA%20G.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 48,
+          "name": "RO'ZIMURODOV J.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=RO'ZIMURODOV%20J.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 49,
+          "name": "YUNUSOVA M.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=YUNUSOVA%20M.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 50,
+          "name": "ESHBOYEV I.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=ESHBOYEV%20I.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 51,
+          "name": "ZARIPXAN K.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=ZARIPXAN%20K.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 52,
+          "name": "MIRSADIQOVA A.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=MIRSADIQOVA%20A.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 53,
+          "name": "MATYOQUBOVA I.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=MATYOQUBOVA%20I.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 54,
+          "name": "MARDONOV J.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=MARDONOV%20J.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 55,
+          "name": "QUDRATOVA M.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=QUDRATOVA%20M.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 56,
+          "name": "AKTAMOVA N.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=AKTAMOVA%20N.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 57,
+          "name": "QODIROV I./rej.",
+          "role": "Rejissyor",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=QODIROV%20I.%2Frej.",
+          "telegram": "",
+          "department": "tjk",
+          "portfolio": []
+        },
+        {
+          "id": 58,
+          "name": "QODIROV X.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=QODIROV%20X.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 59,
+          "name": "IMINOVA M.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=IMINOVA%20M.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 60,
+          "name": "QOSIMOV M./rej.",
+          "role": "Rejissyor",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=QOSIMOV%20M.%2Frej.",
+          "telegram": "",
+          "department": "tjk",
+          "portfolio": []
+        },
+        {
+          "id": 61,
+          "name": "CHORIYEV SH.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=CHORIYEV%20SH.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 62,
+          "name": "Mambetsharipova N.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=Mambetsharipova%20N.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 63,
+          "name": "QIYOSOVA A.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=QIYOSOVA%20A.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        },
+        {
+          "id": 64,
+          "name": "REYIMOVA D.",
+          "role": "Muxbir",
+          "phone": "+998 90 000 00 00",
+          "avatar": "https://i.pravatar.cc/160?u=REYIMOVA%20D.",
+          "telegram": "",
+          "department": "operator",
+          "portfolio": []
+        }
+      ],
+      "contacts": [
+        {
+          "id": "contact-1",
+          "type": "Muxbir",
+          "name": "Sarvar Raximov",
+          "vehicle": "",
+          "phone": "+998 90 302 55 92"
+        },
+        {
+          "id": "contact-2",
+          "type": "Haydovchi",
+          "name": "142 Caddy",
+          "vehicle": "142 Caddy",
+          "phone": "+998 90 406 15 78"
+        }
+      ],
+      "attendance": {
+        "today": "2026-05-07",
+        "month": "2026-05",
+        "activeNow": 1,
+        "todayScans": 0,
+        "todayMinutes": 0,
+        "monthMinutes": 5209,
+        "recent": [
+          {
+            "id": "att-1777785136210-1",
+            "employeeId": 1,
+            "employeeName": "Abdug'afforov A.",
+            "date": "2026-05-03",
+            "checkIn": "2026-05-03T05:12:16.210Z",
+            "checkOut": null,
+            "method": "face"
+          },
+          {
+            "id": "att-1777784910611-1",
+            "employeeId": 1,
+            "employeeName": "Abdug'afforov A.",
+            "date": "2026-05-03",
+            "checkIn": "2026-05-03T05:08:30.611Z",
+            "checkOut": "2026-05-03T05:12:07.264Z",
+            "method": "face"
+          },
+          {
+            "id": "att-1777784151663-1",
+            "employeeId": 1,
+            "employeeName": "Abdug'afforov A.",
+            "date": "2026-05-03",
+            "checkIn": "2026-05-03T04:55:51.663Z",
+            "checkOut": "2026-05-03T04:55:52.748Z",
+            "method": "face"
+          },
+          {
+            "id": "att-1777784146963-1",
+            "employeeId": 1,
+            "employeeName": "Abdug'afforov A.",
+            "date": "2026-05-03",
+            "checkIn": "2026-05-03T04:55:46.963Z",
+            "checkOut": "2026-05-03T04:55:49.614Z",
+            "method": "face"
+          },
+          {
+            "id": "att-1777784118700-1",
+            "employeeId": 1,
+            "employeeName": "Abdug'afforov A.",
+            "date": "2026-05-03",
+            "checkIn": "2026-05-03T04:55:18.700Z",
+            "checkOut": "2026-05-03T04:55:19.550Z",
+            "method": "face"
+          },
+          {
+            "id": "att-1777738787188-1",
+            "employeeId": 1,
+            "employeeName": "Abdug'afforov A.",
+            "date": "2026-05-02",
+            "checkIn": "2026-05-02T16:19:47.188Z",
+            "checkOut": "2026-05-02T16:19:56.680Z",
+            "method": "face"
+          }
+        ],
+        "rows": [
+          {
+            "employeeId": 1,
+            "name": "Abdug'afforov A.",
+            "todayMinutes": 0,
+            "monthMinutes": 5209,
+            "active": true,
+            "lastAction": "2026-05-03T05:12:16.210Z"
+          }
+        ]
+      }
     }
   },
-  "attendance": [
+  "attendance": [],
+  "contacts": [
     {
-      "id": "att-1777738787188-1",
-      "employeeId": 1,
-      "employeeName": "Abdug'afforov A.",
-      "date": "2026-05-02",
-      "checkIn": "2026-05-02T16:19:47.188Z",
-      "checkOut": "2026-05-02T16:19:56.680Z",
-      "method": "face"
+      "id": "contact-1",
+      "type": "Muxbir",
+      "name": "Sarvar Raximov",
+      "vehicle": "",
+      "phone": "+998 90 302 55 92"
     },
     {
-      "id": "att-1777784118700-1",
-      "employeeId": 1,
-      "employeeName": "Abdug'afforov A.",
-      "date": "2026-05-03",
-      "checkIn": "2026-05-03T04:55:18.700Z",
-      "checkOut": "2026-05-03T04:55:19.550Z",
-      "method": "face"
-    },
-    {
-      "id": "att-1777784146963-1",
-      "employeeId": 1,
-      "employeeName": "Abdug'afforov A.",
-      "date": "2026-05-03",
-      "checkIn": "2026-05-03T04:55:46.963Z",
-      "checkOut": "2026-05-03T04:55:49.614Z",
-      "method": "face"
-    },
-    {
-      "id": "att-1777784151663-1",
-      "employeeId": 1,
-      "employeeName": "Abdug'afforov A.",
-      "date": "2026-05-03",
-      "checkIn": "2026-05-03T04:55:51.663Z",
-      "checkOut": "2026-05-03T04:55:52.748Z",
-      "method": "face"
-    },
-    {
-      "id": "att-1777784910611-1",
-      "employeeId": 1,
-      "employeeName": "Abdug'afforov A.",
-      "date": "2026-05-03",
-      "checkIn": "2026-05-03T05:08:30.611Z",
-      "checkOut": "2026-05-03T05:12:07.264Z",
-      "method": "face"
-    },
-    {
-      "id": "att-1777785136210-1",
-      "employeeId": 1,
-      "employeeName": "Abdug'afforov A.",
-      "date": "2026-05-03",
-      "checkIn": "2026-05-03T05:12:16.210Z",
-      "checkOut": null,
-      "method": "face"
+      "id": "contact-2",
+      "type": "Haydovchi",
+      "name": "142 Caddy",
+      "vehicle": "142 Caddy",
+      "phone": "+998 90 406 15 78"
     }
   ]
 }
