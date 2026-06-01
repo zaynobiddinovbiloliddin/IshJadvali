@@ -5,6 +5,7 @@ import morgan from "morgan";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { join, dirname } from "path";
+import { startTelegramBot } from "./src/telegram-bot.mjs";
 
 dotenv.config();
 
@@ -1101,5 +1102,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const HOST = process.env.HOST || "0.0.0.0";
   app.listen(PORT, HOST, () => {
     console.log(`Server ready: http://${HOST}:${PORT}`);
+    if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
+      startTelegramBot(prisma);
+    }
   });
 }
