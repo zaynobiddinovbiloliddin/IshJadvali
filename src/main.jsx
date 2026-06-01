@@ -795,6 +795,7 @@ function App() {
     if (page === "monthly") return "Oylik grafik";
     if (page === "shooting") return "Tasvir jadvali";
     if (page === "reports") return "Hisobotlar";
+    if (page === "audit") return "Audit jurnal";
     if (page === "profile") return "Profil";
     return "Ish jadvali";
   }, [page]);
@@ -873,6 +874,7 @@ function App() {
             {page === "documents" && <DocumentsPage employees={dashboard.employees} onNotify={notify} onSaveEmployee={saveEmployee} />}
             {page === "shooting" && <ShootingPage onNotify={notify} />}
             {page === "reports" && <ReportsPage dashboard={dashboard} />}
+            {page === "audit" && <AuditPage />}
             {page === "profile" && (
               <ProfilePage
                 currentUser={currentUser}
@@ -2833,6 +2835,91 @@ function ReportsPage({ dashboard }) {
   );
 }
 
+function AuditPage() {
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("all");
+
+  useEffect(() => {
+    api("/api/audit-logs")
+      .then((data) => setLogs(data.logs || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filtered = logs.filter((log) => {
+    const matchSearch =
+      !search.trim() ||
+      [log.action, log.entity, log.entityId, log.details]
+        .join(" ")
+        .toLowerCase()
+        .includes(search.trim().toLowerCase());
+    const matchFilter = filter === "all" || log.action === filter;
+    return matchSearch && matchFilter;
+  });
+
+  if (loading) return <SkeletonPage />;
+
+  return (
+    <section className="audit-page">
+      <div className="audit-head">
+        <div>
+          <h2>Audit Jurnal</h2>
+          <p>Tizimda barcha o'zgarishlar tarixi · Jami {logs.length} ta</p>
+        </div>
+      </div>
+      <div className="reports-toolbar">
+        <label>
+          <Search size={16} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Amal, xodim yoki tafsilot bo'yicha qidirish"
+          />
+        </label>
+        <select value={filter} onChange={(e) => setFilter(e.target.value)}>
+          <option value="all">Barcha amallar</option>
+          <option value="login">Kirish</option>
+          <option value="create">Yaratish</option>
+          <option value="update">O'zgartirish</option>
+          <option value="delete">O'chirish</option>
+          <option value="generate">Yaratish (jadval)</option>
+          <option value="checkin">Kirish (Face ID)</option>
+          <option value="checkout">Chiqish (Face ID)</option>
+          <option value="add_group">Guruh qo'shish</option>
+          <option value="status_update">Status</option>
+        </select>
+      </div>
+      <div className="audit-list">
+        {filtered.map((log) => (
+          <article key={log.id} className="audit-row">
+            <span className={`audit-badge ${String(log.action).toLowerCase().replace(/_/g, "-")}`}>
+              {log.action}
+            </span>
+            <div className="audit-main">
+              <strong>
+                {log.entityId || log.entity}
+                <em className="audit-entity"> · {log.entity}</em>
+              </strong>
+              {log.details && <p>{log.details}</p>}
+            </div>
+            <time className="audit-time">
+              {new Date(log.createdAt).toLocaleString("uz-UZ", {
+                day: "2-digit",
+                month: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit"
+              })}
+            </time>
+          </article>
+        ))}
+        {!filtered.length && <EmptyCard text="Hozircha audit yozuvlari yo'q" />}
+      </div>
+    </section>
+  );
+}
+
 function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThemeChange, onSaveContact, onDeleteContact, onUpdateUser, onNotify }) {
   const [notify, setNotify] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
@@ -3258,6 +3345,7 @@ function MenuPanel({ onClose, onPageChange, onOpenMonthly, panelRef }) {
     ["monthly", "Oylik grafik", Clock3],
     ["shooting", "Tasvir jadvali", FileText],
     ["reports", "Hisobotlar", ChartColumn],
+    ["audit", "Audit jurnal", ShieldCheck],
     ["profile", "Profil", User]
   ];
 

@@ -1,0 +1,78 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Employee {
+  id          Int       @id @default(autoincrement())
+  name        String
+  role        String    @default("Operator")
+  phone       String    @default("+998 90 000 00 00")
+  telegram    String    @default("")
+  department  String    @default("operator")
+  avatar      String    @default("")
+  address     String    @default("")
+  portfolio   Json      @default("[]")
+  documents   Json      @default("{}")
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  schedules    ScheduleEntry[]
+  attendances  Attendance[]
+}
+
+model Schedule {
+  id        String   @id @default(cuid())
+  weekStart String   @unique
+  data      Json
+  savedAt   DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ScheduleEntry {
+  id         Int      @id @default(autoincrement())
+  employeeId Int
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  weekStart  String
+  day        String
+  statusType String   @default("working")
+  groupId    String   @default("")
+  createdAt  DateTime @default(now())
+
+  @@unique([employeeId, weekStart, day, groupId])
+}
+
+model Contact {
+  id        String   @id @default(cuid())
+  type      String   @default("Muxbir")
+  name      String   @default("")
+  vehicle   String   @default("")
+  phone     String
+  createdAt DateTime @default(now())
+}
+
+model Attendance {
+  id           String    @id @default(cuid())
+  employeeId   Int
+  employee     Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employeeName String
+  date         String
+  checkIn      DateTime
+  checkOut     DateTime?
+  method       String    @default("face")
+  createdAt    DateTime  @default(now())
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  action    String
+  entity    String
+  entityId  String?
+  details   String?
+  createdAt DateTime @default(now())
+}

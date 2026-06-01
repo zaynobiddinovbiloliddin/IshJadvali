@@ -6521,3 +6521,106 @@ button.metric-card {
     grid-column: 2;
   }
 }
+
+/* ── Audit Page ─────────────────────────────────────────────────────────────── */
+
+.audit-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 80px;
+}
+
+.audit-head h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.audit-head p {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.audit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.audit-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--card-bg);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.audit-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  margin-top: 2px;
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.audit-badge.login         { background: #dbeafe; color: #1d4ed8; }
+.audit-badge.create        { background: #dcfce7; color: #15803d; }
+.audit-badge.update        { background: #ffedd5; color: #c2410c; }
+.audit-badge.delete        { background: #fee2e2; color: #b91c1c; }
+.audit-badge.generate      { background: #f3e8ff; color: #7e22ce; }
+.audit-badge.checkin       { background: #cffafe; color: #0e7490; }
+.audit-badge.checkout      { background: #cffafe; color: #0e7490; }
+.audit-badge.add-group     { background: #dcfce7; color: #15803d; }
+.audit-badge.status-update { background: #fef9c3; color: #a16207; }
+
+[data-theme="dark"] .audit-badge              { background: #374151; color: #d1d5db; }
+[data-theme="dark"] .audit-badge.login        { background: #1e3a5f; color: #93c5fd; }
+[data-theme="dark"] .audit-badge.create       { background: #14532d; color: #86efac; }
+[data-theme="dark"] .audit-badge.update       { background: #431407; color: #fdba74; }
+[data-theme="dark"] .audit-badge.delete       { background: #450a0a; color: #fca5a5; }
+[data-theme="dark"] .audit-badge.generate     { background: #3b0764; color: #d8b4fe; }
+[data-theme="dark"] .audit-badge.checkin      { background: #164e63; color: #67e8f9; }
+[data-theme="dark"] .audit-badge.checkout     { background: #164e63; color: #67e8f9; }
+[data-theme="dark"] .audit-badge.add-group    { background: #14532d; color: #86efac; }
+[data-theme="dark"] .audit-badge.status-update{ background: #422006; color: #fde68a; }
+
+.audit-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.audit-main strong {
+  font-size: 0.88rem;
+  font-weight: 600;
+  display: block;
+}
+
+.audit-entity {
+  font-weight: 400;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.audit-main p {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.audit-time {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
