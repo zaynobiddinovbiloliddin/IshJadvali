@@ -1829,15 +1829,21 @@ function StudioPage({ dashboard, onCreate, onDeleteEmployee, onNotify, onSaveEmp
         {visibleEmployees.length ? visibleEmployees.map((employee) => {
           const department = departmentMeta(employee.department);
           return (
-            <button className="team-member-row" type="button" key={employee.id} onClick={() => setSelectedPerson(employee)}>
+            <button
+              className="team-member-row"
+              type="button"
+              key={employee.id}
+              style={{ borderLeftColor: { pull: "#6366f1", operator: "#22c55e", dron: "#f97316", tjk: "#eab308" }[employee.department] || "#94a3b8" }}
+              onClick={() => setSelectedPerson(employee)}
+            >
               <Avatar person={employee} />
               <div className="team-member-main">
                 <strong>{employee.name}</strong>
                 <span>{employee.role || "Operator"}</span>
-                <em>Faol</em>
               </div>
-              <span>{department.shortLabel}</span>
-              <span>{department.label}</span>
+              <span className="dept-badge" style={{ background: { pull: "#eef2ff", operator: "#f0fdf4", dron: "#fff7ed", tjk: "#fefce8" }[employee.department] || "#f1f5f9", color: { pull: "#6366f1", operator: "#16a34a", dron: "#ea580c", tjk: "#ca8a04" }[employee.department] || "#64748b" }}>
+                {department.shortLabel}
+              </span>
             </button>
           );
         }) : <EmptyCard text="Bu bo'limda xodim yo'q" />}
@@ -3325,16 +3331,44 @@ function MetricCard({ icon, value, label, tone, active = false, onClick }) {
   );
 }
 
-function Avatar({ person }) {
+function Avatar({ person, size = "md" }) {
+  const hasRealAvatar = person?.avatar && person.avatar.startsWith("data:image");
+  const initials = String(person?.name || "?").trim().charAt(0).toUpperCase();
+  const colors = [
+    "#6366f1", "#8b5cf6", "#ec4899", "#f43f5e",
+    "#f97316", "#eab308", "#22c55e", "#14b8a6",
+    "#3b82f6", "#06b6d4", "#84cc16", "#a855f7"
+  ];
+  const colorIndex =
+    (person?.name || "").split("").reduce((sum, char) => sum + char.charCodeAt(0), 0) %
+    colors.length;
+  const bgColor = colors[colorIndex];
+
+  if (hasRealAvatar) {
+    return (
+      <span className={`avatar avatar-${size}`}>
+        <img src={person.avatar} alt={person.name} />
+      </span>
+    );
+  }
   return (
-    <span className="avatar">
-      {person.avatar ? <img src={person.avatar} alt={person.name} /> : <User size={20} />}
+    <span
+      className={`avatar avatar-initials avatar-${size}`}
+      style={{ backgroundColor: bgColor }}
+      aria-label={person?.name}
+    >
+      {initials}
     </span>
   );
 }
 
 function EmptyCard({ text }) {
-  return <div className="empty-card">{text}</div>;
+  return (
+    <div className="empty-card">
+      <span className="empty-icon">📭</span>
+      <p>{text}</p>
+    </div>
+  );
 }
 
 function MenuPanel({ onClose, onPageChange, onOpenMonthly, panelRef }) {
@@ -3382,10 +3416,11 @@ function NotificationsPanel({ items, panelRef }) {
 function SkeletonPage() {
   return (
     <section className="skeleton-page">
-      <span />
-      <span />
-      <span />
-      <span />
+      <div className="skeleton-hero" />
+      <div className="skeleton-row" />
+      <div className="skeleton-row short" />
+      <div className="skeleton-row" />
+      <div className="skeleton-row short" />
     </section>
   );
 }
