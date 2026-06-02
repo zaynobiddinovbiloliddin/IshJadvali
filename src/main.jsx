@@ -1099,6 +1099,7 @@ function DepartmentManagerModal({ departments, onClose, onSave, onDelete, onNoti
   return createPortal((
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Bo'limlarni boshqarish" onClick={onClose}>
       <div className="schedule-modal" style={{ maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
+        <span className="modal-handle" />
         <div className="modal-head">
           <strong>Bo'limlarni boshqarish</strong>
           <button type="button" onClick={onClose}>
@@ -1227,7 +1228,7 @@ function AuthPage({ onAuth, onNotify, theme, onThemeChange }) {
             />
           </label>
           {error && <p className="auth-error">{error}</p>}
-          <button type="submit" disabled={loading}>
+          <button type="submit" className="auth-submit" disabled={loading}>
             <LogIn size={17} />
             {loading ? "Kirish..." : "Kirish"}
           </button>
@@ -1592,6 +1593,7 @@ function ShootingPage({ onNotify }) {
       {addOpen && createPortal((
         <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Yangi jadval qo'shish" onClick={() => setAddOpen(false)}>
           <form ref={addFormRef} className="schedule-modal" onSubmit={addRow} onClick={(event) => event.stopPropagation()}>
+            <span className="modal-handle" />
             <div className="modal-head">
               <strong>Yangi jadval qo'shish</strong>
               <button type="button" onClick={() => setAddOpen(false)}>
@@ -2128,6 +2130,7 @@ function StudioPage({ currentUser, departments, onLoadDepartments, dashboard, on
       {employeeModalOpen && createPortal((
         <div className="modal-backdrop team-modal-backdrop" role="dialog" aria-modal="true" aria-label={editingId ? "Xodimni tahrirlash" : "Yangi xodim qo'shish"} onClick={() => setEmployeeModalOpen(false)}>
           <form ref={formRef} className="schedule-modal team-edit-modal" onSubmit={submitEmployee} onClick={(event) => event.stopPropagation()}>
+            <span className="modal-handle" />
             <div className="modal-head">
               <strong>{editingId ? "Xodimni tahrirlash" : "Yangi xodim qo'shish"}</strong>
               <button type="button" onClick={() => setEmployeeModalOpen(false)}>
@@ -2184,6 +2187,7 @@ function StudioPage({ currentUser, departments, onLoadDepartments, dashboard, on
       {scheduleModalOpen && createPortal((
         <div className="modal-backdrop team-modal-backdrop" role="dialog" aria-modal="true" aria-label="Yangi jadval yaratish" onClick={() => setScheduleModalOpen(false)}>
           <section className="schedule-modal team-edit-modal" onClick={(event) => event.stopPropagation()}>
+            <span className="modal-handle" />
             <div className="modal-head">
               <strong>Yangi jadval yaratish</strong>
               <button type="button" onClick={() => setScheduleModalOpen(false)}>
@@ -2599,6 +2603,7 @@ function EmployeeManager({ employees, onDelete, onNotify, onSave }) {
       {modalOpen && createPortal((
         <div className="modal-backdrop employee-modal-backdrop" role="dialog" aria-modal="true" aria-label={editingId ? "Xodimni tahrirlash" : "Yangi xodim qo'shish"} onClick={() => setModalOpen(false)}>
           <form ref={formRef} className="schedule-modal employee-modal" onSubmit={submit} onClick={(event) => event.stopPropagation()}>
+            <span className="modal-handle" />
             <div className="modal-head">
               <strong>{editingId ? "Xodimni tahrirlash" : "Yangi xodim qo'shish"}</strong>
               <button type="button" onClick={() => setModalOpen(false)}>
@@ -2783,6 +2788,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
       {editOpen && createPortal((
         <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Hujjatlarni tahrirlash" onClick={() => setEditOpen(false)}>
           <form ref={formRef} className="schedule-modal documents-modal" onSubmit={submit} onClick={(event) => event.stopPropagation()}>
+            <span className="modal-handle" />
             <div className="modal-head">
               <strong>Hujjatlarni tahrirlash</strong>
               <button type="button" onClick={() => setEditOpen(false)}>
@@ -3501,6 +3507,7 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
       {contactFormOpen && createPortal((
         <div className="modal-backdrop contact-modal-backdrop" role="dialog" aria-modal="true" aria-label="Kontakt qo'shish" onClick={() => setContactFormOpen(false)}>
           <form className="schedule-modal contact-modal" onSubmit={submitContact} onClick={(event) => event.stopPropagation()}>
+            <span className="modal-handle" />
             <div className="modal-head">
               <strong>Kontakt qo'shish</strong>
               <button type="button" onClick={() => setContactFormOpen(false)}>
@@ -3657,12 +3664,20 @@ function UsersPage({ currentUser, onNotify }) {
   const [editUser, setEditUser] = useState(null);
   const [form, setForm] = useState({ username: "", password: "", fullName: "", role: "xodim" });
   const [saving, setSaving] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [search, setSearch] = useState("");
 
   const ROLES = [
     { id: "superadmin", label: "Super admin" },
     { id: "admin", label: "Administrator" },
     { id: "xodim", label: "Xodim" }
   ];
+
+  const ROLE_COLORS = {
+    superadmin: "#6366f1",
+    admin: "#0ea5e9",
+    xodim: "#6b7280"
+  };
 
   useEffect(() => {
     api("/api/users").then((data) => {
@@ -3674,12 +3689,14 @@ function UsersPage({ currentUser, onNotify }) {
   function openCreate() {
     setEditUser(null);
     setForm({ username: "", password: "", fullName: "", role: "xodim" });
+    setShowPassword(false);
     setShowForm(true);
   }
 
   function openEdit(user) {
     setEditUser(user);
     setForm({ username: user.username, password: "", fullName: user.fullName, role: user.role });
+    setShowPassword(false);
     setShowForm(true);
   }
 
@@ -3687,6 +3704,7 @@ function UsersPage({ currentUser, onNotify }) {
     event.preventDefault();
     if (!form.fullName.trim()) { onNotify("To'liq ism kiritilmadi", "error"); return; }
     if (!editUser && (!form.username.trim() || !form.password.trim())) { onNotify("Login va parol kiritilmadi", "error"); return; }
+    if (!editUser && form.password.length < 6) { onNotify("Parol kamida 6 belgi bo'lishi kerak", "error"); return; }
     setSaving(true);
     try {
       const body = { fullName: form.fullName, role: form.role };
@@ -3714,7 +3732,7 @@ function UsersPage({ currentUser, onNotify }) {
     try {
       const updated = await api(`/api/users/${user.id}`, { method: "PUT", body: JSON.stringify({ isActive: !user.isActive }) });
       setUsers((prev) => prev.map((u) => u.id === updated.id ? updated : u));
-      onNotify(updated.isActive ? "Faollashtirildi" : "O'chirildi");
+      onNotify(updated.isActive ? "Foydalanuvchi faollashtirildi" : "Foydalanuvchi o'chirildi", updated.isActive ? "success" : "warning");
     } catch (err) {
       onNotify(err.message || "Xatolik", "error");
     }
@@ -3725,7 +3743,7 @@ function UsersPage({ currentUser, onNotify }) {
     try {
       await api(`/api/users/${user.id}`, { method: "DELETE" });
       setUsers((prev) => prev.filter((u) => u.id !== user.id));
-      onNotify("Foydalanuvchi o'chirildi");
+      onNotify("Foydalanuvchi o'chirildi", "warning");
     } catch (err) {
       onNotify(err.message || "Xatolik", "error");
     }
@@ -3738,43 +3756,100 @@ function UsersPage({ currentUser, onNotify }) {
     admins: users.filter((u) => u.role === "admin").length
   };
 
+  const filtered = users.filter((u) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return u.fullName?.toLowerCase().includes(q) || u.username?.toLowerCase().includes(q) || u.role?.toLowerCase().includes(q);
+  });
+
   return (
     <section className="users-page">
-      <div className="users-stats">
-        <article className="metric-card"><strong>{stats.total}</strong><span>Jami</span></article>
-        <article className="metric-card"><strong>{stats.active}</strong><span>Faol</span></article>
-        <article className="metric-card"><strong>{stats.superadmins}</strong><span>Super admin</span></article>
-        <article className="metric-card"><strong>{stats.admins}</strong><span>Admin</span></article>
-      </div>
-
-      <div className="users-toolbar">
-        <h2>Foydalanuvchilar</h2>
+      <div className="users-header">
+        <div className="users-title">
+          <h2>Foydalanuvchilar</h2>
+          <p>{stats.active} faol · {stats.total} jami</p>
+        </div>
         <button type="button" className="btn-primary" onClick={openCreate}>
           <Plus size={16} /> Qo'shish
         </button>
       </div>
 
-      {showForm && (
+      <div className="users-stats-grid">
+        <div className="users-stat-card" style={{ borderColor: "#6366f1", color: "#6366f1" }}>
+          <strong>{stats.total}</strong>
+          <span>Jami</span>
+        </div>
+        <div className="users-stat-card" style={{ borderColor: "#22c55e", color: "#22c55e" }}>
+          <strong>{stats.active}</strong>
+          <span>Faol</span>
+        </div>
+        <div className="users-stat-card" style={{ borderColor: "#a855f7", color: "#a855f7" }}>
+          <strong>{stats.superadmins}</strong>
+          <span>Super admin</span>
+        </div>
+        <div className="users-stat-card" style={{ borderColor: "#0ea5e9", color: "#0ea5e9" }}>
+          <strong>{stats.admins}</strong>
+          <span>Admin</span>
+        </div>
+      </div>
+
+      <div className="users-search" style={{ maxWidth: "100%" }}>
+        <span className="users-search-icon"><Search size={15} /></span>
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Qidirish: ism, login, rol..."
+        />
+      </div>
+
+      {showForm && createPortal(
         <div className="modal-backdrop" onClick={() => setShowForm(false)}>
-          <div className="schedule-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <strong>{editUser ? "Tahrirlash" : "Yangi foydalanuvchi"}</strong>
-              <button type="button" className="icon-button" onClick={() => setShowForm(false)}><Plus size={20} style={{ transform: "rotate(45deg)" }} /></button>
+          <div className="schedule-modal" style={{ maxWidth: 460 }} onClick={(e) => e.stopPropagation()}>
+            <span className="modal-handle" />
+            <div className="modal-head">
+              <strong>{editUser ? "Foydalanuvchini tahrirlash" : "Yangi foydalanuvchi"}</strong>
+              <button type="button" className="modal-close-btn" onClick={() => setShowForm(false)}>✕</button>
             </div>
             <form className="users-form" onSubmit={saveUser}>
-              {!editUser && (
-                <label>
-                  Login
-                  <input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} placeholder="username" autoComplete="off" />
-                </label>
-              )}
               <label>
                 To'liq ism
-                <input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} placeholder="Ism Familiya" />
+                <input
+                  value={form.fullName}
+                  onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+                  placeholder="Ism Familiya"
+                />
               </label>
               <label>
-                Parol{editUser && " (bo'sh qoldiring — o'zgartirilmaydi)"}
-                <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="••••••••" autoComplete="new-password" />
+                Login (username)
+                <input
+                  value={form.username}
+                  onChange={(e) => !editUser && setForm({ ...form, username: e.target.value })}
+                  placeholder="username"
+                  autoComplete="off"
+                  readOnly={!!editUser}
+                />
+              </label>
+              <label>
+                Parol
+                {editUser && <span className="pw-hint">Bo'sh qoldiring — o'zgarmaydi</span>}
+                {!editUser && <span className="pw-hint">Kamida 6 belgi</span>}
+                <div className="pw-field-wrap">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    placeholder={editUser ? "••••••••" : "Yangi parol"}
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    className="pw-toggle"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? "Yashirish" : "Ko'rsatish"}
+                  >
+                    {showPassword ? <Moon size={15} /> : <Sun size={15} />}
+                  </button>
+                </div>
               </label>
               <label>
                 Rol
@@ -3784,40 +3859,73 @@ function UsersPage({ currentUser, onNotify }) {
               </label>
               <div className="modal-actions">
                 <button type="button" className="btn-ghost" onClick={() => setShowForm(false)}>Bekor</button>
-                <button type="submit" className="btn-primary" disabled={saving}>{saving ? "Saqlanmoqda..." : "Saqlash"}</button>
+                <button type="submit" className="btn-primary" disabled={saving}>
+                  {saving ? "Saqlanmoqda..." : (editUser ? "Yangilash" : "Qo'shish")}
+                </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {loading ? <SkeletonPage /> : (
         <div className="users-list">
-          {users.map((user) => (
-            <div key={user.id} className={`user-row${user.isActive ? "" : " inactive"}`}>
-              <span className="avatar avatar-sm avatar-initials" style={{ backgroundColor: user.role === "superadmin" ? "#6366f1" : user.role === "admin" ? "#0ea5e9" : "#6b7280" }}>
+          {filtered.map((user) => (
+            <div key={user.id} className={`user-card${user.isActive ? "" : " inactive"}`}>
+              <span
+                className="avatar avatar-sm avatar-initials"
+                style={{ backgroundColor: ROLE_COLORS[user.role] || "#6b7280", flexShrink: 0 }}
+              >
                 {user.fullName?.charAt(0).toUpperCase()}
               </span>
-              <div className="user-info">
-                <strong>{user.fullName}</strong>
-                <span>@{user.username} · {ROLES.find((r) => r.id === user.role)?.label || user.role}</span>
+              <div className="user-card-info">
+                <span className="user-card-name">{user.fullName}</span>
+                <span className="user-card-login">@{user.username}</span>
+                <div className="user-card-badges">
+                  <span className={`role-badge ${user.role}`}>
+                    {ROLES.find((r) => r.id === user.role)?.label || user.role}
+                  </span>
+                  <span className={`status-badge ${user.isActive ? "active" : "inactive"}`}>
+                    {user.isActive ? "Faol" : "Nofaol"}
+                  </span>
+                </div>
               </div>
-              <div className="user-actions">
-                <button type="button" className={`user-toggle-btn${user.isActive ? " active" : ""}`} onClick={() => toggleActive(user)} title={user.isActive ? "O'chirish" : "Faollashtirish"}>
-                  {user.isActive ? <Check size={14} /> : <Plus size={14} style={{ transform: "rotate(45deg)" }} />}
+              <div className="user-card-actions">
+                <button
+                  type="button"
+                  className={`action-btn ${user.isActive ? "toggle-on" : "toggle-off"}`}
+                  onClick={() => toggleActive(user)}
+                  title={user.isActive ? "Nofaol qilish" : "Faollashtirish"}
+                >
+                  {user.isActive ? <Check size={15} /> : <Plus size={15} style={{ transform: "rotate(45deg)" }} />}
                 </button>
-                <button type="button" className="user-edit-btn" onClick={() => openEdit(user)} title="Tahrirlash">
-                  <Edit3 size={14} />
+                <button
+                  type="button"
+                  className="action-btn edit"
+                  onClick={() => openEdit(user)}
+                  title="Tahrirlash"
+                >
+                  <Edit3 size={15} />
                 </button>
                 {user.id !== currentUser?.id && (
-                  <button type="button" className="user-delete-btn" onClick={() => deleteUser(user)} title="O'chirish">
-                    <Trash2 size={14} />
+                  <button
+                    type="button"
+                    className="action-btn delete"
+                    onClick={() => deleteUser(user)}
+                    title="O'chirish"
+                  >
+                    <Trash2 size={15} />
                   </button>
                 )}
               </div>
             </div>
           ))}
-          {users.length === 0 && <p className="empty-state">Foydalanuvchilar yo'q</p>}
+          {filtered.length === 0 && (
+            <p className="empty-state">
+              {search ? `"${search}" bo'yicha hech narsa topilmadi` : "Foydalanuvchilar yo'q"}
+            </p>
+          )}
         </div>
       )}
     </section>
@@ -3890,15 +3998,21 @@ function LoadingScreen({ message = "Yuklanmoqda..." }) {
 function ToastViewport({ items }) {
   if (!items.length) return null;
 
-  return (
-    <section className="toast-stack" aria-live="polite" aria-label="Xabarlar">
+  return createPortal(
+    <div className="toast-viewport" aria-live="polite" aria-label="Xabarlar">
       {items.map((item) => (
-        <article className={`toast ${item.type || "success"}`} key={item.id}>
-          <span>{item.type === "error" ? "!" : <Check size={14} />}</span>
-          <p>{item.message}</p>
-        </article>
+        <div key={item.id} className={`toast-item toast-${item.type || "success"}`}>
+          <span className="toast-icon">
+            {item.type === "error" && "✕"}
+            {item.type === "warning" && "!"}
+            {item.type === "info" && "i"}
+            {(!item.type || item.type === "success") && "✓"}
+          </span>
+          <p className="toast-message">{item.message}</p>
+        </div>
       ))}
-    </section>
+    </div>,
+    document.body
   );
 }
 
