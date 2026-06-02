@@ -268,11 +268,39 @@ const emptyDashboard = {
   contacts: []
 };
 
-async function api(path, options) {
+function isSuper(user) { return user?.role === "superadmin"; }
+function isAdmin(user) { return user?.role === "admin" || user?.role === "superadmin"; }
+
+function deptColor(deptName, departments) {
+  const dept = departments?.find((d) => d.name === deptName);
+  return dept?.color || "#94a3b8";
+}
+
+function hexToRgb(hex) {
+  const h = String(hex || "#94a3b8").replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16) || 148;
+  const g = parseInt(h.slice(2, 4), 16) || 163;
+  const b = parseInt(h.slice(4, 6), 16) || 184;
+  return `${r}, ${g}, ${b}`;
+}
+
+async function api(path, options = {}) {
+  const token = window.localStorage.getItem("authToken");
   const response = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
     ...options
   });
+
+  if (response.status === 401) {
+    window.localStorage.removeItem("currentUser");
+    window.localStorage.removeItem("authToken");
+    window.location.reload();
+    return;
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: "Server xatosi" }));
@@ -467,7 +495,8 @@ function App() {
   const [showAllOverview, setShowAllOverview] = useState(false);
   const [error, setError] = useState("");
   const [theme, setTheme] = useState(() => window.localStorage.getItem("theme") || "light");
-  const [currentUser, setCurrentUser] = useState(() => normalizeCurrentUser(readStoredJson("currentUser", null)));
+  const [currentUser, setCurrentUser] = useState(() => readStoredJson("currentUser", null));
+  const [departments, setDepartments] = useState([]);
   const [navDirection, setNavDirection] = useState("next");
   const [toasts, setToasts] = useState([]);
   const hasLoadedDashboard = useRef(false);
@@ -482,6 +511,13 @@ function App() {
     window.setTimeout(() => {
       setToasts((items) => items.filter((item) => item.id !== id));
     }, 3000);
+  }, []);
+
+  const loadDepartments = useCallback(async () => {
+    try {
+      const data = await api("/api/departments");
+      setDepartments(data?.departments || []);
+    } catch {}
   }, []);
 
   const loadDashboard = useCallback(async () => {
@@ -501,7 +537,8 @@ function App() {
 
   useEffect(() => {
     loadDashboard();
-  }, [loadDashboard]);
+    loadDepartments();
+  }, [loadDashboard, loadDepartments]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -544,16 +581,19 @@ function App() {
     };
   }, [menuOpen, notificationsOpen]);
 
-  function handleAuth(user) {
-    const nextUser = persistCurrentUser({
-      name: user.name.trim() || "Administrator",
-      email: user.email.trim() || "admin@uz24.local",
-      role: "Jadval administratori",
-      avatar: "",
-      ...createAuthTokens(user.email)
-    });
-    setCurrentUser(nextUser);
-    notify("Tizimga muvaffaqiyatli kirdingiz");
+  function handleAuth(user, token) {
+    const userData = {
+      id: user.id,
+      name: user.fullName,
+      username: user.username,
+      role: user.role,
+      email: `${user.username}@uz24.local`,
+      avatar: ""
+    };
+    window.localStorage.setItem("currentUser", JSON.stringify(userData));
+    window.localStorage.setItem("authToken", token);
+    setCurrentUser(userData);
+    notify(`Xush kelibsiz, ${user.fullName}!`);
   }
 
   function updateCurrentUser(nextUser) {
@@ -569,6 +609,7 @@ function App() {
 
   function handleLogout() {
     window.localStorage.removeItem("currentUser");
+    window.localStorage.removeItem("authToken");
     window.localStorage.removeItem("authTokens");
     setCurrentUser(null);
     setPage("weekly");
@@ -794,6 +835,7 @@ function App() {
     if (page === "documents") return "Hujjatlar";
     if (page === "monthly") return "Oylik grafik";
     if (page === "shooting") return "Tasvir jadvali";
+    if (page === "live") return "Jonli efir";
     if (page === "reports") return "Hisobotlar";
     if (page === "audit") return "Audit jurnal";
     if (page === "profile") return "Profil";
@@ -820,12 +862,12 @@ function App() {
           <Menu size={23} />
         </button>
         <div className="topbar-title">
-          {page === "weekly" && (
-            <span className="title-icon">
-              <CalendarDays size={17} />
-            </span>
-          )}
-          <h1>{title}</h1>
+          <img
+            src="/logo.svg"
+            alt="O'zbekiston 24"
+            className="topbar-logo"
+            onError={(e) => { e.target.style.display = "none"; }}
+          />
         </div>
         <button ref={notificationsButtonRef} className="icon-button" type="button" aria-label="Bildirishnomalar" onClick={() => {
           setNotificationsOpen((value) => !value);
@@ -847,6 +889,7 @@ function App() {
             {page === "weekly" && (
               <WeeklyPage
                 activeDay={activeDay}
+                currentUser={currentUser}
                 dashboard={dashboard}
                 onCreate={createSchedule}
                 onDeleteSchedule={deleteSchedule}
@@ -857,6 +900,9 @@ function App() {
             )}
             {page === "studio" && (
               <StudioPage
+                currentUser={currentUser}
+                departments={departments}
+                onLoadDepartments={loadDepartments}
                 dashboard={dashboard}
                 showAllOverview={showAllOverview}
                 onCreate={createSchedule}
@@ -873,6 +919,7 @@ function App() {
             {page === "monthly" && <MonthlyPage dashboard={dashboard} weekStart={weekStart} fullscreen onClose={closeMonthly} />}
             {page === "documents" && <DocumentsPage employees={dashboard.employees} onNotify={notify} onSaveEmployee={saveEmployee} />}
             {page === "shooting" && <ShootingPage onNotify={notify} />}
+            {page === "live" && <LivePage />}
             {page === "reports" && <ReportsPage dashboard={dashboard} />}
             {page === "audit" && <AuditPage />}
             {page === "profile" && (
@@ -900,82 +947,244 @@ function App() {
   );
 }
 
-function AuthPage({ onAuth, onNotify, theme, onThemeChange }) {
-  const [mode, setMode] = useState("login");
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
-  const [formError, setFormError] = useState("");
-  const formRef = useRef(null);
+function DepartmentTabs({ departments, active, onChange, currentUser, onManage }) {
+  return (
+    <div className="dept-tabs-wrapper">
+      <div className="dept-tabs">
+        <button
+          type="button"
+          className={`dept-tab${active === "all" ? " active" : ""}`}
+          style={active === "all"
+            ? { backgroundColor: "#6366f1", borderColor: "#6366f1", color: "#fff" }
+            : { borderColor: "#6366f1", color: "#6366f1" }}
+          onClick={() => onChange("all")}
+        >
+          Hammasi
+        </button>
+        {departments.map((dept) => (
+          <button
+            key={dept.id}
+            type="button"
+            className={`dept-tab${active === dept.name ? " active" : ""}`}
+            style={active === dept.name
+              ? { backgroundColor: dept.color, borderColor: dept.color, color: "#fff" }
+              : { borderColor: dept.color, color: dept.color }}
+            onClick={() => onChange(dept.name)}
+          >
+            {dept.label}
+          </button>
+        ))}
+      </div>
+      {isSuper(currentUser) && (
+        <button
+          type="button"
+          className="dept-manage-btn"
+          onClick={onManage}
+          title="Bo'limlarni boshqarish"
+          aria-label="Bo'limlarni boshqarish"
+        >
+          ⚙️
+        </button>
+      )}
+    </div>
+  );
+}
 
-  function submit(event) {
+const DEPT_COLORS = [
+  "#6366f1", "#8b5cf6", "#ec4899", "#f43f5e",
+  "#f97316", "#eab308", "#22c55e", "#14b8a6",
+  "#3b82f6", "#06b6d4", "#84cc16", "#a855f7"
+];
+
+function DepartmentManagerModal({ departments, onClose, onSave, onDelete, onNotify }) {
+  const [draft, setDraft] = useState({ label: "", color: "#6366f1" });
+  const [loading, setLoading] = useState(false);
+
+  function toSlug(text) {
+    return text
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, "")
+      .replace(/\s+/g, "_")
+      .slice(0, 20)
+      .replace(/^_+|_+$/g, "");
+  }
+
+  async function addDept(event) {
     event.preventDefault();
-    const email = form.email.trim();
-    const password = form.password.trim();
-    const name = form.name.trim();
-
-    if (mode === "register" && name.length < 3) {
-      setFormError("Ism familiyani kiriting.");
-      onNotify("Ism familiyani kiriting.", "error");
-      formRef.current?.querySelector("[name='auth-name']")?.focus();
+    if (!draft.label.trim()) {
+      onNotify("Bo'lim nomini kiriting", "error");
       return;
     }
+    setLoading(true);
+    try {
+      await api("/api/departments", {
+        method: "POST",
+        body: JSON.stringify({
+          name: toSlug(draft.label),
+          label: draft.label.trim(),
+          color: draft.color
+        })
+      });
+      setDraft({ label: "", color: "#6366f1" });
+      onSave();
+      onNotify("Bo'lim qo'shildi");
+    } catch (err) {
+      onNotify(err.message, "error");
+    } finally {
+      setLoading(false);
+    }
+  }
 
-    if (!email || !email.includes("@")) {
-      setFormError("Email manzilni to'g'ri kiriting.");
-      onNotify("Email manzilni to'g'ri kiriting.", "error");
-      formRef.current?.querySelector("[name='auth-email']")?.focus();
+  async function deleteDept(dept) {
+    if (!window.confirm(`"${dept.label}" bo'limini o'chirasizmi?`)) return;
+    try {
+      await api(`/api/departments/${dept.id}`, { method: "DELETE" });
+      onDelete();
+      onNotify("Bo'lim o'chirildi");
+    } catch (err) {
+      onNotify(err.message, "error");
+    }
+  }
+
+  return createPortal((
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Bo'limlarni boshqarish" onClick={onClose}>
+      <div className="schedule-modal" style={{ maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <strong>Bo'limlarni boshqarish</strong>
+          <button type="button" onClick={onClose}>
+            <LogOut size={15} />
+            Chiqish
+          </button>
+        </div>
+
+        <div className="dept-list">
+          {departments.map((dept) => (
+            <div key={dept.id} className="dept-list-row">
+              <span className="dept-color-dot" style={{ backgroundColor: dept.color }} />
+              <strong style={{ fontSize: "0.88rem" }}>{dept.label}</strong>
+              <span className="dept-slug">@{dept.name}</span>
+              <button
+                type="button"
+                className="dept-delete-btn"
+                onClick={() => deleteDept(dept)}
+                title="O'chirish"
+              >
+                🗑
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <form className="dept-add-form" onSubmit={addDept}>
+          <strong>Yangi bo'lim qo'shish</strong>
+          <label>
+            Bo'lim nomi
+            <input
+              value={draft.label}
+              onChange={(e) => setDraft({ ...draft, label: e.target.value })}
+              placeholder="Masalan: Montaj bo'limi"
+            />
+          </label>
+          <div className="color-picker">
+            <span>Rang:</span>
+            {DEPT_COLORS.map((color) => (
+              <button
+                key={color}
+                type="button"
+                className={`color-dot${draft.color === color ? " selected" : ""}`}
+                style={{ backgroundColor: color }}
+                onClick={() => setDraft({ ...draft, color })}
+                aria-label={color}
+              />
+            ))}
+          </div>
+          {draft.label.trim() && (
+            <div className="dept-preview">
+              <span>Ko'rinishi:</span>
+              <button
+                type="button"
+                className="dept-tab active"
+                style={{ backgroundColor: draft.color, borderColor: draft.color, color: "#fff" }}
+              >
+                {draft.label}
+              </button>
+            </div>
+          )}
+          <button type="submit" disabled={loading}>
+            <Plus size={15} />
+            {loading ? "Qo'shilmoqda..." : "Qo'shish"}
+          </button>
+        </form>
+      </div>
+    </div>
+  ), document.body);
+}
+
+function AuthPage({ onAuth, onNotify, theme, onThemeChange }) {
+  const [form, setForm] = useState({ username: "", password: "" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(event) {
+    event.preventDefault();
+    if (!form.username.trim() || !form.password.trim()) {
+      setError("Login va parolni kiriting");
       return;
     }
-
-    if (password.length < 6) {
-      setFormError("Parol kamida 6 ta belgidan iborat bo'lishi kerak.");
-      onNotify("Parol kamida 6 ta belgidan iborat bo'lishi kerak.", "error");
-      formRef.current?.querySelector("[name='auth-password']")?.focus();
-      return;
+    setLoading(true);
+    setError("");
+    try {
+      const data = await api("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify(form)
+      });
+      onAuth(data.user, data.token);
+    } catch (err) {
+      setError(err.message || "Login yoki parol noto'g'ri");
+    } finally {
+      setLoading(false);
     }
-
-    setFormError("");
-    onAuth(form);
   }
 
   return (
     <main className="auth-shell">
       <section className="auth-panel">
         <div className="auth-brand">
-          <span><ShieldCheck size={24} /></span>
+          <img
+            src="/logo.svg"
+            alt="O'zbekiston 24"
+            className="auth-logo"
+            onError={(e) => { e.target.style.display = "none"; }}
+          />
           <div>
             <strong>O'zbekiston 24</strong>
-            <p>Tasvirga olish jadvali boshqaruvi</p>
+            <p>Ish jadvali boshqaruvi</p>
           </div>
         </div>
-        <div className="auth-tabs">
-          <button className={mode === "login" ? "active" : ""} type="button" onClick={() => {
-            setMode("login");
-            setFormError("");
-          }}>Login</button>
-          <button className={mode === "register" ? "active" : ""} type="button" onClick={() => {
-            setMode("register");
-            setFormError("");
-          }}>Register</button>
-        </div>
-        <form ref={formRef} className="auth-form" onSubmit={submit}>
-          {mode === "register" && (
-            <label>
-              Ism familiya
-              <input name="auth-name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Administrator" />
-            </label>
-          )}
+        <form className="auth-form" onSubmit={submit}>
           <label>
-            Email
-            <input name="auth-email" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} placeholder="admin@uz24.local" />
+            Login
+            <input
+              value={form.username}
+              onChange={(e) => setForm({ ...form, username: e.target.value })}
+              placeholder="superadmin"
+              autoComplete="username"
+            />
           </label>
           <label>
             Parol
-            <input name="auth-password" type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} placeholder="Kamida 6 belgi" />
+            <input
+              type="password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              placeholder="••••••••"
+              autoComplete="current-password"
+            />
           </label>
-          {formError && <p className="auth-error">{formError}</p>}
-          <button type="submit">
+          {error && <p className="auth-error">{error}</p>}
+          <button type="submit" disabled={loading}>
             <LogIn size={17} />
-            {mode === "login" ? "Kirish" : "Ro'yxatdan o'tish"}
+            {loading ? "Kirish..." : "Kirish"}
           </button>
         </form>
         <button className="theme-switch" type="button" onClick={() => onThemeChange(theme === "dark" ? "light" : "dark")}>
@@ -1234,6 +1443,43 @@ function ShootingPage({ onNotify }) {
     onNotify("Tasvir jadvaliga yangi qator qo'shildi");
   }
 
+  async function downloadWord() {
+    try {
+      const exportRows = rows.map((row) => ({
+        cameraNumber: row.camera || "",
+        exitTime: row.time || "",
+        operatorsText: row.operatorsText || "",
+        topic: row.topic || "",
+        reportersText: row.reportersText || "",
+        equipment: row.equipment || "HD jamlanmasi, mikrofon, chiroq, avtotransport"
+      }));
+      const response = await fetch("/api/filming/export-word", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${window.localStorage.getItem("authToken")}`
+        },
+        body: JSON.stringify({ date: new Date().toISOString(), approvedBy: "M. Safarov", rows: exportRows })
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ message: "Server xatosi" }));
+        throw new Error(err.message || "Server xatosi");
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `tasvirga-olish-jadvali-${new Date().toISOString().slice(0, 10)}.docx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      onNotify("Word fayl tayyorlandi");
+    } catch (err) {
+      onNotify("Word yaratishda xato: " + err.message, "error");
+    }
+  }
+
   function downloadExcel() {
     const body = rows.map((row) => `
       <tr><td colspan="3"><b>Kerakli jihoz va texnika:</b></td><td colspan="2"><b>${escapeHtml(row.equipment)}</b></td></tr>
@@ -1279,12 +1525,16 @@ function ShootingPage({ onNotify }) {
             <Plus size={17} />
             Yangi jadval
           </button>
+          <button type="button" onClick={downloadWord}>
+            <FileText size={17} />
+            Word
+          </button>
           <button type="button" onClick={downloadExcel}>
-            <Save size={17} />
+            <FileSpreadsheet size={17} />
             Excel
           </button>
           <button type="button" onClick={() => window.print()}>
-            <FileText size={17} />
+            <Save size={17} />
             Print
           </button>
         </div>
@@ -1575,7 +1825,7 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose }) {
   ), document.body);
 }
 
-function WeeklyPage({ activeDay, dashboard, onCreate, onDeleteSchedule, onDayChange, onOpenMonthly, onStatusChange }) {
+function WeeklyPage({ activeDay, currentUser, dashboard, onCreate, onDeleteSchedule, onDayChange, onOpenMonthly, onStatusChange }) {
   const [openMetric, setOpenMetric] = useState("");
   const [openGroups, setOpenGroups] = useState(() => new Set());
   const [selectedPerson, setSelectedPerson] = useState(null);
@@ -1701,11 +1951,13 @@ function WeeklyPage({ activeDay, dashboard, onCreate, onDeleteSchedule, onDayCha
         )) : <EmptyCard text="Bu kunga jadval kiritilmagan" />}
       </section>
 
-      <button className="create-button" type="button" onClick={onCreate}>
-        <RefreshCcw size={17} />
-        Yangi jadval yaratish
-      </button>
-      {dashboard.week.saved && (
+      {isAdmin(currentUser) && (
+        <button className="create-button" type="button" onClick={onCreate}>
+          <RefreshCcw size={17} />
+          Yangi jadval yaratish
+        </button>
+      )}
+      {isSuper(currentUser) && dashboard.week.saved && (
         <button className="danger-button" type="button" onClick={onDeleteSchedule}>
           <Trash2 size={17} />
           Joriy jadvalni o'chirish
@@ -1725,9 +1977,10 @@ function WeeklyPage({ activeDay, dashboard, onCreate, onDeleteSchedule, onDayCha
   );
 }
 
-function StudioPage({ dashboard, onCreate, onDeleteEmployee, onNotify, onSaveEmployee }) {
+function StudioPage({ currentUser, departments, onLoadDepartments, dashboard, onCreate, onDeleteEmployee, onNotify, onSaveEmployee }) {
   const blankEmployee = { name: "", role: "", phone: "", telegram: "", department: "operator", avatar: "", portfolio: [] };
   const [activeDepartment, setActiveDepartment] = useState("all");
+  const [deptModalOpen, setDeptModalOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [employeeModalOpen, setEmployeeModalOpen] = useState(false);
@@ -1806,34 +2059,37 @@ function StudioPage({ dashboard, onCreate, onDeleteEmployee, onNotify, onSaveEmp
       </label>
 
       <div className="team-actions">
-        <button type="button" onClick={openAddEmployee}>
-          <Plus size={15} />
-          Yangi Xodim Qo'shish
-        </button>
-        <button className="primary" type="button" onClick={() => setScheduleModalOpen(true)}>
-          <CalendarDays size={15} />
-          Yangi Jadval Yaratish
-        </button>
+        {isAdmin(currentUser) && (
+          <button type="button" onClick={openAddEmployee}>
+            <Plus size={15} />
+            Yangi Xodim Qo'shish
+          </button>
+        )}
+        {isAdmin(currentUser) && (
+          <button className="primary" type="button" onClick={() => setScheduleModalOpen(true)}>
+            <CalendarDays size={15} />
+            Yangi Jadval Yaratish
+          </button>
+        )}
       </div>
 
-      <div className="team-tabs" role="tablist" aria-label="Bo'lim filterlari">
-        <button className={activeDepartment === "all" ? "active" : ""} type="button" onClick={() => setActiveDepartment("all")}>[HAMMASI]</button>
-        {DEPARTMENTS.map((department) => (
-          <button className={activeDepartment === department.id ? "active" : ""} type="button" key={department.id} onClick={() => setActiveDepartment(department.id)}>
-            [{department.shortLabel.toUpperCase()}]
-          </button>
-        ))}
-      </div>
+      <DepartmentTabs
+        departments={departments}
+        active={activeDepartment}
+        onChange={setActiveDepartment}
+        currentUser={currentUser}
+        onManage={() => setDeptModalOpen(true)}
+      />
 
       <section className="team-list">
         {visibleEmployees.length ? visibleEmployees.map((employee) => {
-          const department = departmentMeta(employee.department);
+          const dynDept = departments.find((d) => d.name === employee.department);
           return (
             <button
               className="team-member-row"
               type="button"
               key={employee.id}
-              style={{ borderLeftColor: { pull: "#6366f1", operator: "#22c55e", dron: "#f97316", tjk: "#eab308" }[employee.department] || "#94a3b8" }}
+              style={{ borderLeftColor: deptColor(employee.department, departments) }}
               onClick={() => setSelectedPerson(employee)}
             >
               <Avatar person={employee} />
@@ -1841,8 +2097,8 @@ function StudioPage({ dashboard, onCreate, onDeleteEmployee, onNotify, onSaveEmp
                 <strong>{employee.name}</strong>
                 <span>{employee.role || "Operator"}</span>
               </div>
-              <span className="dept-badge" style={{ background: { pull: "#eef2ff", operator: "#f0fdf4", dron: "#fff7ed", tjk: "#fefce8" }[employee.department] || "#f1f5f9", color: { pull: "#6366f1", operator: "#16a34a", dron: "#ea580c", tjk: "#ca8a04" }[employee.department] || "#64748b" }}>
-                {department.shortLabel}
+              <span className="dept-badge" style={{ background: `rgba(${hexToRgb(deptColor(employee.department, departments))}, 0.12)`, color: deptColor(employee.department, departments) }}>
+                {dynDept?.label || employee.department}
               </span>
             </button>
           );
@@ -1851,6 +2107,7 @@ function StudioPage({ dashboard, onCreate, onDeleteEmployee, onNotify, onSaveEmp
 
       {selectedPerson && (
         <TeamPersonModal
+          currentUser={currentUser}
           person={selectedPerson}
           assignments={dashboard.groups.flatMap((group) => group.people
             .filter((person) => String(person.id) === String(selectedPerson.id))
@@ -1885,8 +2142,8 @@ function StudioPage({ dashboard, onCreate, onDeleteEmployee, onNotify, onSaveEmp
             <label>
               Bo'lim
               <select value={draft.department || "operator"} onChange={(event) => setDraft({ ...draft, department: event.target.value })}>
-                {DEPARTMENTS.map((department) => (
-                  <option key={department.id} value={department.id}>{department.label}</option>
+                {(departments.length > 0 ? departments : DEPARTMENTS.map((d) => ({ name: d.id, label: d.label }))).map((dept) => (
+                  <option key={dept.name || dept.id} value={dept.name || dept.id}>{dept.label}</option>
                 ))}
               </select>
             </label>
@@ -1941,11 +2198,21 @@ function StudioPage({ dashboard, onCreate, onDeleteEmployee, onNotify, onSaveEmp
           </section>
         </div>
       ), document.body)}
+
+      {deptModalOpen && (
+        <DepartmentManagerModal
+          departments={departments}
+          onClose={() => setDeptModalOpen(false)}
+          onSave={() => { onLoadDepartments(); setDeptModalOpen(false); }}
+          onDelete={() => onLoadDepartments()}
+          onNotify={onNotify}
+        />
+      )}
     </section>
   );
 }
 
-function TeamPersonModal({ assignments = [], onClose, onDelete, onEdit, person }) {
+function TeamPersonModal({ assignments = [], currentUser, onClose, onDelete, onEdit, person }) {
   const department = departmentMeta(person.department);
   const kpi = calculateEfficiency(assignments);
   const [documentMode, setDocumentMode] = useState("word");
@@ -1992,14 +2259,18 @@ function TeamPersonModal({ assignments = [], onClose, onDelete, onEdit, person }
             <i><b style={{ width: `${kpi}%` }} /></i>
           </section>
           <div className="team-person-actions">
-            <button type="button" onClick={() => onEdit(person)}>
-              <Edit3 size={15} />
-              TAHRIRLASH
-            </button>
-            <button className="danger" type="button" onClick={() => onDelete(person.id)}>
-              <Trash2 size={15} />
-              O'CHIRISH
-            </button>
+            {isAdmin(currentUser) && (
+              <button type="button" onClick={() => onEdit(person)}>
+                <Edit3 size={15} />
+                TAHRIRLASH
+              </button>
+            )}
+            {isSuper(currentUser) && (
+              <button className="danger" type="button" onClick={() => onDelete(person.id)}>
+                <Trash2 size={15} />
+                O'CHIRISH
+              </button>
+            )}
           </div>
         </article>
         <EmployeeDocumentView employee={person} assignments={assignments} mode={documentMode} />
@@ -2932,6 +3203,7 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
   const [draft, setDraft] = useState(currentUser);
   const [contactDraft, setContactDraft] = useState({ type: "Muxbir", name: "", vehicle: "", phone: "" });
   const [contactFormOpen, setContactFormOpen] = useState(false);
+  const [contactSearch, setContactSearch] = useState("");
   const [todaySlide, setTodaySlide] = useState(0);
   const [selectedDate, setSelectedDate] = useState(() => toInputDate(new Date()));
   const formRef = useRef(null);
@@ -3041,6 +3313,10 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
       setContactFormOpen(false);
     }
   }
+
+  const filteredContacts = contactSearch.trim()
+    ? contacts.filter((c) => [c.name, c.vehicle, c.phone, c.type].join(" ").toLowerCase().includes(contactSearch.trim().toLowerCase()))
+    : contacts;
 
   return (
     <section className="profile-page">
@@ -3191,14 +3467,33 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
             <Phone size={18} />
             <strong>Haydovchilar va muxbirlar</strong>
           </div>
-          <button type="button" onClick={() => setContactFormOpen(true)}>
-            <Plus size={16} />
-            Qo'shish
-          </button>
+          {isAdmin(currentUser) && (
+            <button type="button" onClick={() => setContactFormOpen(true)}>
+              <Plus size={16} />
+              Qo'shish
+            </button>
+          )}
         </div>
 
+        <div className="contact-search">
+          <Search size={15} />
+          <input
+            value={contactSearch}
+            onChange={(e) => setContactSearch(e.target.value)}
+            placeholder="Ism yoki telefon bo'yicha qidirish..."
+          />
+          {contactSearch && (
+            <button type="button" className="contact-search-clear" onClick={() => setContactSearch("")}>✕</button>
+          )}
+        </div>
+        {contactSearch && (
+          <p className="contact-search-count">
+            {contacts.filter((c) => [c.name, c.vehicle, c.phone, c.type].join(" ").toLowerCase().includes(contactSearch.trim().toLowerCase())).length} ta natija
+          </p>
+        )}
+
         <div className="contact-list">
-          {contacts.length ? contacts.map((contact) => (
+          {filteredContacts.length ? filteredContacts.map((contact) => (
             <article key={contact.id} className="contact-row">
               <span className={contact.type === "Haydovchi" ? "driver" : ""}>
                 {contact.type === "Haydovchi" ? <Car size={16} /> : <User size={16} />}
@@ -3211,11 +3506,13 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
                   {contact.phone}
                 </a>
               </div>
-              <button type="button" aria-label="Kontaktni o'chirish" onClick={() => onDeleteContact(contact.id)}>
-                <Trash2 size={16} />
-              </button>
+              {isAdmin(currentUser) && (
+                <button type="button" aria-label="Kontaktni o'chirish" onClick={() => onDeleteContact(contact.id)}>
+                  <Trash2 size={16} />
+                </button>
+              )}
             </article>
-          )) : <EmptyCard text="Kontaktlar hali kiritilmagan" />}
+          )) : <EmptyCard text={contactSearch ? `"${contactSearch}" bo'yicha natija topilmadi` : "Kontaktlar hali kiritilmagan"} />}
         </div>
       </section>
 
@@ -3371,6 +3668,73 @@ function EmptyCard({ text }) {
   );
 }
 
+function LivePage() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+  const CHANNEL_ID = "UCi3kNKp7aqiLQ8O6E6lV1KQ";
+  const liveUrl = `https://www.youtube.com/embed/live_stream?channel=${CHANNEL_ID}&autoplay=1&mute=0`;
+
+  return (
+    <section className="live-page">
+      <div className="live-header">
+        <div className="live-badge">
+          <span className="live-dot" />
+          JONLI EFIR
+        </div>
+        <h2>O'zbekiston 24</h2>
+        <p>Milliy telekanal — jonli translatsiya</p>
+      </div>
+
+      <div className="live-player-wrapper">
+        {isLoading && !hasError && (
+          <div className="live-loading">
+            <div className="live-spinner" />
+            <p>Efir yuklanmoqda...</p>
+          </div>
+        )}
+        {hasError ? (
+          <div className="live-error">
+            <span>📡</span>
+            <p>Efirga ulanib bo'lmadi</p>
+            <p className="live-error-sub">YouTube da to'g'ridan ko'rish uchun:</p>
+            <a
+              href="https://www.youtube.com/@uzbekiston24tv/live"
+              target="_blank"
+              rel="noreferrer"
+              className="live-yt-link"
+            >
+              YouTube da ochish →
+            </a>
+          </div>
+        ) : (
+          <iframe
+            className="live-iframe"
+            src={liveUrl}
+            title="O'zbekiston 24 Jonli Efir"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            onLoad={() => setIsLoading(false)}
+            onError={() => { setIsLoading(false); setHasError(true); }}
+          />
+        )}
+      </div>
+
+      <div className="live-links">
+        <p>Boshqa platformalarda ko'rish:</p>
+        <div className="live-link-grid">
+          <a href="https://www.youtube.com/@uzbekiston24tv/live" target="_blank" rel="noreferrer">
+            📺 YouTube
+          </a>
+          <a href="https://uzbekiston24.tv" target="_blank" rel="noreferrer">
+            🌐 Rasmiy sayt
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function MenuPanel({ onClose, onPageChange, onOpenMonthly, panelRef }) {
   const links = [
     ["weekly", "Ish jadvali", CalendarDays],
@@ -3378,6 +3742,7 @@ function MenuPanel({ onClose, onPageChange, onOpenMonthly, panelRef }) {
     ["documents", "Hujjatlar", ShieldCheck],
     ["monthly", "Oylik grafik", Clock3],
     ["shooting", "Tasvir jadvali", FileText],
+    ["live", "Jonli efir", PlayCircle],
     ["reports", "Hisobotlar", ChartColumn],
     ["audit", "Audit jurnal", ShieldCheck],
     ["profile", "Profil", User]

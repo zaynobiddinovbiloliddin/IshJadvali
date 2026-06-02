@@ -5,7 +5,10 @@ import morgan from "morgan";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { join, dirname } from "path";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
 import { startTelegramBot } from "./src/telegram-bot.mjs";
+import { buildFilmingScheduleDocx } from "./src/word-export.mjs";
 
 dotenv.config();
 
@@ -932,6 +935,30 @@ async function scanAttendance(payload) {
   return { action: "checkin", employee: scheduleEmployee(employee), record, dashboard };
 }
 
+// ─── Auth middleware ──────────────────────────────────────────────────────────
+
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!token) return res.status(401).json({ message: "Autentifikatsiya talab qilinadi" });
+
+  try {
+    req.user = jwt.verify(token, process.env.JWT_SECRET || "ishjadvali_secret_key");
+    next();
+  } catch {
+    return res.status(401).json({ message: "Token yaroqsiz yoki muddati o'tgan" });
+  }
+}
+
+function requireRole(...roles) {
+  return (req, res, next) => {
+    if (!req.user || !roles.includes(req.user.role)) {
+      return res.status(403).json({ message: "Ruxsat yo'q" });
+    }
+    next();
+  };
+}
+
 // ─── Error wrapper ────────────────────────────────────────────────────────────
 
 function wrap(fn) {
@@ -945,6 +972,129 @@ function wrap(fn) {
 }
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
+
+// ─── Auth routes ─────────────────────────────────────────────────────────────
+
+app.post(
+  "/api/auth/login",
+  wrap(async (req, res) => {
+    const { username, password } = req.body || {};
+    if (!username || !password) {
+      return res.status(400).json({ success: false, message: "Login va parolni kiriting" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { username: String(username).trim() } });
+    if (!user || !user.isActive) {
+      return res.status(401).json({ success: false, message: "Login yoki parol noto'g'ri" });
+    }
+
+    const valid = await bcrypt.compare(String(password), user.password);
+    if (!valid) {
+      return res.status(401).json({ success: false, message: "Login yoki parol noto'g'ri" });
+    }
+
+    const payload = { id: user.id, username: user.username, role: user.role, fullName: user.fullName };
+    const token = jwt.sign(payload, process.env.JWT_SECRET || "ishjadvali_secret_key", { expiresIn: "7d" });
+
+    res.json({
+      success: true,
+      user: payload,
+      token
+    });
+  })
+);
+
+app.get(
+  "/api/auth/me",
+  authenticateToken,
+  wrap(async (req, res) => {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { id: true, username: true, role: true, fullName: true, isActive: true }
+    });
+    if (!user || !user.isActive) {
+      return res.status(401).json({ message: "Foydalanuvchi topilmadi" });
+    }
+    res.json({ user });
+  })
+);
+
+// ─── Department routes ────────────────────────────────────────────────────────
+
+app.get(
+  "/api/departments",
+  wrap(async (req, res) => {
+    const departments = await prisma.department.findMany({
+      where: { isActive: true },
+      orderBy: { createdAt: "asc" }
+    });
+    res.json({ departments });
+  })
+);
+
+app.post(
+  "/api/departments",
+  authenticateToken,
+  requireRole("superadmin"),
+  wrap(async (req, res) => {
+    const { name, label, color } = req.body || {};
+    if (!name?.trim()) return res.status(400).json({ message: "Bo'lim kodi (name) kiritilmadi" });
+    if (!label?.trim()) return res.status(400).json({ message: "Bo'lim nomi (label) kiritilmadi" });
+
+    const slug = String(name).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 32);
+    const department = await prisma.department.upsert({
+      where: { name: slug },
+      update: { label: label.trim(), color: color || "#6366f1", isActive: true },
+      create: { name: slug, label: label.trim(), color: color || "#6366f1" }
+    });
+
+    await writeAudit("create", "Department", department.id, department.label);
+    res.status(201).json({ department });
+  })
+);
+
+app.put(
+  "/api/departments/:id",
+  authenticateToken,
+  requireRole("superadmin"),
+  wrap(async (req, res) => {
+    const { label, color } = req.body || {};
+    const department = await prisma.department.update({
+      where: { id: Number(req.params.id) },
+      data: {
+        ...(label?.trim() ? { label: label.trim() } : {}),
+        ...(color ? { color } : {})
+      }
+    });
+    await writeAudit("update", "Department", department.id, department.label);
+    res.json({ department });
+  })
+);
+
+app.delete(
+  "/api/departments/:id",
+  authenticateToken,
+  requireRole("superadmin"),
+  wrap(async (req, res) => {
+    const department = await prisma.department.findUnique({ where: { id: Number(req.params.id) } });
+    if (!department) return res.status(404).json({ message: "Bo'lim topilmadi" });
+
+    const employeeCount = await prisma.employee.count({
+      where: { department: department.name, isActive: true }
+    });
+    if (employeeCount > 0) {
+      return res.status(400).json({
+        message: `Bu bo'limda ${employeeCount} ta xodim bor, avval ularni boshqa bo'limga o'tkazing`
+      });
+    }
+
+    await prisma.department.update({ where: { id: Number(req.params.id) }, data: { isActive: false } });
+    await writeAudit("delete", "Department", department.id, department.label);
+    res.json({ ok: true });
+  })
+);
+
+// ─── Health ───────────────────────────────────────────────────────────────────
 
 app.get(
   "/api/health",
@@ -971,6 +1121,8 @@ app.get(
 
 app.post(
   "/api/employees",
+  authenticateToken,
+  requireRole("superadmin", "admin"),
   wrap(async (req, res) => {
     res.status(201).json(await createEmployee(req.body));
   })
@@ -978,6 +1130,8 @@ app.post(
 
 app.put(
   "/api/employees/:id",
+  authenticateToken,
+  requireRole("superadmin", "admin"),
   wrap(async (req, res) => {
     res.json(await updateEmployee(req.params.id, req.body));
   })
@@ -985,6 +1139,8 @@ app.put(
 
 app.delete(
   "/api/employees/:id",
+  authenticateToken,
+  requireRole("superadmin"),
   wrap(async (req, res) => {
     res.json(await deleteEmployee(req.params.id));
   })
@@ -1000,6 +1156,8 @@ app.get(
 
 app.post(
   "/api/contacts",
+  authenticateToken,
+  requireRole("superadmin", "admin"),
   wrap(async (req, res) => {
     res.status(201).json(await saveContact(req.body));
   })
@@ -1007,6 +1165,8 @@ app.post(
 
 app.delete(
   "/api/contacts/:id",
+  authenticateToken,
+  requireRole("superadmin", "admin"),
   wrap(async (req, res) => {
     res.json(await deleteContact(decodeURIComponent(req.params.id)));
   })
@@ -1036,6 +1196,8 @@ app.get(
 
 app.post(
   "/api/schedules/generate",
+  authenticateToken,
+  requireRole("superadmin", "admin"),
   wrap(async (req, res) => {
     res.status(201).json(await generateAndStoreSchedule(req.body.weekStart));
   })
@@ -1050,6 +1212,8 @@ app.get(
 
 app.delete(
   "/api/schedules/:weekStart",
+  authenticateToken,
+  requireRole("superadmin"),
   wrap(async (req, res) => {
     res.json(await deleteSchedule(req.params.weekStart));
   })
@@ -1057,6 +1221,8 @@ app.delete(
 
 app.post(
   "/api/schedules/:weekStart/groups",
+  authenticateToken,
+  requireRole("superadmin", "admin"),
   wrap(async (req, res) => {
     res.status(201).json(await addScheduleGroup(req.params.weekStart, req.body));
   })
@@ -1064,6 +1230,8 @@ app.post(
 
 app.put(
   "/api/schedules/:weekStart/status",
+  authenticateToken,
+  requireRole("superadmin", "admin"),
   wrap(async (req, res) => {
     res.json(await updatePersonStatus(req.params.weekStart, req.body));
   })
@@ -1077,6 +1245,32 @@ app.get(
       take: 100
     });
     res.json({ logs });
+  })
+);
+
+// ─── Word export ─────────────────────────────────────────────────────────────
+
+app.post(
+  "/api/filming/export-word",
+  authenticateToken,
+  wrap(async (req, res) => {
+    const { date, approvedBy, rows } = req.body || {};
+    const buffer = await buildFilmingScheduleDocx({
+      date: date ? new Date(date) : new Date(),
+      approvedBy: approvedBy || "M. Safarov",
+      rows: rows || []
+    });
+    const today = new Date().toISOString().slice(0, 10);
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    res.setHeader("Content-Disposition", `attachment; filename="tasvirga-olish-jadvali-${today}.docx"`);
+    res.send(buffer);
+    await prisma.auditLog.create({
+      data: {
+        action: "EXPORT",
+        entity: "FilmingSchedule",
+        details: `Word export: ${today}, ${rows?.length || 0} qator, user: ${req.user.username}`
+      }
+    });
   })
 );
 

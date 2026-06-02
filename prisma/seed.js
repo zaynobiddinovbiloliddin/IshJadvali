@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -119,6 +120,43 @@ async function main() {
     });
     console.log("✓ Seeded 2 contacts");
   }
+
+  const departmentsToSeed = [
+    { name: "pull", label: "Pull xizmati", color: "#6366f1" },
+    { name: "operator", label: "Operatorlar", color: "#22c55e" },
+    { name: "dron", label: "Dron bo'limi", color: "#f97316" },
+    { name: "tjk", label: "TJK guruhi", color: "#eab308" }
+  ];
+
+  for (const dept of departmentsToSeed) {
+    await prisma.department.upsert({
+      where: { name: dept.name },
+      update: {},
+      create: dept
+    });
+  }
+  console.log("✓ Seeded 4 departments");
+
+  const usersToSeed = [
+    { username: "superadmin", password: "Super@2025", role: "superadmin", fullName: "Super Administrator" },
+    { username: "admin01", password: "Admin@2025", role: "admin", fullName: "Jadval Administratori" },
+    { username: "operator01", password: "Staff@2025", role: "xodim", fullName: "Abdugafforov A." }
+  ];
+
+  for (const userData of usersToSeed) {
+    const hashed = await bcrypt.hash(userData.password, 10);
+    await prisma.user.upsert({
+      where: { username: userData.username },
+      update: {},
+      create: {
+        username: userData.username,
+        password: hashed,
+        role: userData.role,
+        fullName: userData.fullName
+      }
+    });
+  }
+  console.log("✓ Seeded 3 users (superadmin, admin01, operator01)");
 
   console.log("Seed complete.");
 }
