@@ -705,7 +705,6 @@ function App() {
     setLoadingMessage("Xodim o'chirilmoqda...");
     setGenerating(true);
     setError("");
-
     try {
       await api(`/api/employees/${id}`, { method: "DELETE" });
       await loadDashboard();
@@ -835,10 +834,10 @@ function App() {
     if (page === "documents") return "Hujjatlar";
     if (page === "monthly") return "Oylik grafik";
     if (page === "shooting") return "Tasvir jadvali";
-    if (page === "live") return "Jonli efir";
     if (page === "reports") return "Hisobotlar";
     if (page === "audit") return "Audit jurnal";
     if (page === "profile") return "Profil";
+    if (page === "users") return "Foydalanuvchilar";
     return "Ish jadvali";
   }, [page]);
 
@@ -851,97 +850,148 @@ function App() {
     );
   }
 
+  const sidebarLinks = [
+    ["weekly", "Ish jadvali", CalendarDays],
+    ["studio", "Jamoa va bo'limlar", UsersRound],
+    ["documents", "Hujjatlar", ShieldCheck],
+    ["monthly", "Oylik grafik", Clock3],
+    ["shooting", "Tasvir jadvali", FileText],
+    ["reports", "Hisobotlar", ChartColumn],
+    ["audit", "Audit jurnal", ShieldCheck],
+    ...(isSuper(currentUser) ? [["users", "Foydalanuvchilar", UserCheck]] : []),
+    ["profile", "Profil", User]
+  ];
+
   return (
     <div className="app-shell">
       {generating && <LoadingScreen message={loadingMessage} />}
-      <header className="topbar">
-        <button ref={menuButtonRef} className="icon-button" type="button" aria-label="Menyu" onClick={() => {
-          setMenuOpen((value) => !value);
-          setNotificationsOpen(false);
-        }}>
-          <Menu size={23} />
-        </button>
-        <div className="topbar-title">
-          <img
-            src="/logo.svg"
-            alt="O'zbekiston 24"
-            className="topbar-logo"
+
+      <aside className="desktop-sidebar">
+        <div className="desktop-sidebar-brand">
+          <img src="/logo.svg" alt="O'zbekiston 24"
             onError={(e) => { e.target.style.display = "none"; }}
           />
         </div>
-        <button ref={notificationsButtonRef} className="icon-button" type="button" aria-label="Bildirishnomalar" onClick={() => {
-          setNotificationsOpen((value) => !value);
-          setMenuOpen(false);
-        }}>
-          <Bell size={20} fill="currentColor" />
-        </button>
-      </header>
+        <nav className="desktop-sidebar-nav">
+          {sidebarLinks.map(([id, label, Icon]) => (
+            <button
+              key={id}
+              type="button"
+              className={`desktop-sidebar-btn${page === id ? " active" : ""}`}
+              onClick={() => { if (id === "monthly") openMonthly(); else setPage(id); }}
+            >
+              <Icon size={18} />
+              {label}
+            </button>
+          ))}
+        </nav>
+        <div className="desktop-sidebar-user">
+          <span className="avatar avatar-sm avatar-initials" style={{ backgroundColor: "#6366f1" }}>
+            {currentUser.name?.charAt(0).toUpperCase()}
+          </span>
+          <div>
+            <strong>{currentUser.name}</strong>
+            <span>{currentUser.role}</span>
+          </div>
+        </div>
+      </aside>
 
-      {menuOpen && <MenuPanel panelRef={menuPanelRef} onClose={() => setMenuOpen(false)} onPageChange={setPage} onOpenMonthly={openMonthly} />}
-      {notificationsOpen && <NotificationsPanel panelRef={notificationsPanelRef} items={dashboard.notifications} />}
-
-      <main className="content">
-        {error && <div className="error-banner">{error}</div>}
-        {loading ? (
-          <SkeletonPage />
-        ) : (
-          <>
-            {page === "weekly" && (
-              <WeeklyPage
-                activeDay={activeDay}
-                currentUser={currentUser}
-                dashboard={dashboard}
-                onCreate={createSchedule}
-                onDeleteSchedule={deleteSchedule}
-                onDayChange={setActiveDay}
-                onOpenMonthly={openMonthly}
-                onStatusChange={updateStatus}
-              />
-            )}
-            {page === "studio" && (
-              <StudioPage
-                currentUser={currentUser}
-                departments={departments}
-                onLoadDepartments={loadDepartments}
-                dashboard={dashboard}
-                showAllOverview={showAllOverview}
-                onCreate={createSchedule}
-                onAddSchedule={addStudioSchedule}
-                onDeleteEmployee={deleteEmployee}
-                onSaveEmployee={saveEmployee}
-                onScanAttendance={scanAttendance}
-                onNotify={notify}
-                onMoveWeek={moveWeek}
-                navDirection={navDirection}
-                onToggleOverview={() => setShowAllOverview((value) => !value)}
-              />
-            )}
-            {page === "monthly" && <MonthlyPage dashboard={dashboard} weekStart={weekStart} fullscreen onClose={closeMonthly} />}
-            {page === "documents" && <DocumentsPage employees={dashboard.employees} onNotify={notify} onSaveEmployee={saveEmployee} />}
-            {page === "shooting" && <ShootingPage onNotify={notify} />}
-            {page === "live" && <LivePage />}
-            {page === "reports" && <ReportsPage dashboard={dashboard} />}
-            {page === "audit" && <AuditPage />}
-            {page === "profile" && (
-              <ProfilePage
-                currentUser={currentUser}
-                dashboard={dashboard}
-                notificationsEnabled={notificationsOpen}
-              theme={theme}
-              onLogout={handleLogout}
-              onRefresh={loadDashboard}
-              onThemeChange={setTheme}
-              onUpdateUser={updateCurrentUser}
-              onNotify={notify}
-              onSaveContact={saveContact}
-              onDeleteContact={deleteContact}
+      <div className="desktop-main">
+        <header className="topbar">
+          <button ref={menuButtonRef} className="icon-button" type="button" aria-label="Menyu" onClick={() => {
+            setMenuOpen((value) => !value);
+            setNotificationsOpen(false);
+          }}>
+            <Menu size={23} />
+          </button>
+          <div className="topbar-brand">
+            <img
+              src="/logo.svg"
+              alt="O'zbekiston 24"
+              className="topbar-logo"
+              onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
             />
-            )}
-          </>
-        )}
-      </main>
+            <span className="topbar-logo-fallback" style={{ display: "none" }}>
+              O'Z<strong>24</strong>
+            </span>
+          </div>
+          <button ref={notificationsButtonRef} className="icon-button" type="button" aria-label="Bildirishnomalar" onClick={() => {
+            setNotificationsOpen((value) => !value);
+            setMenuOpen(false);
+          }}>
+            <Bell size={20} fill="currentColor" />
+          </button>
+        </header>
 
-      <BottomNav page={page} onPageChange={setPage} />
+        {menuOpen && <MenuPanel panelRef={menuPanelRef} onClose={() => setMenuOpen(false)} onPageChange={setPage} onOpenMonthly={openMonthly} currentUser={currentUser} />}
+        {notificationsOpen && <NotificationsPanel panelRef={notificationsPanelRef} items={dashboard.notifications} />}
+
+        <main className="content">
+          {error && <div className="error-banner">{error}</div>}
+          {loading ? (
+            <SkeletonPage />
+          ) : (
+            <>
+              {page === "weekly" && (
+                <WeeklyPage
+                  activeDay={activeDay}
+                  currentUser={currentUser}
+                  dashboard={dashboard}
+                  onCreate={createSchedule}
+                  onDeleteSchedule={deleteSchedule}
+                  onDayChange={setActiveDay}
+                  onOpenMonthly={openMonthly}
+                  onStatusChange={updateStatus}
+                />
+              )}
+              {page === "studio" && (
+                <StudioPage
+                  currentUser={currentUser}
+                  departments={departments}
+                  onLoadDepartments={loadDepartments}
+                  dashboard={dashboard}
+                  showAllOverview={showAllOverview}
+                  onCreate={createSchedule}
+                  onAddSchedule={addStudioSchedule}
+                  onDeleteEmployee={deleteEmployee}
+                  onSaveEmployee={saveEmployee}
+                  onScanAttendance={scanAttendance}
+                  onNotify={notify}
+                  onMoveWeek={moveWeek}
+                  navDirection={navDirection}
+                  onToggleOverview={() => setShowAllOverview((value) => !value)}
+                />
+              )}
+              {page === "monthly" && <MonthlyPage dashboard={dashboard} weekStart={weekStart} fullscreen onClose={closeMonthly} />}
+              {page === "documents" && <DocumentsPage employees={dashboard.employees} onNotify={notify} onSaveEmployee={saveEmployee} />}
+              {page === "shooting" && <ShootingPage onNotify={notify} />}
+              {page === "reports" && <ReportsPage dashboard={dashboard} />}
+              {page === "audit" && <AuditPage />}
+              {page === "users" && isSuper(currentUser) && (
+                <UsersPage currentUser={currentUser} onNotify={notify} />
+              )}
+              {page === "profile" && (
+                <ProfilePage
+                  currentUser={currentUser}
+                  dashboard={dashboard}
+                  notificationsEnabled={notificationsOpen}
+                  theme={theme}
+                  onLogout={handleLogout}
+                  onRefresh={loadDashboard}
+                  onThemeChange={setTheme}
+                  onUpdateUser={updateCurrentUser}
+                  onNotify={notify}
+                  onSaveContact={saveContact}
+                  onDeleteContact={deleteContact}
+                />
+              )}
+            </>
+          )}
+        </main>
+
+        <BottomNav page={page} onPageChange={setPage} />
+      </div>
+
       <ToastViewport items={toasts} />
     </div>
   );
@@ -1150,12 +1200,7 @@ function AuthPage({ onAuth, onNotify, theme, onThemeChange }) {
     <main className="auth-shell">
       <section className="auth-panel">
         <div className="auth-brand">
-          <img
-            src="/logo.svg"
-            alt="O'zbekiston 24"
-            className="auth-logo"
-            onError={(e) => { e.target.style.display = "none"; }}
-          />
+          <span><ShieldCheck size={24} /></span>
           <div>
             <strong>O'zbekiston 24</strong>
             <p>Ish jadvali boshqaruvi</p>
@@ -1443,43 +1488,6 @@ function ShootingPage({ onNotify }) {
     onNotify("Tasvir jadvaliga yangi qator qo'shildi");
   }
 
-  async function downloadWord() {
-    try {
-      const exportRows = rows.map((row) => ({
-        cameraNumber: row.camera || "",
-        exitTime: row.time || "",
-        operatorsText: row.operatorsText || "",
-        topic: row.topic || "",
-        reportersText: row.reportersText || "",
-        equipment: row.equipment || "HD jamlanmasi, mikrofon, chiroq, avtotransport"
-      }));
-      const response = await fetch("/api/filming/export-word", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${window.localStorage.getItem("authToken")}`
-        },
-        body: JSON.stringify({ date: new Date().toISOString(), approvedBy: "M. Safarov", rows: exportRows })
-      });
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({ message: "Server xatosi" }));
-        throw new Error(err.message || "Server xatosi");
-      }
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `tasvirga-olish-jadvali-${new Date().toISOString().slice(0, 10)}.docx`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-      onNotify("Word fayl tayyorlandi");
-    } catch (err) {
-      onNotify("Word yaratishda xato: " + err.message, "error");
-    }
-  }
-
   function downloadExcel() {
     const body = rows.map((row) => `
       <tr><td colspan="3"><b>Kerakli jihoz va texnika:</b></td><td colspan="2"><b>${escapeHtml(row.equipment)}</b></td></tr>
@@ -1525,16 +1533,12 @@ function ShootingPage({ onNotify }) {
             <Plus size={17} />
             Yangi jadval
           </button>
-          <button type="button" onClick={downloadWord}>
-            <FileText size={17} />
-            Word
-          </button>
           <button type="button" onClick={downloadExcel}>
-            <FileSpreadsheet size={17} />
+            <Save size={17} />
             Excel
           </button>
           <button type="button" onClick={() => window.print()}>
-            <Save size={17} />
+            <FileText size={17} />
             Print
           </button>
         </div>
@@ -3203,7 +3207,6 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
   const [draft, setDraft] = useState(currentUser);
   const [contactDraft, setContactDraft] = useState({ type: "Muxbir", name: "", vehicle: "", phone: "" });
   const [contactFormOpen, setContactFormOpen] = useState(false);
-  const [contactSearch, setContactSearch] = useState("");
   const [todaySlide, setTodaySlide] = useState(0);
   const [selectedDate, setSelectedDate] = useState(() => toInputDate(new Date()));
   const formRef = useRef(null);
@@ -3313,10 +3316,6 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
       setContactFormOpen(false);
     }
   }
-
-  const filteredContacts = contactSearch.trim()
-    ? contacts.filter((c) => [c.name, c.vehicle, c.phone, c.type].join(" ").toLowerCase().includes(contactSearch.trim().toLowerCase()))
-    : contacts;
 
   return (
     <section className="profile-page">
@@ -3475,25 +3474,8 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
           )}
         </div>
 
-        <div className="contact-search">
-          <Search size={15} />
-          <input
-            value={contactSearch}
-            onChange={(e) => setContactSearch(e.target.value)}
-            placeholder="Ism yoki telefon bo'yicha qidirish..."
-          />
-          {contactSearch && (
-            <button type="button" className="contact-search-clear" onClick={() => setContactSearch("")}>✕</button>
-          )}
-        </div>
-        {contactSearch && (
-          <p className="contact-search-count">
-            {contacts.filter((c) => [c.name, c.vehicle, c.phone, c.type].join(" ").toLowerCase().includes(contactSearch.trim().toLowerCase())).length} ta natija
-          </p>
-        )}
-
         <div className="contact-list">
-          {filteredContacts.length ? filteredContacts.map((contact) => (
+          {contacts.length ? contacts.map((contact) => (
             <article key={contact.id} className="contact-row">
               <span className={contact.type === "Haydovchi" ? "driver" : ""}>
                 {contact.type === "Haydovchi" ? <Car size={16} /> : <User size={16} />}
@@ -3512,7 +3494,7 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
                 </button>
               )}
             </article>
-          )) : <EmptyCard text={contactSearch ? `"${contactSearch}" bo'yicha natija topilmadi` : "Kontaktlar hali kiritilmagan"} />}
+          )) : <EmptyCard text="Kontaktlar hali kiritilmagan" />}
         </div>
       </section>
 
@@ -3668,83 +3650,190 @@ function EmptyCard({ text }) {
   );
 }
 
-function LivePage() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
-  const CHANNEL_ID = "UCi3kNKp7aqiLQ8O6E6lV1KQ";
-  const liveUrl = `https://www.youtube.com/embed/live_stream?channel=${CHANNEL_ID}&autoplay=1&mute=0`;
+function UsersPage({ currentUser, onNotify }) {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editUser, setEditUser] = useState(null);
+  const [form, setForm] = useState({ username: "", password: "", fullName: "", role: "xodim" });
+  const [saving, setSaving] = useState(false);
+
+  const ROLES = [
+    { id: "superadmin", label: "Super admin" },
+    { id: "admin", label: "Administrator" },
+    { id: "xodim", label: "Xodim" }
+  ];
+
+  useEffect(() => {
+    api("/api/users").then((data) => {
+      setUsers(data.users || []);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
+  function openCreate() {
+    setEditUser(null);
+    setForm({ username: "", password: "", fullName: "", role: "xodim" });
+    setShowForm(true);
+  }
+
+  function openEdit(user) {
+    setEditUser(user);
+    setForm({ username: user.username, password: "", fullName: user.fullName, role: user.role });
+    setShowForm(true);
+  }
+
+  async function saveUser(event) {
+    event.preventDefault();
+    if (!form.fullName.trim()) { onNotify("To'liq ism kiritilmadi", "error"); return; }
+    if (!editUser && (!form.username.trim() || !form.password.trim())) { onNotify("Login va parol kiritilmadi", "error"); return; }
+    setSaving(true);
+    try {
+      const body = { fullName: form.fullName, role: form.role };
+      if (!editUser) { body.username = form.username; body.password = form.password; }
+      else if (form.password) body.password = form.password;
+
+      if (editUser) {
+        const updated = await api(`/api/users/${editUser.id}`, { method: "PUT", body: JSON.stringify(body) });
+        setUsers((prev) => prev.map((u) => u.id === updated.id ? updated : u));
+        onNotify("Foydalanuvchi yangilandi");
+      } else {
+        const created = await api("/api/users", { method: "POST", body: JSON.stringify(body) });
+        setUsers((prev) => [...prev, created]);
+        onNotify("Foydalanuvchi qo'shildi");
+      }
+      setShowForm(false);
+    } catch (err) {
+      onNotify(err.message || "Xatolik", "error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function toggleActive(user) {
+    try {
+      const updated = await api(`/api/users/${user.id}`, { method: "PUT", body: JSON.stringify({ isActive: !user.isActive }) });
+      setUsers((prev) => prev.map((u) => u.id === updated.id ? updated : u));
+      onNotify(updated.isActive ? "Faollashtirildi" : "O'chirildi");
+    } catch (err) {
+      onNotify(err.message || "Xatolik", "error");
+    }
+  }
+
+  async function deleteUser(user) {
+    if (!window.confirm(`${user.fullName} ni o'chirishni tasdiqlaysizmi?`)) return;
+    try {
+      await api(`/api/users/${user.id}`, { method: "DELETE" });
+      setUsers((prev) => prev.filter((u) => u.id !== user.id));
+      onNotify("Foydalanuvchi o'chirildi");
+    } catch (err) {
+      onNotify(err.message || "Xatolik", "error");
+    }
+  }
+
+  const stats = {
+    total: users.length,
+    active: users.filter((u) => u.isActive).length,
+    superadmins: users.filter((u) => u.role === "superadmin").length,
+    admins: users.filter((u) => u.role === "admin").length
+  };
 
   return (
-    <section className="live-page">
-      <div className="live-header">
-        <div className="live-badge">
-          <span className="live-dot" />
-          JONLI EFIR
-        </div>
-        <h2>O'zbekiston 24</h2>
-        <p>Milliy telekanal — jonli translatsiya</p>
+    <section className="users-page">
+      <div className="users-stats">
+        <article className="metric-card"><strong>{stats.total}</strong><span>Jami</span></article>
+        <article className="metric-card"><strong>{stats.active}</strong><span>Faol</span></article>
+        <article className="metric-card"><strong>{stats.superadmins}</strong><span>Super admin</span></article>
+        <article className="metric-card"><strong>{stats.admins}</strong><span>Admin</span></article>
       </div>
 
-      <div className="live-player-wrapper">
-        {isLoading && !hasError && (
-          <div className="live-loading">
-            <div className="live-spinner" />
-            <p>Efir yuklanmoqda...</p>
-          </div>
-        )}
-        {hasError ? (
-          <div className="live-error">
-            <span>📡</span>
-            <p>Efirga ulanib bo'lmadi</p>
-            <p className="live-error-sub">YouTube da to'g'ridan ko'rish uchun:</p>
-            <a
-              href="https://www.youtube.com/@uzbekiston24tv/live"
-              target="_blank"
-              rel="noreferrer"
-              className="live-yt-link"
-            >
-              YouTube da ochish →
-            </a>
-          </div>
-        ) : (
-          <iframe
-            className="live-iframe"
-            src={liveUrl}
-            title="O'zbekiston 24 Jonli Efir"
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            onLoad={() => setIsLoading(false)}
-            onError={() => { setIsLoading(false); setHasError(true); }}
-          />
-        )}
+      <div className="users-toolbar">
+        <h2>Foydalanuvchilar</h2>
+        <button type="button" className="btn-primary" onClick={openCreate}>
+          <Plus size={16} /> Qo'shish
+        </button>
       </div>
 
-      <div className="live-links">
-        <p>Boshqa platformalarda ko'rish:</p>
-        <div className="live-link-grid">
-          <a href="https://www.youtube.com/@uzbekiston24tv/live" target="_blank" rel="noreferrer">
-            📺 YouTube
-          </a>
-          <a href="https://uzbekiston24.tv" target="_blank" rel="noreferrer">
-            🌐 Rasmiy sayt
-          </a>
+      {showForm && (
+        <div className="modal-backdrop" onClick={() => setShowForm(false)}>
+          <div className="schedule-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <strong>{editUser ? "Tahrirlash" : "Yangi foydalanuvchi"}</strong>
+              <button type="button" className="icon-button" onClick={() => setShowForm(false)}><Plus size={20} style={{ transform: "rotate(45deg)" }} /></button>
+            </div>
+            <form className="users-form" onSubmit={saveUser}>
+              {!editUser && (
+                <label>
+                  Login
+                  <input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} placeholder="username" autoComplete="off" />
+                </label>
+              )}
+              <label>
+                To'liq ism
+                <input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} placeholder="Ism Familiya" />
+              </label>
+              <label>
+                Parol{editUser && " (bo'sh qoldiring — o'zgartirilmaydi)"}
+                <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="••••••••" autoComplete="new-password" />
+              </label>
+              <label>
+                Rol
+                <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
+                  {ROLES.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
+                </select>
+              </label>
+              <div className="modal-actions">
+                <button type="button" className="btn-ghost" onClick={() => setShowForm(false)}>Bekor</button>
+                <button type="submit" className="btn-primary" disabled={saving}>{saving ? "Saqlanmoqda..." : "Saqlash"}</button>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
+      )}
+
+      {loading ? <SkeletonPage /> : (
+        <div className="users-list">
+          {users.map((user) => (
+            <div key={user.id} className={`user-row${user.isActive ? "" : " inactive"}`}>
+              <span className="avatar avatar-sm avatar-initials" style={{ backgroundColor: user.role === "superadmin" ? "#6366f1" : user.role === "admin" ? "#0ea5e9" : "#6b7280" }}>
+                {user.fullName?.charAt(0).toUpperCase()}
+              </span>
+              <div className="user-info">
+                <strong>{user.fullName}</strong>
+                <span>@{user.username} · {ROLES.find((r) => r.id === user.role)?.label || user.role}</span>
+              </div>
+              <div className="user-actions">
+                <button type="button" className={`user-toggle-btn${user.isActive ? " active" : ""}`} onClick={() => toggleActive(user)} title={user.isActive ? "O'chirish" : "Faollashtirish"}>
+                  {user.isActive ? <Check size={14} /> : <Plus size={14} style={{ transform: "rotate(45deg)" }} />}
+                </button>
+                <button type="button" className="user-edit-btn" onClick={() => openEdit(user)} title="Tahrirlash">
+                  <Edit3 size={14} />
+                </button>
+                {user.id !== currentUser?.id && (
+                  <button type="button" className="user-delete-btn" onClick={() => deleteUser(user)} title="O'chirish">
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+          {users.length === 0 && <p className="empty-state">Foydalanuvchilar yo'q</p>}
+        </div>
+      )}
     </section>
   );
 }
 
-function MenuPanel({ onClose, onPageChange, onOpenMonthly, panelRef }) {
+function MenuPanel({ onClose, onPageChange, onOpenMonthly, panelRef, currentUser }) {
   const links = [
     ["weekly", "Ish jadvali", CalendarDays],
     ["studio", "Jamoa va bo'limlar", UsersRound],
     ["documents", "Hujjatlar", ShieldCheck],
     ["monthly", "Oylik grafik", Clock3],
     ["shooting", "Tasvir jadvali", FileText],
-    ["live", "Jonli efir", PlayCircle],
     ["reports", "Hisobotlar", ChartColumn],
     ["audit", "Audit jurnal", ShieldCheck],
+    ...(isSuper(currentUser) ? [["users", "Foydalanuvchilar", UserCheck]] : []),
     ["profile", "Profil", User]
   ];
 

@@ -1,34 +1,27 @@
-import express from "express";
-import { PrismaClient } from "@prisma/client";
-import cors from "cors";
-import morgan from "morgan";
-import dotenv from "dotenv";
-import { fileURLToPath } from "url";
-import { join, dirname } from "path";
-import jwt from "jsonwebtoken";
+import { createServer } from "node:http";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { extname, join, normalize } from "node:path";
+import { fileURLToPath } from "node:url";
 import bcrypt from "bcryptjs";
-import { startTelegramBot } from "./src/telegram-bot.mjs";
-import { buildFilmingScheduleDocx } from "./src/word-export.mjs";
+const { compareSync, hashSync } = bcrypt;
 
-dotenv.config();
+const __dirname = fileURLToPath(new URL(".", import.meta.url));
+const PORT = Number(process.env.PORT || 3001);
+const DATA_DIR = process.env.VERCEL ? "/tmp/ish-jadvali" : join(__dirname, "data");
+const DB_FILE = join(DATA_DIR, "mock-db.json");
+const JWT_SECRET = process.env.JWT_SECRET || "ishjadvali_secret_key";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const prisma = new PrismaClient();
-const app = express();
-
-app.use(cors());
-app.use(morgan("dev"));
-app.use(express.json({ limit: "10mb" }));
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
+const initialUsers = [
+  { id: 1, username: "superadmin", password: hashSync("Super@2025", 10), fullName: "Super Administrator", role: "superadmin", isActive: true, createdAt: new Date().toISOString() },
+  { id: 2, username: "admin01", password: hashSync("Admin@2025", 10), fullName: "Jadval Administratori", role: "admin", isActive: true, createdAt: new Date().toISOString() }
+];
 const departments = [
   { id: "pull", name: "Pull xizmati" },
   { id: "operator", name: "Operatorlar" },
   { id: "dron", name: "Dron bo'limi" },
   { id: "tjk", name: "TJK guruhi" }
 ];
-
 const statusMap = {
   working: "Studiyada",
   rest: "Damda",
@@ -38,10 +31,8 @@ const statusMap = {
   vacation: "Mehnat ta'tili",
   administration: "Administratsiya",
   presidential: "Prezidentskiy",
-  sick: "Balnishniy",
-  otpiska: "Otpiska"
+  sick: "Balnishniy"
 };
-
 const statusMetricMap = {
   working: "working",
   backup: "working",
@@ -51,21 +42,119 @@ const statusMetricMap = {
   rest: "rest",
   vacation: "rest",
   sick: "rest",
-  otpiska: "rest",
   trip: "away"
 };
+
+const initialEmployees = [
+  ["Abdug'afforov A.", "Operator va texnik xodim"],
+  ["JO'RAYEV S.", "Operator / muxbir"],
+  ["Shermuhammedov D.", "Operator va texnik xodim"],
+  ["BOSITXONOV B.", "Operator va texnik xodim"],
+  ["QUDRATOV X.", "Operator va texnik xodim"],
+  ["TO'XTASINOV M.", "Operator va texnik xodim"],
+  ["FAYZIYEV F.", "Operator va texnik xodim"],
+  ["SATTOROV I.", "Operator va texnik xodim"],
+  ["Saidnasimov S.", "Operator va texnik xodim"],
+  ["ZAMONOV I.", "Operator va texnik xodim"],
+  ["ILMURZIN A.", "Operator va texnik xodim"],
+  ["RASULOV B./dron", "Operator / dron"],
+  ["Turdialiyev I./dron", "Operator / dron"],
+  ["MENAYEV T.", "Operator va texnik xodim"],
+  ["MAXMUDOV J.", "Operator va texnik xodim"],
+  ["Ulug'murodov U.", "Operator va texnik xodim"],
+  ["Eshonxo'jayev F.", "Operator va texnik xodim"],
+  ["RUSTAMOV I.", "Operator va texnik xodim"],
+  ["ZIKRILLAYEV A.", "Operator va texnik xodim"],
+  ["HAMIDOV D.", "Operator va texnik xodim"],
+  ["NURMATOV B.", "Operator va texnik xodim"],
+  ["LUTFULLAYEV S.", "Operator va texnik xodim"],
+  ["XAYDAROV X.", "Operator va texnik xodim"],
+  ["KOMILOV M.", "Operator va texnik xodim"],
+  ["XOLIQULOV S.", "Operator va texnik xodim"],
+  ["Abdurahmonov D.", "Operator va texnik xodim"],
+  ["TOIROV B.", "Operator va texnik xodim"],
+  ["ZAXIDOV M.", "Operator va texnik xodim"],
+  ["Abdusattorov A.", "Operator va texnik xodim"],
+  ["RAHMONOV S.", "Operator va texnik xodim"],
+  ["SOLIBOYEV I.", "Operator va texnik xodim"],
+  ["AZIMOV E.", "Operator va texnik xodim"],
+  ["RUSTAMOV E.", "Operator va texnik xodim"],
+  ["SOLIBOYEV Y.", "Operator va texnik xodim"],
+  ["UMAROV J.", "Operator va texnik xodim"],
+  ["IBROHIMOV A.", "Muxbir"],
+  ["O'TAYEVA S.", "Muxbir"],
+  ["SHUKUROVA R.", "Muxbir"],
+  ["HAYITOV D.", "Muxbir"],
+  ["QURBONOV D.", "Muxbir"],
+  ["JOVLIYEV G'.", "Muxbir"],
+  ["HAMROYEVA O.", "Muxbir"],
+  ["SOATOV J.", "Muxbir"],
+  ["QALANDAROVA M.", "Muxbir"],
+  ["NIZAMUDINOVA K.", "Muxbir"],
+  ["Xudoyberdiyeva O.", "Muxbir"],
+  ["AXMADOVA G.", "Muxbir"],
+  ["RO'ZIMURODOV J.", "Muxbir"],
+  ["YUNUSOVA M.", "Muxbir"],
+  ["ESHBOYEV I.", "Muxbir"],
+  ["ZARIPXAN K.", "Muxbir"],
+  ["MIRSADIQOVA A.", "Muxbir"],
+  ["MATYOQUBOVA I.", "Muxbir"],
+  ["MARDONOV J.", "Muxbir"],
+  ["QUDRATOVA M.", "Muxbir"],
+  ["AKTAMOVA N.", "Muxbir"],
+  ["QODIROV I./rej.", "Rejissyor"],
+  ["QODIROV X.", "Muxbir"],
+  ["IMINOVA M.", "Muxbir"],
+  ["QOSIMOV M./rej.", "Rejissyor"],
+  ["CHORIYEV SH.", "Muxbir"],
+  ["Mambetsharipova N.", "Muxbir"],
+  ["QIYOSOVA A.", "Muxbir"],
+  ["REYIMOVA D.", "Muxbir"]
+].map(([name, role], index) => ({
+  id: index + 1,
+  name,
+  role,
+  phone: "+998 90 000 00 00",
+  telegram: "",
+  department: inferDepartment({ id: index + 1, name, role }),
+  portfolio: [],
+  avatar: `https://i.pravatar.cc/160?u=${encodeURIComponent(name)}`
+}));
 
 const studios = [
   { name: "3 Studiya", tone: "purple", time: "9:00 - 22:00" },
   { name: "35 TJK", tone: "purple", time: "9:00 - 18:00" },
   { name: "3 Tongi dastur", tone: "blue", time: "9:00 - 18:00" }
 ];
+const initialContacts = [
+  { id: "contact-1", type: "Muxbir", name: "Sarvar Raximov", vehicle: "", phone: "+998 90 302 55 92" },
+  { id: "contact-2", type: "Haydovchi", name: "142 Caddy", vehicle: "142 Caddy", phone: "+998 90 406 15 78" }
+];
 
 const dayNames = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba", "Yakshanba"];
 const shortDayNames = ["Dush", "Sey", "Chor", "Pay", "Jum", "Shan", "Yak"];
 const monthShort = ["Yan", "Fev", "Mar", "Apr", "May", "Iyn", "Iyl", "Avg", "Sen", "Okt", "Noy", "Dek"];
 
-// ─── Pure utility functions ───────────────────────────────────────────────────
+let db = await loadDb();
+
+async function loadDb() {
+  try {
+    const raw = await readFile(DB_FILE, "utf8");
+    const parsed = JSON.parse(raw);
+    const employees = Array.isArray(parsed.employees) && parsed.employees.length ? parsed.employees : initialEmployees;
+    const users = Array.isArray(parsed.users) && parsed.users.length ? parsed.users : initialUsers;
+    return {
+      generation: Number(parsed.generation || 0),
+      employees: employees.map(normalizeEmployee),
+      schedules: parsed.schedules && typeof parsed.schedules === "object" ? parsed.schedules : {},
+      attendance: Array.isArray(parsed.attendance) ? parsed.attendance.map(normalizeAttendanceRecord).filter(Boolean) : [],
+      contacts: Array.isArray(parsed.contacts) ? parsed.contacts.map(normalizeContact).filter(Boolean) : initialContacts,
+      users
+    };
+  } catch {
+    return { generation: 0, employees: initialEmployees.map(normalizeEmployee), schedules: {}, attendance: [], contacts: initialContacts, users: initialUsers };
+  }
+}
 
 function inferDepartment(employee) {
   const text = `${employee.name || ""} ${employee.role || ""}`.toLowerCase();
@@ -76,7 +165,7 @@ function inferDepartment(employee) {
 }
 
 function normalizeDepartment(value) {
-  return departments.some((d) => d.id === value) ? value : "operator";
+  return departments.some((department) => department.id === value) ? value : "operator";
 }
 
 function cleanPortfolio(portfolio) {
@@ -92,113 +181,42 @@ function cleanPortfolio(portfolio) {
 }
 
 function documentSlug(employee) {
-  return (
-    String(employee.name || `employee-${employee.id || Date.now()}`)
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 48) || `employee-${employee.id || Date.now()}`
-  );
+  return String(employee.name || `employee-${employee.id || Date.now()}`)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48) || `employee-${employee.id || Date.now()}`;
 }
 
 function createEmployeeDocumentView(employee, existing = {}) {
-  const slug = documentSlug(employee);
   return {
-    slug,
-    wordFile: `${slug}.docx`,
-    excelFile: `${slug}.xlsx`,
+    slug: documentSlug(employee),
+    wordFile: `${documentSlug(employee)}.docx`,
+    excelFile: `${documentSlug(employee)}.xlsx`,
     generatedAt: existing.generatedAt || new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
 }
 
-function cleanDocuments(documents) {
-  if (!documents || typeof documents !== "object") return {};
-  return ["photo3x4", "passportUz", "passportForeign", "certificate"].reduce((result, key) => {
-    if (typeof documents[key] === "string" && documents[key].startsWith("data:image/")) {
-      result[key] = documents[key];
-    }
-    return result;
-  }, {});
-}
-
-function createAvatar(name, id) {
-  return `https://i.pravatar.cc/160?u=${encodeURIComponent(name || `employee-${id}`)}`;
-}
-
 function normalizeEmployee(employee) {
-  const portfolio = Array.isArray(employee.portfolio) ? employee.portfolio : [];
-  const documents =
-    employee.documents && typeof employee.documents === "object" ? employee.documents : {};
-  const base = {
-    id: Number(employee.id),
-    name: String(employee.name || "").trim(),
-    role: String(employee.role || "Operator").trim(),
+  const normalized = {
+    ...employee,
     phone: employee.phone || "+998 90 000 00 00",
     telegram: employee.telegram || "",
     department: normalizeDepartment(employee.department || inferDepartment(employee)),
     address: employee.address || "",
-    avatar: employee.avatar || createAvatar(employee.name, employee.id),
-    documents: cleanDocuments(documents),
-    portfolio: cleanPortfolio(portfolio)
+    documents: cleanDocuments(employee.documents),
+    portfolio: cleanPortfolio(employee.portfolio)
   };
-  return { ...base, documentView: createEmployeeDocumentView(base, employee.documentView || {}) };
-}
-
-function scheduleEmployee(employee) {
-  const { address, documents, ...publicEmployee } = employee;
-  return publicEmployee;
-}
-
-function publicEmployees(employees) {
-  return employees.map(scheduleEmployee);
-}
-
-function normalizeContact(contact) {
-  if (!contact || typeof contact !== "object") return null;
-  const type = contact.type === "Haydovchi" ? "Haydovchi" : "Muxbir";
-  const name = String(contact.name || "").trim();
-  const vehicle = String(contact.vehicle || "").trim();
-  const phone = String(contact.phone || "").trim();
-  if (!name && !vehicle && !phone) return null;
   return {
-    id: String(contact.id || `contact-${Date.now()}`),
-    type,
-    name,
-    vehicle,
-    phone
+    ...normalized,
+    documentView: createEmployeeDocumentView(normalized, employee.documentView)
   };
 }
 
-function publicContacts(contacts) {
-  return contacts.map(normalizeContact).filter(Boolean);
-}
-
-function countByMetric(people, metric) {
-  return people.filter((p) => statusMetricMap[p.statusType] === metric).length;
-}
-
-function normalizeAttendanceRecord(record) {
-  if (!record || !record.employeeId || !record.checkIn) return null;
-  const checkIn = new Date(record.checkIn);
-  const checkOut = record.checkOut ? new Date(record.checkOut) : null;
-  if (Number.isNaN(checkIn.getTime())) return null;
-  return {
-    id: String(record.id || `att-${checkIn.getTime()}-${record.employeeId}`),
-    employeeId: Number(record.employeeId),
-    employeeName: String(record.employeeName || ""),
-    date: record.date || formatInputDate(checkIn),
-    checkIn: checkIn.toISOString(),
-    checkOut: checkOut && !Number.isNaN(checkOut.getTime()) ? checkOut.toISOString() : null,
-    method: record.method || "face"
-  };
-}
-
-function minutesBetween(start, end) {
-  const startDate = new Date(start);
-  const endDate = end ? new Date(end) : new Date();
-  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return 0;
-  return Math.max(0, Math.round((endDate.getTime() - startDate.getTime()) / 60000));
+async function saveDb() {
+  await mkdir(DATA_DIR, { recursive: true });
+  await writeFile(DB_FILE, JSON.stringify(db, null, 2));
 }
 
 function addDays(date, amount) {
@@ -233,81 +251,78 @@ function getWeekStart(value) {
   return safeDate;
 }
 
-function getScheduleKey(weekStartValue) {
-  return formatInputDate(getWeekStart(weekStartValue));
+function pickEmployee(index) {
+  return db.employees[index % db.employees.length];
 }
 
-function pickEmployee(index, employees) {
-  return employees[index % employees.length];
+function scheduleEmployee(employee) {
+  const { address, documents, ...publicEmployee } = employee;
+  return publicEmployee;
 }
 
-function buildPerson(employee, studio, dayIndex, offset, seed) {
-  const rest = (employee.id + dayIndex + seed) % 7 === 0;
-  const backup = (employee.id + offset + seed) % 11 === 0;
-  const trip = (employee.id + dayIndex + offset + seed) % 13 === 0;
-  const tjk =
-    studio.name.toLowerCase().includes("tjk") ||
-    (employee.department === "tjk" && (employee.id + dayIndex + seed) % 5 === 0);
-  const statusType = rest ? "rest" : tjk ? "tjk" : trip ? "trip" : backup ? "backup" : "working";
+function publicEmployees() {
+  return db.employees.map(scheduleEmployee);
+}
+
+function normalizeContact(contact) {
+  if (!contact || typeof contact !== "object") return null;
+  const type = contact.type === "Haydovchi" ? "Haydovchi" : "Muxbir";
+  const name = String(contact.name || "").trim();
+  const vehicle = String(contact.vehicle || "").trim();
+  const phone = String(contact.phone || "").trim();
+  if (!name && !vehicle && !phone) return null;
+
   return {
-    ...scheduleEmployee(employee),
-    time: studio.time,
-    employeeId: employee.id === 9 ? "EMP-009" : "",
-    status: statusMap[statusType],
-    statusType
+    id: String(contact.id || `contact-${Date.now()}`),
+    type,
+    name,
+    vehicle,
+    phone
   };
 }
 
-function createGroups(weekStart, seed, employees) {
-  return dayNames.flatMap((day, dayIndex) => {
-    const date = addDays(weekStart, dayIndex);
-    return studios.map((studio, studioIndex) => {
-      const base = dayIndex * 2 + studioIndex * 3 + seed;
-      const people = [0, 1, 2].map((offset) =>
-        buildPerson(pickEmployee(base + offset, employees), studio, dayIndex, offset, seed)
-      );
-      return {
-        id: `${dayIndex}-${studio.name}`,
-        day,
-        title: `${day}, ${formatDate(date)}`,
-        meta: studio.name,
-        tone: studio.tone,
-        people
-      };
-    });
-  });
+function publicContacts() {
+  return (db.contacts || []).map(normalizeContact).filter(Boolean);
 }
 
-function createOverviewRows(groups, employees) {
-  return employees.slice(0, 8).map((employee) => {
-    const days = [0, 1, 2, 3, 4, 5, 6].map((dayIndex) => {
-      const group = groups.find(
-        (g) => g.day === dayNames[dayIndex] && g.people.some((p) => p.id === employee.id)
-      );
-      if (!group) return "empty";
-      const person = group.people.find((p) => p.id === employee.id);
-      if (
-        ["rest", "trip", "tjk", "vacation", "administration", "presidential", "sick"].includes(
-          person.statusType
-        )
-      )
-        return person.statusType;
-      return "work";
-    });
-    return { name: employee.name, days };
-  });
+function countByMetric(people, metric) {
+  return people.filter((person) => statusMetricMap[person.statusType] === metric).length;
 }
 
-function buildAttendanceSummary(employees, attendance) {
+function normalizeAttendanceRecord(record) {
+  if (!record || !record.employeeId || !record.checkIn) return null;
+  const checkIn = new Date(record.checkIn);
+  const checkOut = record.checkOut ? new Date(record.checkOut) : null;
+  if (Number.isNaN(checkIn.getTime())) return null;
+
+  return {
+    id: String(record.id || `att-${checkIn.getTime()}-${record.employeeId}`),
+    employeeId: Number(record.employeeId),
+    employeeName: String(record.employeeName || ""),
+    date: record.date || formatInputDate(checkIn),
+    checkIn: checkIn.toISOString(),
+    checkOut: checkOut && !Number.isNaN(checkOut.getTime()) ? checkOut.toISOString() : null,
+    method: record.method || "face"
+  };
+}
+
+function minutesBetween(start, end) {
+  const startDate = new Date(start);
+  const endDate = end ? new Date(end) : new Date();
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return 0;
+  return Math.max(0, Math.round((endDate.getTime() - startDate.getTime()) / 60000));
+}
+
+function buildAttendanceSummary() {
   const today = formatInputDate(new Date());
   const month = formatInputMonth(new Date());
-  const records = attendance || [];
-  const todayRecords = records.filter((r) => r.date === today);
-  const monthlyRecords = records.filter((r) => r.date?.startsWith(month));
-  const openRecords = records.filter((r) => !r.checkOut);
+  const records = db.attendance || [];
+  const todayRecords = records.filter((record) => record.date === today);
+  const monthlyRecords = records.filter((record) => record.date?.startsWith(month));
+  const openRecords = records.filter((record) => !record.checkOut);
   const employeeRows = new Map();
 
-  for (const employee of employees) {
+  for (const employee of db.employees) {
     employeeRows.set(Number(employee.id), {
       employeeId: Number(employee.id),
       name: employee.name,
@@ -337,44 +352,91 @@ function buildAttendanceSummary(employees, attendance) {
 
   const topRows = [...employeeRows.values()]
     .filter((row) => row.monthMinutes > 0 || row.active)
-    .sort((a, b) => b.monthMinutes - a.monthMinutes)
+    .sort((first, second) => second.monthMinutes - first.monthMinutes)
     .slice(0, 6);
 
   return {
     today,
     month,
     activeNow: openRecords.length,
-    todayScans: todayRecords.reduce((sum, r) => sum + 1 + (r.checkOut ? 1 : 0), 0),
-    todayMinutes: todayRecords.reduce((sum, r) => sum + minutesBetween(r.checkIn, r.checkOut), 0),
-    monthMinutes: monthlyRecords.reduce((sum, r) => sum + minutesBetween(r.checkIn, r.checkOut), 0),
+    todayScans: todayRecords.reduce((sum, record) => sum + 1 + (record.checkOut ? 1 : 0), 0),
+    todayMinutes: todayRecords.reduce((sum, record) => sum + minutesBetween(record.checkIn, record.checkOut), 0),
+    monthMinutes: monthlyRecords.reduce((sum, record) => sum + minutesBetween(record.checkIn, record.checkOut), 0),
     recent: [...records].slice(-6).reverse(),
     rows: topRows
   };
 }
 
-function buildDashboard(weekStartValue, options = {}, employees = [], contacts = [], attendance = []) {
+function buildPerson(employee, studio, dayIndex, offset, seed) {
+  const rest = (employee.id + dayIndex + seed) % 7 === 0;
+  const backup = (employee.id + offset + seed) % 11 === 0;
+  const trip = (employee.id + dayIndex + offset + seed) % 13 === 0;
+  const tjk = studio.name.toLowerCase().includes("tjk") || (employee.department === "tjk" && (employee.id + dayIndex + seed) % 5 === 0);
+  const statusType = rest ? "rest" : tjk ? "tjk" : trip ? "trip" : backup ? "backup" : "working";
+
+  return {
+    ...scheduleEmployee(employee),
+    time: studio.time,
+    employeeId: employee.id === 9 ? "EMP-009" : "",
+    status: statusMap[statusType],
+    statusType
+  };
+}
+
+function createGroups(weekStart, seed) {
+  return dayNames.flatMap((day, dayIndex) => {
+    const date = addDays(weekStart, dayIndex);
+
+    return studios.map((studio, studioIndex) => {
+      const base = dayIndex * 2 + studioIndex * 3 + seed;
+      const people = [0, 1, 2].map((offset) => buildPerson(pickEmployee(base + offset), studio, dayIndex, offset, seed));
+
+      return {
+        id: `${dayIndex}-${studio.name}`,
+        day,
+        title: `${day}, ${formatDate(date)}`,
+        meta: studio.name,
+        tone: studio.tone,
+        people
+      };
+    });
+  });
+}
+
+function createOverviewRows(groups) {
+  return db.employees.slice(0, 8).map((employee) => {
+    const days = [0, 1, 2, 3, 4, 5, 6].map((dayIndex) => {
+      const groupForEmployee = groups.find((group) => group.day === dayNames[dayIndex] && group.people.some((person) => person.id === employee.id));
+      if (!groupForEmployee) return "empty";
+      const person = groupForEmployee.people.find((item) => item.id === employee.id);
+      if (["rest", "trip", "tjk", "vacation", "administration", "presidential", "sick"].includes(person.statusType)) return person.statusType;
+      return "work";
+    });
+
+    return { name: employee.name, days };
+  });
+}
+
+function buildDashboard(weekStartValue, options = {}) {
   const weekStart = getWeekStart(weekStartValue);
   const weekEnd = addDays(weekStart, 6);
   const seed = Number(options.seed || 0);
   const generatedAt = options.generatedAt || "Hali yaratilmagan";
-  const groups = createGroups(weekStart, seed, employees);
-  const allPeople = groups.flatMap((g) => g.people);
-  const todayGroups = groups.filter((g) => g.day === "Dushanba");
-  const todayPeople = todayGroups.flatMap((g) => g.people);
-  const studioToday = todayPeople
-    .filter((p) => statusMetricMap[p.statusType] !== "rest")
-    .slice(0, 3)
-    .map((p) => ({ ...p, status: "Working" }));
+  const groups = createGroups(weekStart, seed);
+  const allPeople = groups.flatMap((group) => group.people);
+  const todayGroups = groups.filter((group) => group.day === "Dushanba");
+  const todayPeople = todayGroups.flatMap((group) => group.people);
+  const studioToday = todayPeople.filter((person) => statusMetricMap[person.statusType] !== "rest").slice(0, 3).map((person) => ({ ...person, status: "Working" }));
 
   const working = countByMetric(allPeople, "working");
   const rest = countByMetric(allPeople, "rest");
-  const backup = allPeople.filter((p) => p.statusType === "backup").length;
-  const trip = allPeople.filter((p) => p.statusType === "trip").length;
-  const tjk = allPeople.filter((p) => p.statusType === "tjk").length;
-  const vacation = allPeople.filter((p) => p.statusType === "vacation").length;
-  const administration = allPeople.filter((p) => p.statusType === "administration").length;
-  const presidential = allPeople.filter((p) => p.statusType === "presidential").length;
-  const sick = allPeople.filter((p) => p.statusType === "sick").length;
+  const backup = allPeople.filter((person) => person.statusType === "backup").length;
+  const trip = allPeople.filter((person) => person.statusType === "trip").length;
+  const tjk = allPeople.filter((person) => person.statusType === "tjk").length;
+  const vacation = allPeople.filter((person) => person.statusType === "vacation").length;
+  const administration = allPeople.filter((person) => person.statusType === "administration").length;
+  const presidential = allPeople.filter((person) => person.statusType === "presidential").length;
+  const sick = allPeople.filter((person) => person.statusType === "sick").length;
 
   return {
     week: {
@@ -385,15 +447,12 @@ function buildDashboard(weekStartValue, options = {}, employees = [], contacts =
       title: `Hafta ${Math.max(1, Math.ceil((weekStart.getDate() + seed) / 7))}, ${weekStart.getFullYear()}`,
       range: `${formatDate(weekStart)} - ${formatDate(weekEnd)}`,
       todayLabel: formatDate(new Date()),
-      shortDays: [0, 1, 2, 3, 4, 5, 6].map((i) => ({
-        label: shortDayNames[i],
-        date: addDays(weekStart, i).getDate()
-      })),
+      shortDays: [0, 1, 2, 3, 4, 5, 6].map((index) => ({ label: shortDayNames[index], date: addDays(weekStart, index).getDate() })),
       generatedAt,
       saved: Boolean(options.saved)
     },
     metrics: {
-      total: employees.length,
+      total: db.employees.length,
       working,
       rest,
       backup,
@@ -405,12 +464,12 @@ function buildDashboard(weekStartValue, options = {}, employees = [], contacts =
       sick,
       workingToday: countByMetric(todayPeople, "working"),
       restToday: countByMetric(todayPeople, "rest"),
-      tripToday: todayPeople.filter((p) => p.statusType === "trip").length,
-      tjkToday: todayPeople.filter((p) => p.statusType === "tjk").length
+      tripToday: todayPeople.filter((person) => person.statusType === "trip").length,
+      tjkToday: todayPeople.filter((person) => person.statusType === "tjk").length
     },
     groups,
     studioToday,
-    overviewRows: createOverviewRows(groups, employees),
+    overviewRows: createOverviewRows(groups),
     reports: [
       { label: "Ishlayotganlar", value: working },
       { label: "Dam olish kuni", value: rest },
@@ -432,47 +491,185 @@ function buildDashboard(weekStartValue, options = {}, employees = [], contacts =
       `${sick} ta balnishniy.`,
       `${backup} ta xodim zaxirada.`
     ],
-    employees: publicEmployees(employees),
-    contacts: publicContacts(contacts),
-    attendance: buildAttendanceSummary(employees, attendance)
+    employees: publicEmployees(),
+    contacts: publicContacts(),
+    attendance: buildAttendanceSummary()
   };
 }
 
-function refreshScheduleDerivedData(schedule, employees, contacts, attendance) {
+function nextEmployeeId() {
+  return Math.max(0, ...db.employees.map((employee) => Number(employee.id) || 0)) + 1;
+}
+
+function createAvatar(name, id) {
+  return `https://i.pravatar.cc/160?u=${encodeURIComponent(name || `employee-${id}`)}`;
+}
+
+function cleanDocuments(documents) {
+  if (!documents || typeof documents !== "object") return {};
+  return ["photo3x4", "passportUz", "passportForeign", "certificate"].reduce((result, key) => {
+    if (typeof documents[key] === "string" && documents[key].startsWith("data:image/")) {
+      result[key] = documents[key];
+    }
+    return result;
+  }, {});
+}
+
+function cleanEmployeePayload(payload, existing = {}) {
+  const normalized = normalizeEmployee({
+    ...existing,
+    id: payload.id ?? existing.id,
+    name: payload.name?.trim() || existing.name,
+    role: payload.role?.trim() || existing.role || "Operator",
+    phone: payload.phone?.trim() || existing.phone || "+998 90 000 00 00",
+    telegram: payload.telegram?.trim() || "",
+    department: normalizeDepartment(payload.department || existing.department || inferDepartment(payload)),
+    address: "",
+    avatar: payload.avatar?.trim() || existing.avatar,
+    documents: {},
+    portfolio: payload.portfolio || existing.portfolio
+  });
+  return {
+    ...normalized,
+    documentView: createEmployeeDocumentView(normalized, existing.documentView)
+  };
+}
+
+async function createEmployee(payload) {
+  if (!payload.name?.trim()) throw new Error("Xodim ismi kiritilmadi");
+  const id = nextEmployeeId();
+
+  const employee = cleanEmployeePayload({
+    ...payload,
+    id,
+    avatar: payload.avatar?.trim() || createAvatar(payload.name, id)
+  });
+
+  db.employees.push(employee);
+  await saveDb();
+  return scheduleEmployee(employee);
+}
+
+async function updateEmployee(id, payload) {
+  const index = db.employees.findIndex((employee) => String(employee.id) === String(id));
+  if (index === -1) throw new Error("Xodim topilmadi");
+
+  db.employees[index] = cleanEmployeePayload(payload, db.employees[index]);
+
+  for (const schedule of Object.values(db.schedules)) {
+    schedule.employees = publicEmployees();
+    schedule.groups = schedule.groups.map((group) => ({
+      ...group,
+      people: group.people.map((person) => (
+        String(person.id) === String(id) ? { ...person, ...scheduleEmployee(db.employees[index]), time: person.time, employeeId: person.employeeId, status: person.status, statusType: person.statusType } : person
+      ))
+    }));
+    refreshScheduleDerivedData(schedule);
+  }
+
+  await saveDb();
+  return scheduleEmployee(db.employees[index]);
+}
+
+async function deleteEmployee(id) {
+  const exists = db.employees.some((employee) => String(employee.id) === String(id));
+  if (!exists) throw new Error("Xodim topilmadi");
+  if (db.employees.length <= 1) throw new Error("Oxirgi xodimni o'chirib bo'lmaydi");
+  db.employees = db.employees.filter((employee) => String(employee.id) !== String(id));
+  db.attendance = db.attendance.filter((record) => String(record.employeeId) !== String(id));
+
+  for (const key of Object.keys(db.schedules)) {
+    const schedule = db.schedules[key];
+    schedule.groups = schedule.groups.map((group) => ({
+      ...group,
+      people: group.people.filter((person) => String(person.id) !== String(id))
+    }));
+    schedule.employees = publicEmployees();
+    refreshScheduleDerivedData(schedule);
+  }
+
+  await saveDb();
+  return { ok: true };
+}
+
+async function saveContact(payload) {
+  const contact = normalizeContact({
+    ...payload,
+    id: payload.id || `contact-${Date.now()}`
+  });
+  if (!contact) throw new Error("Kontakt ma'lumotlarini kiriting");
+  if (!contact.name && !contact.vehicle) throw new Error("Ism yoki mashina raqamini kiriting");
+  if (!contact.phone) throw new Error("Telefon raqamini kiriting");
+
+  const contacts = publicContacts();
+  const index = contacts.findIndex((item) => item.id === contact.id);
+  if (index === -1) contacts.unshift(contact);
+  else contacts[index] = contact;
+  db.contacts = contacts;
+  await saveDb();
+  return { contacts: publicContacts() };
+}
+
+async function deleteContact(id) {
+  db.contacts = publicContacts().filter((contact) => contact.id !== id);
+  await saveDb();
+  return { contacts: publicContacts() };
+}
+
+async function scanAttendance(payload) {
+  const employee = db.employees.find((item) => String(item.id) === String(payload.employeeId));
+  if (!employee) throw new Error("Face ID uchun xodim tanlanmadi");
+
+  const openRecord = db.attendance.find((record) => String(record.employeeId) === String(employee.id) && !record.checkOut);
+  const now = new Date();
+
+  if (openRecord) {
+    openRecord.checkOut = now.toISOString();
+    openRecord.employeeName = employee.name;
+    await saveDb();
+    return { action: "checkout", employee: scheduleEmployee(employee), record: openRecord, dashboard: getDashboard(payload.weekStart) };
+  }
+
+  const record = {
+    id: `att-${now.getTime()}-${employee.id}`,
+    employeeId: Number(employee.id),
+    employeeName: employee.name,
+    date: formatInputDate(now),
+    checkIn: now.toISOString(),
+    checkOut: null,
+    method: "face"
+  };
+
+  db.attendance.push(record);
+  await saveDb();
+  return { action: "checkin", employee: scheduleEmployee(employee), record, dashboard: getDashboard(payload.weekStart) };
+}
+
+function refreshScheduleDerivedData(schedule) {
   schedule.groups = schedule.groups.map((group) => ({
     ...group,
     people: group.people.map((person) => {
-      const employee = employees.find((e) => String(e.id) === String(person.id));
-      return employee
-        ? {
-            ...person,
-            ...scheduleEmployee(employee),
-            time: person.time,
-            employeeId: person.employeeId,
-            status: person.status,
-            statusType: person.statusType
-          }
-        : person;
+      const employee = db.employees.find((item) => String(item.id) === String(person.id));
+      return employee ? { ...person, ...scheduleEmployee(employee), time: person.time, employeeId: person.employeeId, status: person.status, statusType: person.statusType } : person;
     })
   }));
 
-  const allPeople = schedule.groups.flatMap((g) => g.people);
-  const todayGroups = schedule.groups.filter((g) => g.day === "Dushanba");
-  const todayPeople = todayGroups.flatMap((g) => g.people);
-
+  const allPeople = schedule.groups.flatMap((group) => group.people);
+  const todayGroups = schedule.groups.filter((group) => group.day === "Dushanba");
+  const todayPeople = todayGroups.flatMap((group) => group.people);
   const working = countByMetric(allPeople, "working");
   const rest = countByMetric(allPeople, "rest");
-  const backup = allPeople.filter((p) => p.statusType === "backup").length;
-  const trip = allPeople.filter((p) => p.statusType === "trip").length;
-  const tjk = allPeople.filter((p) => p.statusType === "tjk").length;
-  const vacation = allPeople.filter((p) => p.statusType === "vacation").length;
-  const administration = allPeople.filter((p) => p.statusType === "administration").length;
-  const presidential = allPeople.filter((p) => p.statusType === "presidential").length;
-  const sick = allPeople.filter((p) => p.statusType === "sick").length;
+  const backup = allPeople.filter((person) => person.statusType === "backup").length;
+  const trip = allPeople.filter((person) => person.statusType === "trip").length;
+  const tjk = allPeople.filter((person) => person.statusType === "tjk").length;
+  const vacation = allPeople.filter((person) => person.statusType === "vacation").length;
+  const administration = allPeople.filter((person) => person.statusType === "administration").length;
+  const presidential = allPeople.filter((person) => person.statusType === "presidential").length;
+  const sick = allPeople.filter((person) => person.statusType === "sick").length;
 
   schedule.metrics = {
     ...schedule.metrics,
-    total: employees.length,
+    total: db.employees.length,
     working,
     rest,
     backup,
@@ -484,17 +681,11 @@ function refreshScheduleDerivedData(schedule, employees, contacts, attendance) {
     sick,
     workingToday: countByMetric(todayPeople, "working"),
     restToday: countByMetric(todayPeople, "rest"),
-    tripToday: todayPeople.filter((p) => p.statusType === "trip").length,
-    tjkToday: todayPeople.filter((p) => p.statusType === "tjk").length
+    tripToday: todayPeople.filter((person) => person.statusType === "trip").length,
+    tjkToday: todayPeople.filter((person) => person.statusType === "tjk").length
   };
-  schedule.studioToday = todayPeople
-    .filter((p) => statusMetricMap[p.statusType] !== "rest")
-    .slice(0, 3)
-    .map((p) => ({ ...p, status: "Working" }));
-  schedule.overviewRows = createOverviewRows(schedule.groups, employees);
-  schedule.employees = publicEmployees(employees);
-  schedule.contacts = publicContacts(contacts);
-  schedule.attendance = buildAttendanceSummary(employees, attendance);
+  schedule.studioToday = todayPeople.filter((person) => statusMetricMap[person.statusType] !== "rest").slice(0, 3).map((person) => ({ ...person, status: "Working" }));
+  schedule.overviewRows = createOverviewRows(schedule.groups);
   schedule.reports = [
     { label: "Ishlayotganlar", value: working },
     { label: "Dam olish kuni", value: rest },
@@ -520,144 +711,49 @@ function refreshScheduleDerivedData(schedule, employees, contacts, attendance) {
   ];
 }
 
-function cleanEmployeePayload(payload, existing = {}) {
-  const normalized = normalizeEmployee({
-    ...existing,
-    id: payload.id ?? existing.id,
-    name: payload.name?.trim() || existing.name,
-    role: payload.role?.trim() || existing.role || "Operator",
-    phone: payload.phone?.trim() || existing.phone || "+998 90 000 00 00",
-    telegram: payload.telegram?.trim() || "",
-    department: normalizeDepartment(
-      payload.department || existing.department || inferDepartment(payload)
-    ),
-    address: "",
-    avatar:
-      payload.avatar?.trim() ||
-      existing.avatar ||
-      createAvatar(payload.name || existing.name, existing.id),
-    documents: cleanDocuments(
-      payload.documents && typeof payload.documents === "object"
-        ? payload.documents
-        : existing.documents || {}
-    ),
-    portfolio: payload.portfolio || existing.portfolio || []
-  });
-  return {
-    ...normalized,
-    documentView: createEmployeeDocumentView(normalized, existing.documentView || {})
-  };
+function getScheduleKey(weekStartValue) {
+  return formatInputDate(getWeekStart(weekStartValue));
 }
 
-// ─── Audit log ────────────────────────────────────────────────────────────────
-
-async function writeAudit(action, entity, entityId, details) {
-  try {
-    await prisma.auditLog.create({
-      data: { action, entity, entityId: String(entityId || ""), details: details || null }
-    });
-  } catch {}
-}
-
-// ─── DB fetch helpers ─────────────────────────────────────────────────────────
-
-async function fetchEmployees() {
-  const rows = await prisma.employee.findMany({
-    where: { isActive: true },
-    orderBy: { id: "asc" }
-  });
-  return rows.map(normalizeEmployee);
-}
-
-async function fetchContacts() {
-  const rows = await prisma.contact.findMany({ orderBy: { createdAt: "asc" } });
-  return rows.map(normalizeContact).filter(Boolean);
-}
-
-async function fetchAttendance() {
-  const rows = await prisma.attendance.findMany({ orderBy: { checkIn: "asc" } });
-  return rows
-    .map((r) =>
-      normalizeAttendanceRecord({
-        ...r,
-        checkIn: r.checkIn.toISOString(),
-        checkOut: r.checkOut ? r.checkOut.toISOString() : null
-      })
-    )
-    .filter(Boolean);
-}
-
-// ─── Business logic (async, uses Prisma) ─────────────────────────────────────
-
-async function getDashboard(weekStartValue) {
+function getDashboard(weekStartValue) {
   const key = getScheduleKey(weekStartValue);
-  const [employees, contacts, attendance] = await Promise.all([
-    fetchEmployees(),
-    fetchContacts(),
-    fetchAttendance()
-  ]);
-
-  const saved = await prisma.schedule.findUnique({ where: { weekStart: key } });
-  if (saved) {
-    const schedule = saved.data;
-    refreshScheduleDerivedData(schedule, employees, contacts, attendance);
-    return schedule;
+  if (db.schedules[key]) {
+    db.schedules[key].employees = publicEmployees();
+    db.schedules[key].contacts = publicContacts();
+    refreshScheduleDerivedData(db.schedules[key]);
+    return db.schedules[key];
   }
-  return buildDashboard(key, {}, employees, contacts, attendance);
+  return buildDashboard(key);
 }
 
 async function generateAndStoreSchedule(weekStartValue) {
   const key = getScheduleKey(weekStartValue);
-  const [employees, contacts, attendance] = await Promise.all([
-    fetchEmployees(),
-    fetchContacts(),
-    fetchAttendance()
-  ]);
+  db.generation += 1;
 
-  const generation = (await prisma.schedule.count()) + 1;
-  const dashboard = buildDashboard(
-    key,
-    {
-      seed: generation,
-      generatedAt: new Date().toLocaleString("uz-UZ", { hour: "2-digit", minute: "2-digit" }),
-      saved: true
-    },
-    employees,
-    contacts,
-    attendance
-  );
-
-  await prisma.schedule.upsert({
-    where: { weekStart: key },
-    update: { data: dashboard },
-    create: { weekStart: key, data: dashboard }
+  const dashboard = buildDashboard(key, {
+    seed: db.generation,
+    generatedAt: new Date().toLocaleString("uz-UZ", { hour: "2-digit", minute: "2-digit" }),
+    saved: true
   });
 
-  await writeAudit("generate", "Schedule", key, `generation=${generation}`);
+  db.schedules[key] = dashboard;
+  await saveDb();
   return dashboard;
 }
 
 async function deleteSchedule(weekStartValue) {
   const key = getScheduleKey(weekStartValue);
-  await prisma.schedule.deleteMany({ where: { weekStart: key } });
-  await writeAudit("delete", "Schedule", key, null);
+  delete db.schedules[key];
+  await saveDb();
   return { ok: true };
 }
 
 async function updatePersonStatus(weekStartValue, payload) {
   const key = getScheduleKey(weekStartValue);
-  const [employees, contacts, attendance] = await Promise.all([
-    fetchEmployees(),
-    fetchContacts(),
-    fetchAttendance()
-  ]);
-
-  const saved = await prisma.schedule.findUnique({ where: { weekStart: key } });
-  const schedule = saved
-    ? saved.data
-    : buildDashboard(key, { saved: true }, employees, contacts, attendance);
-
+  if (!db.schedules[key]) db.schedules[key] = buildDashboard(key, { saved: true });
   const statusType = statusMap[payload.statusType] ? payload.statusType : "working";
+
+  const schedule = db.schedules[key];
   let updated = false;
 
   schedule.groups = schedule.groups.map((group) => {
@@ -667,48 +763,32 @@ async function updatePersonStatus(weekStartValue, payload) {
       people: group.people.map((person) => {
         if (String(person.id) !== String(payload.personId)) return person;
         updated = true;
-        return { ...person, statusType, status: statusMap[statusType] };
+        return {
+          ...person,
+          statusType,
+          status: statusMap[statusType]
+        };
       })
     };
   });
 
   if (!updated) throw new Error("Jadvaldagi xodim topilmadi");
   schedule.week.saved = true;
-  refreshScheduleDerivedData(schedule, employees, contacts, attendance);
-
-  await prisma.schedule.upsert({
-    where: { weekStart: key },
-    update: { data: schedule },
-    create: { weekStart: key, data: schedule }
-  });
-
-  await writeAudit(
-    "status_update",
-    "Schedule",
-    key,
-    `person=${payload.personId} status=${statusType}`
-  );
+  refreshScheduleDerivedData(schedule);
+  await saveDb();
   return schedule;
 }
 
 async function addScheduleGroup(weekStartValue, payload) {
   const key = getScheduleKey(weekStartValue);
-  const [employees, contacts, attendance] = await Promise.all([
-    fetchEmployees(),
-    fetchContacts(),
-    fetchAttendance()
-  ]);
+  if (!db.schedules[key]) db.schedules[key] = buildDashboard(key, { saved: true });
 
-  const saved = await prisma.schedule.findUnique({ where: { weekStart: key } });
-  const schedule = saved
-    ? saved.data
-    : buildDashboard(key, { saved: true }, employees, contacts, attendance);
-
+  const schedule = db.schedules[key];
   const day = dayNames.includes(payload.day) ? payload.day : dayNames[0];
   const dayIndex = dayNames.indexOf(day);
   const date = addDays(getWeekStart(key), dayIndex);
   const selectedEmployees = (Array.isArray(payload.employeeIds) ? payload.employeeIds : [])
-    .map((id) => employees.find((e) => String(e.id) === String(id)))
+    .map((id) => db.employees.find((employee) => String(employee.id) === String(id)))
     .filter(Boolean);
 
   if (!selectedEmployees.length) throw new Error("Kamida bitta xodim tanlang");
@@ -734,570 +814,221 @@ async function addScheduleGroup(weekStartValue, payload) {
 
   schedule.groups = [group, ...schedule.groups];
   schedule.week.saved = true;
-  schedule.week.generatedAt = new Date().toLocaleString("uz-UZ", {
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-  refreshScheduleDerivedData(schedule, employees, contacts, attendance);
-
-  await prisma.schedule.upsert({
-    where: { weekStart: key },
-    update: { data: schedule },
-    create: { weekStart: key, data: schedule }
-  });
-
-  await writeAudit("add_group", "Schedule", key, `day=${day} meta=${meta}`);
+  schedule.week.generatedAt = new Date().toLocaleString("uz-UZ", { hour: "2-digit", minute: "2-digit" });
+  schedule.employees = publicEmployees();
+  refreshScheduleDerivedData(schedule);
+  await saveDb();
   return schedule;
 }
 
-async function createEmployee(payload) {
-  if (!payload.name?.trim()) throw new Error("Xodim ismi kiritilmadi");
-
-  const cleaned = cleanEmployeePayload(payload);
-  const employee = await prisma.employee.create({
-    data: {
-      name: cleaned.name,
-      role: cleaned.role,
-      phone: cleaned.phone,
-      telegram: cleaned.telegram,
-      department: cleaned.department,
-      avatar: cleaned.avatar,
-      address: cleaned.address,
-      portfolio: cleaned.portfolio,
-      documents: cleaned.documents
-    }
+function sendJson(response, status, payload) {
+  response.writeHead(status, {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
   });
-
-  const normalized = normalizeEmployee(employee);
-  await writeAudit("create", "Employee", employee.id, employee.name);
-  return scheduleEmployee(normalized);
+  response.end(JSON.stringify(payload));
 }
 
-async function updateEmployee(id, payload) {
-  const existing = await prisma.employee.findUnique({ where: { id: Number(id) } });
-  if (!existing) throw new Error("Xodim topilmadi");
-
-  const cleaned = cleanEmployeePayload(payload, normalizeEmployee(existing));
-  const updated = await prisma.employee.update({
-    where: { id: Number(id) },
-    data: {
-      name: cleaned.name,
-      role: cleaned.role,
-      phone: cleaned.phone,
-      telegram: cleaned.telegram,
-      department: cleaned.department,
-      avatar: cleaned.avatar,
-      address: cleaned.address,
-      portfolio: cleaned.portfolio,
-      documents: cleaned.documents
-    }
-  });
-
-  const normalizedUpdated = normalizeEmployee(updated);
-
-  const allSchedules = await prisma.schedule.findMany();
-  for (const s of allSchedules) {
-    const schedule = s.data;
-    schedule.groups = schedule.groups.map((group) => ({
-      ...group,
-      people: group.people.map((person) =>
-        String(person.id) === String(id)
-          ? {
-              ...person,
-              ...scheduleEmployee(normalizedUpdated),
-              time: person.time,
-              employeeId: person.employeeId,
-              status: person.status,
-              statusType: person.statusType
-            }
-          : person
-      )
-    }));
-    await prisma.schedule.update({ where: { weekStart: s.weekStart }, data: { data: schedule } });
-  }
-
-  await writeAudit("update", "Employee", id, updated.name);
-  return scheduleEmployee(normalizedUpdated);
+async function readBody(request) {
+  const chunks = [];
+  for await (const chunk of request) chunks.push(chunk);
+  if (!chunks.length) return {};
+  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }
 
-async function deleteEmployee(id) {
-  const count = await prisma.employee.count({ where: { isActive: true } });
-  if (count <= 1) throw new Error("Oxirgi xodimni o'chirib bo'lmaydi");
-
-  const existing = await prisma.employee.findUnique({ where: { id: Number(id) } });
-  if (!existing) throw new Error("Xodim topilmadi");
-
-  await prisma.employee.delete({ where: { id: Number(id) } });
-
-  const [freshEmployees, freshContacts, freshAttendance] = await Promise.all([
-    fetchEmployees(),
-    fetchContacts(),
-    fetchAttendance()
-  ]);
-
-  const allSchedules = await prisma.schedule.findMany();
-  for (const s of allSchedules) {
-    const schedule = s.data;
-    schedule.groups = schedule.groups.map((group) => ({
-      ...group,
-      people: group.people.filter((person) => String(person.id) !== String(id))
-    }));
-    refreshScheduleDerivedData(schedule, freshEmployees, freshContacts, freshAttendance);
-    await prisma.schedule.update({ where: { weekStart: s.weekStart }, data: { data: schedule } });
-  }
-
-  await writeAudit("delete", "Employee", id, existing.name);
-  return { ok: true };
-}
-
-async function saveContact(payload) {
-  const contact = normalizeContact({
-    ...payload,
-    id: payload.id || `contact-${Date.now()}`
-  });
-  if (!contact) throw new Error("Kontakt ma'lumotlarini kiriting");
-  if (!contact.name && !contact.vehicle) throw new Error("Ism yoki mashina raqamini kiriting");
-  if (!contact.phone) throw new Error("Telefon raqamini kiriting");
-
-  const existing = await prisma.contact.findUnique({ where: { id: contact.id } });
-  if (existing) {
-    await prisma.contact.update({
-      where: { id: contact.id },
-      data: { type: contact.type, name: contact.name, vehicle: contact.vehicle, phone: contact.phone }
-    });
-    await writeAudit("update", "Contact", contact.id, contact.name);
-  } else {
-    await prisma.contact.create({
-      data: {
-        id: contact.id,
-        type: contact.type,
-        name: contact.name,
-        vehicle: contact.vehicle,
-        phone: contact.phone
-      }
-    });
-    await writeAudit("create", "Contact", contact.id, contact.name);
-  }
-
-  const contacts = await fetchContacts();
-  return { contacts: publicContacts(contacts) };
-}
-
-async function deleteContact(id) {
-  await prisma.contact.deleteMany({ where: { id } });
-  await writeAudit("delete", "Contact", id, null);
-  const contacts = await fetchContacts();
-  return { contacts: publicContacts(contacts) };
-}
-
-async function scanAttendance(payload) {
-  const employees = await fetchEmployees();
-  const employee = employees.find((e) => String(e.id) === String(payload.employeeId));
-  if (!employee) throw new Error("Face ID uchun xodim tanlanmadi");
-
-  const openRecord = await prisma.attendance.findFirst({
-    where: { employeeId: Number(employee.id), checkOut: null }
-  });
-  const now = new Date();
-
-  if (openRecord) {
-    const updatedRecord = await prisma.attendance.update({
-      where: { id: openRecord.id },
-      data: { checkOut: now, employeeName: employee.name }
-    });
-    const record = normalizeAttendanceRecord({
-      ...updatedRecord,
-      checkIn: updatedRecord.checkIn.toISOString(),
-      checkOut: updatedRecord.checkOut?.toISOString() || null
-    });
-    await writeAudit("checkout", "Attendance", record.id, employee.name);
-    const dashboard = await getDashboard(payload.weekStart);
-    return { action: "checkout", employee: scheduleEmployee(employee), record, dashboard };
-  }
-
-  const created = await prisma.attendance.create({
-    data: {
-      employeeId: Number(employee.id),
-      employeeName: employee.name,
-      date: formatInputDate(now),
-      checkIn: now,
-      checkOut: null,
-      method: "face"
-    }
-  });
-  const record = normalizeAttendanceRecord({
-    ...created,
-    checkIn: created.checkIn.toISOString(),
-    checkOut: null
-  });
-  await writeAudit("checkin", "Attendance", record.id, employee.name);
-  const dashboard = await getDashboard(payload.weekStart);
-  return { action: "checkin", employee: scheduleEmployee(employee), record, dashboard };
-}
-
-// ─── Auth middleware ──────────────────────────────────────────────────────────
-
-function authenticateToken(req, res, next) {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (!token) return res.status(401).json({ message: "Autentifikatsiya talab qilinadi" });
+async function serveStatic(request, response) {
+  const url = new URL(request.url, `http://${request.headers.host}`);
+  const safePath = normalize(url.pathname).replace(/^(\.\.[/\\])+/, "");
+  const requestedPath = safePath === "/" ? "/index.html" : safePath;
+  const filePath = join(__dirname, "dist", requestedPath);
+  const fallback = join(__dirname, "dist", "index.html");
+  const target = existsSync(filePath) ? filePath : fallback;
+  const type = {
+    ".html": "text/html",
+    ".js": "text/javascript",
+    ".css": "text/css",
+    ".svg": "image/svg+xml",
+    ".png": "image/png"
+  }[extname(target)] || "text/plain";
 
   try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET || "ishjadvali_secret_key");
-    next();
+    const file = await readFile(target);
+    response.writeHead(200, { "Content-Type": type });
+    response.end(file);
   } catch {
-    return res.status(401).json({ message: "Token yaroqsiz yoki muddati o'tgan" });
+    response.writeHead(404);
+    response.end("Not found");
   }
 }
 
-function requireRole(...roles) {
-  return (req, res, next) => {
-    if (!req.user || !roles.includes(req.user.role)) {
-      return res.status(403).json({ message: "Ruxsat yo'q" });
-    }
-    next();
-  };
-}
+export async function handleRequest(request, response) {
+  if (request.method === "OPTIONS") return sendJson(response, 200, {});
 
-// ─── Error wrapper ────────────────────────────────────────────────────────────
+  const url = new URL(request.url, `http://${request.headers.host}`);
 
-function wrap(fn) {
-  return async (req, res) => {
-    try {
-      await fn(req, res);
-    } catch (err) {
-      res.status(500).json({ message: err.message || "Server xatosi" });
-    }
-  };
-}
-
-// ─── Routes ───────────────────────────────────────────────────────────────────
-
-// ─── Auth routes ─────────────────────────────────────────────────────────────
-
-app.post(
-  "/api/auth/login",
-  wrap(async (req, res) => {
-    const { username, password } = req.body || {};
-    if (!username || !password) {
-      return res.status(400).json({ success: false, message: "Login va parolni kiriting" });
+  try {
+    if (request.method === "GET" && url.pathname === "/api/health") {
+      return sendJson(response, 200, { ok: true, schedules: Object.keys(db.schedules).length });
     }
 
-    const user = await prisma.user.findUnique({ where: { username: String(username).trim() } });
-    if (!user || !user.isActive) {
-      return res.status(401).json({ success: false, message: "Login yoki parol noto'g'ri" });
-    }
-
-    const valid = await bcrypt.compare(String(password), user.password);
-    if (!valid) {
-      return res.status(401).json({ success: false, message: "Login yoki parol noto'g'ri" });
-    }
-
-    const payload = { id: user.id, username: user.username, role: user.role, fullName: user.fullName };
-    const token = jwt.sign(payload, process.env.JWT_SECRET || "ishjadvali_secret_key", { expiresIn: "7d" });
-
-    res.json({
-      success: true,
-      user: payload,
-      token
-    });
-  })
-);
-
-app.get(
-  "/api/auth/me",
-  authenticateToken,
-  wrap(async (req, res) => {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      select: { id: true, username: true, role: true, fullName: true, isActive: true }
-    });
-    if (!user || !user.isActive) {
-      return res.status(401).json({ message: "Foydalanuvchi topilmadi" });
-    }
-    res.json({ user });
-  })
-);
-
-// ─── Department routes ────────────────────────────────────────────────────────
-
-app.get(
-  "/api/departments",
-  wrap(async (req, res) => {
-    const departments = await prisma.department.findMany({
-      where: { isActive: true },
-      orderBy: { createdAt: "asc" }
-    });
-    res.json({ departments });
-  })
-);
-
-app.post(
-  "/api/departments",
-  authenticateToken,
-  requireRole("superadmin"),
-  wrap(async (req, res) => {
-    const { name, label, color } = req.body || {};
-    if (!name?.trim()) return res.status(400).json({ message: "Bo'lim kodi (name) kiritilmadi" });
-    if (!label?.trim()) return res.status(400).json({ message: "Bo'lim nomi (label) kiritilmadi" });
-
-    const slug = String(name).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 32);
-    const department = await prisma.department.upsert({
-      where: { name: slug },
-      update: { label: label.trim(), color: color || "#6366f1", isActive: true },
-      create: { name: slug, label: label.trim(), color: color || "#6366f1" }
-    });
-
-    await writeAudit("create", "Department", department.id, department.label);
-    res.status(201).json({ department });
-  })
-);
-
-app.put(
-  "/api/departments/:id",
-  authenticateToken,
-  requireRole("superadmin"),
-  wrap(async (req, res) => {
-    const { label, color } = req.body || {};
-    const department = await prisma.department.update({
-      where: { id: Number(req.params.id) },
-      data: {
-        ...(label?.trim() ? { label: label.trim() } : {}),
-        ...(color ? { color } : {})
+    if (request.method === "POST" && url.pathname === "/api/auth/login") {
+      const { username, password } = await readBody(request);
+      const user = db.users.find((u) => u.username === username && u.isActive);
+      if (!user || !compareSync(String(password || ""), user.password)) {
+        return sendJson(response, 401, { message: "Login yoki parol noto'g'ri" });
       }
-    });
-    await writeAudit("update", "Department", department.id, department.label);
-    res.json({ department });
-  })
-);
-
-app.delete(
-  "/api/departments/:id",
-  authenticateToken,
-  requireRole("superadmin"),
-  wrap(async (req, res) => {
-    const department = await prisma.department.findUnique({ where: { id: Number(req.params.id) } });
-    if (!department) return res.status(404).json({ message: "Bo'lim topilmadi" });
-
-    const employeeCount = await prisma.employee.count({
-      where: { department: department.name, isActive: true }
-    });
-    if (employeeCount > 0) {
-      return res.status(400).json({
-        message: `Bu bo'limda ${employeeCount} ta xodim bor, avval ularni boshqa bo'limga o'tkazing`
+      const token = `${Buffer.from(JSON.stringify({ id: user.id, role: user.role })).toString("base64")}.${JWT_SECRET.slice(0, 8)}`;
+      return sendJson(response, 200, {
+        user: { id: user.id, username: user.username, fullName: user.fullName, role: user.role },
+        token
       });
     }
 
-    await prisma.department.update({ where: { id: Number(req.params.id) }, data: { isActive: false } });
-    await writeAudit("delete", "Department", department.id, department.label);
-    res.json({ ok: true });
-  })
-);
+    if (request.method === "GET" && url.pathname === "/api/users") {
+      return sendJson(response, 200, {
+        users: db.users.map(({ password: _pw, ...u }) => u)
+      });
+    }
 
-// ─── Health ───────────────────────────────────────────────────────────────────
-
-app.get(
-  "/api/health",
-  wrap(async (req, res) => {
-    const count = await prisma.schedule.count();
-    res.json({ ok: true, schedules: count });
-  })
-);
-
-app.get(
-  "/api/dashboard",
-  wrap(async (req, res) => {
-    res.json(await getDashboard(req.query.weekStart));
-  })
-);
-
-app.get(
-  "/api/employees",
-  wrap(async (req, res) => {
-    const employees = await fetchEmployees();
-    res.json({ employees: publicEmployees(employees) });
-  })
-);
-
-app.post(
-  "/api/employees",
-  authenticateToken,
-  requireRole("superadmin", "admin"),
-  wrap(async (req, res) => {
-    res.status(201).json(await createEmployee(req.body));
-  })
-);
-
-app.put(
-  "/api/employees/:id",
-  authenticateToken,
-  requireRole("superadmin", "admin"),
-  wrap(async (req, res) => {
-    res.json(await updateEmployee(req.params.id, req.body));
-  })
-);
-
-app.delete(
-  "/api/employees/:id",
-  authenticateToken,
-  requireRole("superadmin"),
-  wrap(async (req, res) => {
-    res.json(await deleteEmployee(req.params.id));
-  })
-);
-
-app.get(
-  "/api/contacts",
-  wrap(async (req, res) => {
-    const contacts = await fetchContacts();
-    res.json({ contacts: publicContacts(contacts) });
-  })
-);
-
-app.post(
-  "/api/contacts",
-  authenticateToken,
-  requireRole("superadmin", "admin"),
-  wrap(async (req, res) => {
-    res.status(201).json(await saveContact(req.body));
-  })
-);
-
-app.delete(
-  "/api/contacts/:id",
-  authenticateToken,
-  requireRole("superadmin", "admin"),
-  wrap(async (req, res) => {
-    res.json(await deleteContact(decodeURIComponent(req.params.id)));
-  })
-);
-
-app.post(
-  "/api/attendance/scan",
-  wrap(async (req, res) => {
-    res.json(await scanAttendance(req.body));
-  })
-);
-
-app.get(
-  "/api/schedules",
-  wrap(async (req, res) => {
-    const schedules = await prisma.schedule.findMany({ orderBy: { savedAt: "desc" } });
-    res.json({
-      schedules: schedules.map((s) => ({
-        start: s.data.week?.start || s.weekStart,
-        range: s.data.week?.range || s.weekStart,
-        generatedAt: s.data.week?.generatedAt || s.savedAt,
-        groups: s.data.groups?.length || 0
-      }))
-    });
-  })
-);
-
-app.post(
-  "/api/schedules/generate",
-  authenticateToken,
-  requireRole("superadmin", "admin"),
-  wrap(async (req, res) => {
-    res.status(201).json(await generateAndStoreSchedule(req.body.weekStart));
-  })
-);
-
-app.get(
-  "/api/schedules/:weekStart",
-  wrap(async (req, res) => {
-    res.json(await getDashboard(req.params.weekStart));
-  })
-);
-
-app.delete(
-  "/api/schedules/:weekStart",
-  authenticateToken,
-  requireRole("superadmin"),
-  wrap(async (req, res) => {
-    res.json(await deleteSchedule(req.params.weekStart));
-  })
-);
-
-app.post(
-  "/api/schedules/:weekStart/groups",
-  authenticateToken,
-  requireRole("superadmin", "admin"),
-  wrap(async (req, res) => {
-    res.status(201).json(await addScheduleGroup(req.params.weekStart, req.body));
-  })
-);
-
-app.put(
-  "/api/schedules/:weekStart/status",
-  authenticateToken,
-  requireRole("superadmin", "admin"),
-  wrap(async (req, res) => {
-    res.json(await updatePersonStatus(req.params.weekStart, req.body));
-  })
-);
-
-app.get(
-  "/api/audit-logs",
-  wrap(async (req, res) => {
-    const logs = await prisma.auditLog.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 100
-    });
-    res.json({ logs });
-  })
-);
-
-// ─── Word export ─────────────────────────────────────────────────────────────
-
-app.post(
-  "/api/filming/export-word",
-  authenticateToken,
-  wrap(async (req, res) => {
-    const { date, approvedBy, rows } = req.body || {};
-    const buffer = await buildFilmingScheduleDocx({
-      date: date ? new Date(date) : new Date(),
-      approvedBy: approvedBy || "M. Safarov",
-      rows: rows || []
-    });
-    const today = new Date().toISOString().slice(0, 10);
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-    res.setHeader("Content-Disposition", `attachment; filename="tasvirga-olish-jadvali-${today}.docx"`);
-    res.send(buffer);
-    await prisma.auditLog.create({
-      data: {
-        action: "EXPORT",
-        entity: "FilmingSchedule",
-        details: `Word export: ${today}, ${rows?.length || 0} qator, user: ${req.user.username}`
+    if (request.method === "POST" && url.pathname === "/api/users") {
+      const body = await readBody(request);
+      if (!body.username || !body.password || !body.fullName) {
+        return sendJson(response, 400, { message: "username, password va fullName talab qilinadi" });
       }
-    });
-  })
-);
+      if (db.users.find((u) => u.username === body.username)) {
+        return sendJson(response, 409, { message: "Bu username allaqachon mavjud" });
+      }
+      const newUser = {
+        id: Math.max(0, ...db.users.map((u) => u.id)) + 1,
+        username: String(body.username).trim(),
+        password: hashSync(String(body.password), 10),
+        fullName: String(body.fullName).trim(),
+        role: ["superadmin", "admin", "xodim"].includes(body.role) ? body.role : "xodim",
+        isActive: true,
+        createdAt: new Date().toISOString()
+      };
+      db.users.push(newUser);
+      await saveDb();
+      const { password: _pw, ...safeUser } = newUser;
+      return sendJson(response, 201, safeUser);
+    }
 
-// Serve built frontend static files
-app.use(express.static(join(__dirname, "dist")));
-app.get("*", (req, res) => {
-  if (req.path.startsWith("/api")) {
-    return res.status(404).json({ message: "API topilmadi" });
+    const userMatch = url.pathname.match(/^\/api\/users\/(\d+)$/);
+    if (userMatch && request.method === "PUT") {
+      const uid = Number(userMatch[1]);
+      const idx = db.users.findIndex((u) => u.id === uid);
+      if (idx === -1) return sendJson(response, 404, { message: "Foydalanuvchi topilmadi" });
+      const body = await readBody(request);
+      if (body.password) db.users[idx].password = hashSync(String(body.password), 10);
+      if (body.fullName) db.users[idx].fullName = String(body.fullName).trim();
+      if (body.role && ["superadmin", "admin", "xodim"].includes(body.role)) db.users[idx].role = body.role;
+      if (typeof body.isActive === "boolean") db.users[idx].isActive = body.isActive;
+      await saveDb();
+      const { password: _pw, ...safeUser } = db.users[idx];
+      return sendJson(response, 200, safeUser);
+    }
+
+    if (userMatch && request.method === "DELETE") {
+      const uid = Number(userMatch[1]);
+      const idx = db.users.findIndex((u) => u.id === uid);
+      if (idx === -1) return sendJson(response, 404, { message: "Foydalanuvchi topilmadi" });
+      if (db.users.filter((u) => u.role === "superadmin" && u.isActive).length <= 1 && db.users[idx].role === "superadmin") {
+        return sendJson(response, 400, { message: "Oxirgi superadminni o'chirib bo'lmaydi" });
+      }
+      db.users.splice(idx, 1);
+      await saveDb();
+      return sendJson(response, 200, { ok: true });
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/dashboard") {
+      return sendJson(response, 200, getDashboard(url.searchParams.get("weekStart")));
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/employees") {
+      return sendJson(response, 200, { employees: publicEmployees() });
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/employees") {
+      return sendJson(response, 201, await createEmployee(await readBody(request)));
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/contacts") {
+      return sendJson(response, 200, { contacts: publicContacts() });
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/contacts") {
+      return sendJson(response, 201, await saveContact(await readBody(request)));
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/attendance/scan") {
+      return sendJson(response, 200, await scanAttendance(await readBody(request)));
+    }
+
+    const employeeMatch = url.pathname.match(/^\/api\/employees\/(\d+)$/);
+    if (employeeMatch && request.method === "PUT") {
+      return sendJson(response, 200, await updateEmployee(employeeMatch[1], await readBody(request)));
+    }
+
+    if (employeeMatch && request.method === "DELETE") {
+      return sendJson(response, 200, await deleteEmployee(employeeMatch[1]));
+    }
+
+    const contactMatch = url.pathname.match(/^\/api\/contacts\/([^/]+)$/);
+    if (contactMatch && request.method === "DELETE") {
+      return sendJson(response, 200, await deleteContact(decodeURIComponent(contactMatch[1])));
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/schedules") {
+      return sendJson(response, 200, {
+        schedules: Object.values(db.schedules).map((schedule) => ({
+          start: schedule.week.start,
+          range: schedule.week.range,
+          generatedAt: schedule.week.generatedAt,
+          groups: schedule.groups.length
+        }))
+      });
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/schedules/generate") {
+      const body = await readBody(request);
+      return sendJson(response, 201, await generateAndStoreSchedule(body.weekStart));
+    }
+
+    const scheduleMatch = url.pathname.match(/^\/api\/schedules\/(\d{4}-\d{2}-\d{2})$/);
+    if (scheduleMatch && request.method === "GET") {
+      return sendJson(response, 200, getDashboard(scheduleMatch[1]));
+    }
+
+    if (scheduleMatch && request.method === "DELETE") {
+      return sendJson(response, 200, await deleteSchedule(scheduleMatch[1]));
+    }
+
+    const groupMatch = url.pathname.match(/^\/api\/schedules\/(\d{4}-\d{2}-\d{2})\/groups$/);
+    if (groupMatch && request.method === "POST") {
+      return sendJson(response, 201, await addScheduleGroup(groupMatch[1], await readBody(request)));
+    }
+
+    const statusMatch = url.pathname.match(/^\/api\/schedules\/(\d{4}-\d{2}-\d{2})\/status$/);
+    if (statusMatch && request.method === "PUT") {
+      return sendJson(response, 200, await updatePersonStatus(statusMatch[1], await readBody(request)));
+    }
+
+    if (url.pathname.startsWith("/api/")) {
+      return sendJson(response, 404, { message: "API topilmadi" });
+    }
+
+    return serveStatic(request, response);
+  } catch (error) {
+    return sendJson(response, 500, { message: error.message || "Server xatosi" });
   }
-  res.sendFile(join(__dirname, "dist", "index.html"));
-});
-
-// ─── Export for Vercel / api/index.mjs ────────────────────────────────────────
-
-export async function handleRequest(req, res) {
-  return app(req, res);
 }
 
-// ─── Start server when run directly ──────────────────────────────────────────
-
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const PORT = Number(process.env.PORT || 3001);
+  const server = createServer(handleRequest);
   const HOST = process.env.HOST || "0.0.0.0";
-  app.listen(PORT, HOST, () => {
-    console.log(`Server ready: http://${HOST}:${PORT}`);
-    if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
-      startTelegramBot(prisma);
-    }
+  server.listen(PORT, HOST, () => {
+    console.log(`Backend ready: http://${HOST}:${PORT}`);
   });
 }
