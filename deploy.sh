@@ -2,101 +2,102 @@
 set -e
 
 echo "=== IshJadvali Server Deploy ==="
+echo "Tur: fresh yoki update? (fresh/update) [default: update]"
+read -r DEPLOY_TYPE
+DEPLOY_TYPE=${DEPLOY_TYPE:-update}
 
 # ── STEP 1: Check & install Node.js ──────────────────────────────────────────
-echo "[1/8] Checking Node.js..."
+echo "[1] Node.js tekshirilmoqda..."
 NODE_VER=$(node --version 2>/dev/null | cut -d'v' -f2 | cut -d'.' -f1 || echo "0")
 if [ "$NODE_VER" -lt "18" ] 2>/dev/null; then
-  echo "Installing Node.js 20..."
+  echo "Node.js 20 o'rnatilmoqda..."
   curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
   apt-get install -y nodejs
 fi
 echo "  Node: $(node --version)"
 
-# ── STEP 2: Check & install PostgreSQL ───────────────────────────────────────
-echo "[2/8] Checking PostgreSQL..."
-if ! command -v psql &> /dev/null; then
-  echo "Installing PostgreSQL..."
-  apt-get update
-  apt-get install -y postgresql postgresql-contrib
-  systemctl start postgresql
-  systemctl enable postgresql
-fi
-echo "  PostgreSQL: $(psql --version)"
+if [ "$DEPLOY_TYPE" = "fresh" ]; then
 
-# Create DB user and database
-echo "  Creating database..."
-sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='ishjadvali'" | grep -q 1 || \
-  sudo -u postgres psql -c "CREATE USER ishjadvali WITH PASSWORD 'StrongPass123!';"
+  # ── FRESH DEPLOY ───────────────────────────────────────────────────────────
 
-sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='ishjadvali'" | grep -q 1 || \
-  sudo -u postgres psql -c "CREATE DATABASE ishjadvali OWNER ishjadvali;"
+  # Stop old project
+  echo "[2] Eski loyiha to'xtatilmoqda..."
+  if command -v pm2 &> /dev/null; then
+    pm2 stop ishjadvali 2>/dev/null || true
+    pm2 delete ishjadvali 2>/dev/null || true
+  fi
 
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE ishjadvali TO ishjadvali;" 2>/dev/null || true
-echo "  Database ready."
+  # Backup existing data before wiping
+  if [ -d /var/www/ishjadvali/data ]; then
+    echo "  Ma'lumotlar backup qilinmoqda..."
+    cp -r /var/www/ishjadvali/data /tmp/ishjadvali-data-backup
+    echo "  Backup: /tmp/ishjadvali-data-backup"
+  fi
 
-# ── STEP 3: Stop and remove old project ──────────────────────────────────────
-echo "[3/8] Cleaning old project..."
-if command -v pm2 &> /dev/null; then
-  pm2 stop all 2>/dev/null || true
-  pm2 delete all 2>/dev/null || true
-fi
-rm -rf /var/www/ishjadvali
-rm -rf /var/www/IshJadvali
-echo "  Old project removed."
+  rm -rf /var/www/ishjadvali
+  rm -rf /var/www/IshJadvali
 
-# ── STEP 4: Clone new project ────────────────────────────────────────────────
-echo "[4/8] Cloning project..."
-mkdir -p /var/www
-cd /var/www
-git clone https://github.com/zaynobiddinovbiloliddin/IshJadvali.git ishjadvali
-cd /var/www/ishjadvali
-echo "  Cloned."
+  # Clone
+  echo "[3] Loyiha yuklanmoqda..."
+  mkdir -p /var/www
+  cd /var/www
+  git clone https://github.com/zaynobiddinovbiloliddin/IshJadvali.git ishjadvali
+  cd /var/www/ishjadvali
 
-# ── STEP 5: Create .env ──────────────────────────────────────────────────────
-echo "[5/8] Creating .env..."
-cat > .env << 'ENVEOF'
+  # Restore data if backup exists
+  if [ -d /tmp/ishjadvali-data-backup ]; then
+    echo "  Ma'lumotlar qayta tiklanmoqda..."
+    rm -rf /var/www/ishjadvali/data
+    cp -r /tmp/ishjadvali-data-backup /var/www/ishjadvali/data
+    echo "  Ma'lumotlar qayta tiklandi."
+  fi
+
+  # Create .env
+  echo "[4] .env yaratilmoqda..."
+  echo "  Telegram Bot Token kiriting (bo'sh qoldirsa o'tkazib yuboriladi):"
+  read -r TG_TOKEN
+  echo "  Telegram Chat ID kiriting:"
+  read -r TG_CHAT
+
+  cat > .env << ENVEOF
 PORT=3001
-DATABASE_URL="postgresql://ishjadvali:StrongPass123!@localhost:5432/ishjadvali"
 JWT_SECRET=uz24ishjadvali2026secretkey
 NODE_ENV=production
+TELEGRAM_BOT_TOKEN=${TG_TOKEN}
+TELEGRAM_CHAT_ID=${TG_CHAT}
 ENVEOF
-echo "  .env created."
+  echo "  .env yaratildi."
 
-# ── STEP 6: Install, migrate, seed, build ────────────────────────────────────
-echo "[6/8] Installing dependencies..."
-npm install
+  # Install & build
+  echo "[5] Kutubxonalar o'rnatilmoqda..."
+  npm install --production=false
 
-echo "  Running migrations..."
-npx prisma migrate deploy
+  echo "  Frontend build qilinmoqda..."
+  npm run build
+  echo "  Build tayyor."
 
-echo "  Seeding database..."
-npx prisma db seed
+  # Start PM2
+  echo "[6] PM2 bilan ishga tushirilmoqda..."
+  if ! command -v pm2 &> /dev/null; then
+    npm install -g pm2
+  fi
+  pm2 start server.mjs --name "ishjadvali"
+  pm2 save
+  pm2 startup 2>/dev/null | grep "sudo" | bash 2>/dev/null || true
+  echo "  PM2 ishga tushdi."
 
-echo "  Building frontend..."
-npm run build
-echo "  Build complete."
+  # Nginx
+  echo "[7] Nginx sozlanmoqda..."
+  if ! command -v nginx &> /dev/null; then
+    apt-get install -y nginx
+  fi
 
-# ── STEP 7: Start with PM2 ───────────────────────────────────────────────────
-echo "[7/8] Starting with PM2..."
-if ! command -v pm2 &> /dev/null; then
-  npm install -g pm2
-fi
-pm2 start server.mjs --name "ishjadvali"
-pm2 save
-pm2 startup | tail -1 | bash 2>/dev/null || true
-echo "  PM2 started."
-
-# ── STEP 8: Setup Nginx ──────────────────────────────────────────────────────
-echo "[8/8] Configuring Nginx..."
-if ! command -v nginx &> /dev/null; then
-  apt-get install -y nginx
-fi
-
-cat > /etc/nginx/sites-available/ishjadvali << 'NGINXEOF'
+  cat > /etc/nginx/sites-available/ishjadvali << 'NGINXEOF'
 server {
     listen 80;
     server_name uzbekiston24.uz www.uzbekiston24.uz 95.111.247.157;
+
+    client_max_body_size 10M;
 
     location / {
         proxy_pass http://localhost:3001;
@@ -113,23 +114,52 @@ server {
 }
 NGINXEOF
 
-ln -sf /etc/nginx/sites-available/ishjadvali /etc/nginx/sites-enabled/ishjadvali
-rm -f /etc/nginx/sites-enabled/default
-nginx -t && systemctl reload nginx
+  ln -sf /etc/nginx/sites-available/ishjadvali /etc/nginx/sites-enabled/ishjadvali
+  rm -f /etc/nginx/sites-enabled/default
+  nginx -t && systemctl reload nginx
 
-# Firewall
-ufw allow 80 2>/dev/null || true
-ufw allow 443 2>/dev/null || true
+  ufw allow 80 2>/dev/null || true
+  ufw allow 443 2>/dev/null || true
 
-# ── Final check ──────────────────────────────────────────────────────────────
+else
+
+  # ── UPDATE DEPLOY ──────────────────────────────────────────────────────────
+
+  APP_DIR="/var/www/ishjadvali"
+  if [ ! -d "$APP_DIR" ]; then
+    echo "XATO: $APP_DIR topilmadi. 'fresh' deploy qiling."
+    exit 1
+  fi
+
+  cd "$APP_DIR"
+
+  echo "[2] Yangi kod yuklanmoqda (git pull)..."
+  git pull origin main
+  echo "  Kod yangilandi."
+
+  echo "[3] Kutubxonalar tekshirilmoqda..."
+  npm install --production=false
+  echo "  Kutubxonalar tayyor."
+
+  echo "[4] Frontend build qilinmoqda..."
+  npm run build
+  echo "  Build tayyor."
+
+  echo "[5] PM2 qayta ishga tushirilmoqda..."
+  pm2 restart ishjadvali 2>/dev/null || pm2 start server.mjs --name "ishjadvali"
+  pm2 save
+  echo "  PM2 qayta ishga tushdi."
+
+fi
+
+# ── Final check ─────────────────────────────────────────────────────────────
 echo ""
-echo "=== Deploy complete! ==="
+echo "=== Deploy tugadi! ==="
 pm2 status
 echo ""
-echo "Testing API..."
 sleep 2
+echo "API tekshiruvi:"
 curl -s http://localhost:3001/api/health && echo ""
 echo ""
-echo "Site: http://uzbekiston24.uz"
-echo ""
-echo ">>> SSL uchun: bash setup-ssl.sh"
+echo "Site: http://95.111.247.157"
+echo "SSL uchun: bash setup-ssl.sh"

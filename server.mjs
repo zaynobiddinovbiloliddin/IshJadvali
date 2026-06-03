@@ -1,15 +1,16 @@
 import { createServer } from "node:http";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rename, unlink, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import bcrypt from "bcryptjs";
+import "dotenv/config";
 const { compareSync, hashSync } = bcrypt;
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const PORT = Number(process.env.PORT || 3001);
 const DATA_DIR = process.env.VERCEL ? "/tmp/ish-jadvali" : join(__dirname, "data");
-const DB_FILE = join(DATA_DIR, "mock-db.json");
+export const DB_FILE = join(DATA_DIR, "mock-db.json");
 const JWT_SECRET = process.env.JWT_SECRET || "ishjadvali_secret_key";
 
 const initialUsers = [
@@ -136,6 +137,22 @@ const shortDayNames = ["Dush", "Sey", "Chor", "Pay", "Jum", "Shan", "Yak"];
 const monthShort = ["Yan", "Fev", "Mar", "Apr", "May", "Iyn", "Iyl", "Avg", "Sen", "Okt", "Noy", "Dek"];
 
 let db = await loadDb();
+cleanOldBackups().catch(() => {});
+
+async function cleanOldBackups() {
+  try {
+    const files = await readdir(DATA_DIR);
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000; // 7 kun
+    for (const file of files) {
+      if (/^backup-\d{4}-\d{2}-\d{2}\.json$/.test(file)) {
+        const dateStr = file.slice(7, 17);
+        if (new Date(dateStr).getTime() < cutoff) {
+          await unlink(join(DATA_DIR, file)).catch(() => {});
+        }
+      }
+    }
+  } catch {}
+}
 
 async function loadDb() {
   try {
@@ -216,7 +233,16 @@ function normalizeEmployee(employee) {
 
 async function saveDb() {
   await mkdir(DATA_DIR, { recursive: true });
-  await writeFile(DB_FILE, JSON.stringify(db, null, 2));
+  const data = JSON.stringify(db, null, 2);
+  const tmp = DB_FILE + ".tmp";
+  await writeFile(tmp, data);
+  await rename(tmp, DB_FILE);
+  // Kunlik backup: har kuni 1 ta backup fayl saqlanadi
+  const today = new Date().toISOString().slice(0, 10);
+  const backupFile = join(DATA_DIR, `backup-${today}.json`);
+  if (!existsSync(backupFile)) {
+    await writeFile(backupFile, data);
+  }
 }
 
 function addDays(date, amount) {
@@ -1028,7 +1054,17 @@ export async function handleRequest(request, response) {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const server = createServer(handleRequest);
   const HOST = process.env.HOST || "0.0.0.0";
-  server.listen(PORT, HOST, () => {
+  server.listen(PORT, HOST, async () => {
     console.log(`Backend ready: http://${HOST}:${PORT}`);
+    if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
+      try {
+        const { startTelegramBot } = await import("./src/telegram-bot.mjs");
+        startTelegramBot();
+      } catch (err) {
+        console.error("Telegram bot ishga tushmadi:", err.message);
+      }
+    } else {
+      console.log("Telegram bot: TOKEN yoki CHAT_ID .env da yo'q, o'tkazib yuborildi");
+    }
   });
 }

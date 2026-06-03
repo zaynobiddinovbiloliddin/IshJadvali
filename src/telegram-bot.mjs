@@ -1,6 +1,6 @@
 import TelegramBot from "node-telegram-bot-api";
 import cron from "node-cron";
-import { execSync } from "child_process";
+import { readFile } from "node:fs/promises";
 import { writeFileSync, unlinkSync, existsSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -14,23 +14,17 @@ import {
   TextRun,
   WidthType,
   AlignmentType,
-  ShadingType,
-  BorderStyle
+  ShadingType
 } from "docx";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const PROJECT_ROOT = join(__dirname, "..");
+const DB_FILE = join(PROJECT_ROOT, "data", "mock-db.json");
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
-if (!BOT_TOKEN || !CHAT_ID) {
-  console.log("Telegram bot: TOKEN yoki CHAT_ID yo'q, o'tkazib yuborildi");
-  process.exit(0);
-}
-
 const bot = new TelegramBot(BOT_TOKEN, { polling: false });
-
-// ─── Day helpers ─────────────────────────────────────────────
 
 const UZ_DAYS = ["Yakshanba", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"];
 const UZ_MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"];
@@ -43,29 +37,37 @@ function formatUzDate(date) {
   return `${date.getDate()} ${UZ_MONTHS[date.getMonth()]} ${date.getFullYear()} yil`;
 }
 
-// ─── PostgreSQL backup ───────────────────────────────────────
+async function readDb() {
+  try {
+    const raw = await readFile(DB_FILE, "utf8");
+    return JSON.parse(raw);
+  } catch {
+    return { employees: [], schedules: {} };
+  }
+}
+
+// ─── JSON backup ─────────────────────────────────────────────
 
 async function createBackup() {
   const date = new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-");
-  const fileName = `backup-${date}.sql`;
+  const fileName = `backup-${date}.json`;
   const filePath = join("/tmp", fileName);
 
-  const dbUrl = process.env.DATABASE_URL || "";
-  const match = dbUrl.match(/postgresql:\/\/([^:@]+)(?::([^@]*))?@([^:/]+)(?::(\d+))?\/(.+)/);
+  if (!existsSync(DB_FILE)) throw new Error("Ma'lumotlar bazasi fayli topilmadi");
 
-  if (!match) throw new Error("DATABASE_URL format noto'g'ri");
+  const raw = await readFile(DB_FILE, "utf8");
+  const dbData = JSON.parse(raw);
 
-  const [, user, password = "", host, port = "5432", dbname] = match;
+  const summary = {
+    backupDate: new Date().toISOString(),
+    employees: dbData.employees?.length || 0,
+    schedules: Object.keys(dbData.schedules || {}).length,
+    contacts: dbData.contacts?.length || 0,
+    attendance: dbData.attendance?.length || 0,
+    data: dbData
+  };
 
-  const pgDump = existsSync("/usr/bin/pg_dump") ? "/usr/bin/pg_dump" : "pg_dump";
-  const env = { ...process.env };
-  if (password) env.PGPASSWORD = password;
-
-  execSync(
-    `${pgDump} -U ${user} -h ${host} -p ${port} ${dbname} > ${filePath}`,
-    { stdio: ["ignore", "pipe", "pipe"], env }
-  );
-
+  writeFileSync(filePath, JSON.stringify(summary, null, 2));
   return { filePath, fileName };
 }
 
@@ -109,30 +111,28 @@ function makeEquipmentRow(equipment = "HD jamlanmasi, mikrofon, chiroq, avtotran
   });
 }
 
-// ─── Build Word document ─────────────────────────────────────
-
-async function createFilmingScheduleWord(prisma) {
+async function createFilmingScheduleWord() {
+  const dbData = await readDb();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayKey = today.toISOString().slice(0, 10);
   const todayName = getTodayName();
 
-  // Find the week that contains today
-  const saved = await prisma.schedule.findFirst({
-    where: { weekStart: { lte: todayKey } },
-    orderBy: { weekStart: "desc" }
-  }).catch(() => null);
-
-  const employees = await prisma.employee.findMany({
-    where: { isActive: true },
-    orderBy: { id: "asc" }
+  // Find the schedule that contains today
+  const schedules = Object.values(dbData.schedules || {});
+  const validSchedules = schedules.filter((s) => {
+    const weekStart = s.week?.start;
+    return weekStart && weekStart <= todayKey;
   });
+  validSchedules.sort((a, b) => b.week.start.localeCompare(a.week.start));
+  const saved = validSchedules[0] || null;
 
-  // Build schedule rows
+  const employees = Array.isArray(dbData.employees) ? dbData.employees : [];
+
   const rows = [];
 
-  if (saved?.data?.groups) {
-    const todayGroups = saved.data.groups.filter((g) => g.day === todayName);
+  if (saved?.groups) {
+    const todayGroups = saved.groups.filter((g) => g.day === todayName);
 
     for (const group of todayGroups) {
       const workingPeople = group.people.filter(
@@ -159,18 +159,14 @@ async function createFilmingScheduleWord(prisma) {
     }
   }
 
-  // Fallback: just show all employees split by studio
   if (!rows.length) {
-    const operatorNames = employees.slice(0, 12).map((e) => e.name).join("\n");
-    const reporterNames = employees.slice(12, 20).map((e) => e.name).join("\n");
+    const names = employees.slice(0, 12).map((e) => e.name);
     rows.push(
-      { camera: "3 Studiya", time: "9:00-22:00", operators: operatorNames.split("\n").slice(0, 4).join("\n"), topic: "Studiyada tasvirga olish jarayoni", reporters: reporterNames.split("\n").slice(0, 2).join("\n") },
-      { camera: "35 TJK", time: "9:00-18:00", operators: operatorNames.split("\n").slice(4, 8).join("\n"), topic: "TJK guruhi ishi", reporters: "" },
-      { camera: "3 Tongi", time: "9:00-18:00", operators: operatorNames.split("\n").slice(8, 12).join("\n"), topic: "Tongi dastur", reporters: reporterNames.split("\n").slice(2).join("\n") }
+      { camera: "3 Studiya", time: "9:00-22:00", operators: names.slice(0, 4).join("\n"), topic: "Studiyada tasvirga olish jarayoni", reporters: "" },
+      { camera: "35 TJK", time: "9:00-18:00", operators: names.slice(4, 8).join("\n"), topic: "TJK guruhi ishi", reporters: "" },
+      { camera: "3 Tongi", time: "9:00-18:00", operators: names.slice(8, 12).join("\n"), topic: "Tongi dastur", reporters: "" }
     );
   }
-
-  // ─── Document structure ───────────────────────────────────
 
   const titleLeft = new Paragraph({
     children: [
@@ -202,7 +198,6 @@ async function createFilmingScheduleWord(prisma) {
     ]
   });
 
-  // Table header
   const headerRow = new TableRow({
     tableHeader: true,
     children: [
@@ -214,7 +209,6 @@ async function createFilmingScheduleWord(prisma) {
     ]
   });
 
-  // Data rows with equipment rows
   const tableRows = [headerRow];
   for (const row of rows) {
     tableRows.push(makeEquipmentRow());
@@ -262,9 +256,9 @@ async function createFilmingScheduleWord(prisma) {
   return { filePath, fileName };
 }
 
-// ─── Send both files ─────────────────────────────────────────
+// ─── Send backup + schedule ──────────────────────────────────
 
-export async function sendBackupAndSchedule(prisma) {
+export async function sendBackupAndSchedule() {
   const now = new Date().toLocaleString("uz-UZ", {
     day: "2-digit",
     month: "2-digit",
@@ -277,16 +271,19 @@ export async function sendBackupAndSchedule(prisma) {
   let wordPath = null;
 
   try {
-    // 1. PostgreSQL backup
     const backup = await createBackup();
     backupPath = backup.filePath;
+
+    const dbData = await readDb();
+    const empCount = dbData.employees?.length || 0;
+    const schedCount = Object.keys(dbData.schedules || {}).length;
+
     await bot.sendDocument(CHAT_ID, backup.filePath, {
-      caption: `📦 *Backup* — ${now}\nPostgreSQL to'liq ma'lumotlar bazasi`,
+      caption: `📦 *Backup* — ${now}\n👥 Xodimlar: ${empCount} ta\n📅 Jadvallar: ${schedCount} ta\nBarcha ma'lumotlar JSON formatida`,
       parse_mode: "Markdown"
     });
 
-    // 2. Word schedule
-    const word = await createFilmingScheduleWord(prisma);
+    const word = await createFilmingScheduleWord();
     wordPath = word.filePath;
     await bot.sendDocument(CHAT_ID, word.filePath, {
       caption: `📋 *Tasvirga olish jadvali* — ${now}\nBugungi kunlik jadval`,
@@ -307,14 +304,20 @@ export async function sendBackupAndSchedule(prisma) {
 
 // ─── Start cron ───────────────────────────────────────────────
 
-export function startTelegramBot(prisma) {
-  console.log("🤖 Telegram bot ishga tushdi (har 30 daqiqada yuboradi)");
+export function startTelegramBot() {
+  if (!BOT_TOKEN || !CHAT_ID) {
+    console.log("Telegram bot: TOKEN yoki CHAT_ID yo'q, o'tkazib yuborildi");
+    return;
+  }
 
-  // Birinchi yuborishni 5 soniyadan keyin bajarish (server tayyor bo'lsin)
-  setTimeout(() => sendBackupAndSchedule(prisma), 5000);
+  console.log("🤖 Telegram bot ishga tushdi (har kuni 08:00 va 20:00 da yuboradi)");
 
-  // Har 30 daqiqada
-  cron.schedule("*/30 * * * *", () => {
-    sendBackupAndSchedule(prisma);
-  });
+  // 5 soniyadan keyin birinchi marta yuborish
+  setTimeout(() => sendBackupAndSchedule(), 5000);
+
+  // Har kuni ertalab 08:00 da
+  cron.schedule("0 8 * * *", () => sendBackupAndSchedule(), { timezone: "Asia/Tashkent" });
+
+  // Har kuni kechqurun 20:00 da
+  cron.schedule("0 20 * * *", () => sendBackupAndSchedule(), { timezone: "Asia/Tashkent" });
 }
