@@ -2670,9 +2670,20 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
   const formRef = useRef(null);
 
   useEffect(() => {
-    const nextEmployee = employees.find((employee) => String(employee.id) === String(selectedId)) || employees[0] || null;
-    setDraft(nextEmployee);
-    if (nextEmployee && String(nextEmployee.id) !== String(selectedId)) setSelectedId(nextEmployee.id);
+    const emp = employees.find((e) => String(e.id) === String(selectedId)) || employees[0] || null;
+    if (!emp) { setDraft(null); return; }
+    setDraft({
+      id: emp.id,
+      name: emp.name || "",
+      role: emp.role || "",
+      phone: emp.phone || "",
+      telegram: emp.telegram || "",
+      department: emp.department || "operator",
+      address: emp.address || "",
+      portfolio: emp.portfolio || [],
+      avatar: emp.avatar || ""
+    });
+    if (String(emp.id) !== String(selectedId)) setSelectedId(emp.id);
   }, [employees, selectedId]);
 
   function updatePortfolio(index, field, value) {
@@ -2804,14 +2815,18 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
               Lavozimi
               <input name="documents-role" value={draft.role || ""} onChange={(event) => setDraft({ ...draft, role: event.target.value })} placeholder="Tasvir yozish operatori" />
             </label>
+            <label>
+              Bo'lim
+              <select value={draft.department || "operator"} onChange={(event) => setDraft({ ...draft, department: event.target.value })}>
+                {DEPARTMENTS.map((department) => (
+                  <option key={department.id} value={department.id}>{department.label}</option>
+                ))}
+              </select>
+            </label>
             <div className="modal-grid two">
               <label>
-                Bo'lim
-                <select value={draft.department || "operator"} onChange={(event) => setDraft({ ...draft, department: event.target.value })}>
-                  {DEPARTMENTS.map((department) => (
-                    <option key={department.id} value={department.id}>{department.label}</option>
-                  ))}
-                </select>
+                Telefon
+                <input name="documents-phone" value={draft.phone || ""} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} placeholder="+998 90 000 00 00" inputMode="tel" />
               </label>
               <label>
                 Telegram

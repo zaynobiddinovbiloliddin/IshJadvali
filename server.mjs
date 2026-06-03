@@ -548,7 +548,7 @@ function cleanEmployeePayload(payload, existing = {}) {
     name: payload.name?.trim() || existing.name,
     role: payload.role?.trim() || existing.role || "Operator",
     phone: payload.phone?.trim() || existing.phone || "+998 90 000 00 00",
-    telegram: payload.telegram?.trim() || "",
+    telegram: typeof payload.telegram === "string" ? payload.telegram.trim() : (existing.telegram ?? ""),
     department: normalizeDepartment(payload.department || existing.department || inferDepartment(payload)),
     address: "",
     avatar: payload.avatar?.trim() || existing.avatar,
