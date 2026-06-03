@@ -166,10 +166,11 @@ async function loadDb() {
       schedules: parsed.schedules && typeof parsed.schedules === "object" ? parsed.schedules : {},
       attendance: Array.isArray(parsed.attendance) ? parsed.attendance.map(normalizeAttendanceRecord).filter(Boolean) : [],
       contacts: Array.isArray(parsed.contacts) ? parsed.contacts.map(normalizeContact).filter(Boolean) : initialContacts,
-      users
+      users,
+      dailyStatuses: Array.isArray(parsed.dailyStatuses) ? parsed.dailyStatuses : []
     };
   } catch {
-    return { generation: 0, employees: initialEmployees.map(normalizeEmployee), schedules: {}, attendance: [], contacts: initialContacts, users: initialUsers };
+    return { generation: 0, employees: initialEmployees.map(normalizeEmployee), schedules: {}, attendance: [], contacts: initialContacts, users: initialUsers, dailyStatuses: [] };
   }
 }
 
@@ -243,6 +244,125 @@ async function saveDb() {
   if (!existsSync(backupFile)) {
     await writeFile(backupFile, data);
   }
+}
+
+// ─── Token auth ──────────────────────────────────────────────────────────────
+function parseTokenUser(request) {
+  const auth = request.headers["authorization"] || "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  if (!token) return null;
+  const dot = token.lastIndexOf(".");
+  if (dot === -1) return null;
+  const b64 = token.slice(0, dot);
+  const sig = token.slice(dot + 1);
+  if (sig !== JWT_SECRET.slice(0, 8)) return null;
+  try {
+    return JSON.parse(Buffer.from(b64, "base64").toString("utf8"));
+  } catch { return null; }
+}
+
+function requireAdmin(request, response) {
+  const user = parseTokenUser(request);
+  if (!user || !["admin", "superadmin"].includes(user.role)) {
+    sendJson(response, 403, { message: "Ruxsat yo'q — faqat admin" });
+    return null;
+  }
+  return user;
+}
+
+// ─── Daily Status helpers ─────────────────────────────────────────────────────
+const VALID_STATUS_CODES = new Set(["I", "S", "T", "K", "D", "M", "O", "A", "P", "empty"]);
+const WORKING_DAILY_CODES = ["I", "S", "T", "A", "P"];
+
+function upsertDailyStatus(employeeId, date, statusCode) {
+  if (!db.dailyStatuses) db.dailyStatuses = [];
+  const idx = db.dailyStatuses.findIndex(
+    (s) => String(s.employeeId) === String(employeeId) && s.date === date
+  );
+  const now = new Date().toISOString();
+  if (idx !== -1) {
+    db.dailyStatuses[idx].statusCode = statusCode;
+    db.dailyStatuses[idx].updatedAt = now;
+  } else {
+    db.dailyStatuses.push({ id: Date.now(), employeeId: Number(employeeId), date, statusCode, createdAt: now, updatedAt: now });
+  }
+}
+
+function getDailyStatusForMonth(year, month) {
+  const prefix = `${year}-${String(month).padStart(2, "0")}`;
+  const statuses = {};
+  for (const s of (db.dailyStatuses || [])) {
+    if (!s.date.startsWith(prefix)) continue;
+    if (!statuses[s.employeeId]) statuses[s.employeeId] = {};
+    statuses[s.employeeId][s.date] = s.statusCode;
+  }
+  return { statuses };
+}
+
+function getDailyStatusWorking(date) {
+  const records = (db.dailyStatuses || []).filter(
+    (s) => s.date === date && WORKING_DAILY_CODES.includes(s.statusCode)
+  );
+  const employees = records.map((r) => {
+    const emp = db.employees.find((e) => String(e.id) === String(r.employeeId));
+    if (!emp) return null;
+    return { id: emp.id, name: emp.name, role: emp.role, department: emp.department, statusCode: r.statusCode };
+  }).filter(Boolean);
+  return { date, employees };
+}
+
+// ─── Filming Word export ──────────────────────────────────────────────────────
+async function generateFilmingWordBuffer(date, rows) {
+  const {
+    Document, Packer, Paragraph, Table, TableRow, TableCell,
+    TextRun, WidthType, AlignmentType, ShadingType
+  } = await import("docx");
+
+  const UZ_MONTHS = ["yanvar","fevral","mart","aprel","may","iyun","iyul","avgust","sentabr","oktabr","noyabr","dekabr"];
+  const d = new Date(`${date}T00:00:00`);
+  const dateLabel = `${d.getDate()} ${UZ_MONTHS[d.getMonth()]} ${d.getFullYear()} yil`;
+  const HEADER_GRAY = "D9D9D9";
+  const LIGHT_BLUE = "BDD7EE";
+  const WHITE = "FFFFFF";
+
+  function mkCell(text, fill, bold = false, span = 1) {
+    return new TableCell({
+      columnSpan: span,
+      shading: { fill, type: ShadingType.CLEAR },
+      margins: { top: 60, bottom: 60, left: 80, right: 80 },
+      children: String(text || "").split("\n").map((line, i) =>
+        new Paragraph({ spacing: { before: i === 0 ? 0 : 40 }, children: [new TextRun({ text: line, bold, size: bold ? 20 : 19, font: "Times New Roman" })] })
+      )
+    });
+  }
+
+  const tableRows = [
+    new TableRow({
+      tableHeader: true,
+      children: ["Kamera\nraqami","Chiqish\nvaqti","Operator va\ntexnik xodim","Tadbir o'tkazilish joyi va tadbir mavzusi","Muxbirlar"].map((h) => mkCell(h, HEADER_GRAY, true))
+    })
+  ];
+
+  for (const row of rows) {
+    tableRows.push(new TableRow({ children: [new TableCell({ columnSpan: 5, shading: { fill: LIGHT_BLUE, type: ShadingType.CLEAR }, margins: { top: 40, bottom: 40, left: 80, right: 80 }, children: [new Paragraph({ children: [new TextRun({ text: `Kerakli jihoz va texnika:    ${row.equipment || "HD jamlanmasi, mikrofon, chiroq, avtotransport"}`, size: 19, font: "Times New Roman" })] })] })] }));
+    tableRows.push(new TableRow({ children: [mkCell(row.cameraNumber || "", WHITE), mkCell(row.exitTime || "", WHITE), mkCell(row.operatorsText || "", WHITE), mkCell(row.topic || "", WHITE), mkCell(row.reportersText || "", WHITE)] }));
+  }
+
+  const doc = new Document({
+    sections: [{
+      properties: { page: { margin: { top: 720, right: 720, bottom: 720, left: 720 } } },
+      children: [
+        new Paragraph({ children: [new TextRun({ text: "Tasvirga olish jadvali", bold: true, size: 24, font: "Times New Roman" }), new TextRun({ text: "\n" + dateLabel, size: 22, font: "Times New Roman" })] }),
+        new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: '"TASDIQLAYMAN"\n"O\'zbekiston 24" ijodiy\nbirlashmasi" DM direktori\n__________M. Safarov', size: 22, font: "Times New Roman" })] }),
+        new Paragraph({ children: [] }),
+        new Paragraph({ spacing: { before: 120, after: 120 }, children: [new TextRun({ text: "Muhim eslatma! Tasvirga olish ishlari yakunlanishi bilan, material tayyorlashga kirishish shart.", color: "CC0000", bold: true, size: 20, font: "Times New Roman" })] }),
+        new Paragraph({ children: [] }),
+        new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [1500, 1200, 2000, 3300, 2000], rows: tableRows })
+      ]
+    }]
+  });
+
+  return Packer.toBuffer(doc);
 }
 
 function addDays(date, amount) {
@@ -977,6 +1097,49 @@ export async function handleRequest(request, response) {
       db.users.splice(idx, 1);
       await saveDb();
       return sendJson(response, 200, { ok: true });
+    }
+
+    // ─── Daily Status ───────────────────────────────────────────────────────
+    if (url.pathname === "/api/daily-status/working" && request.method === "GET") {
+      const date = url.searchParams.get("date") || new Date().toISOString().slice(0, 10);
+      return sendJson(response, 200, getDailyStatusWorking(date));
+    }
+
+    if (url.pathname === "/api/daily-status" && request.method === "GET") {
+      const year = Number(url.searchParams.get("year")) || new Date().getFullYear();
+      const month = Number(url.searchParams.get("month")) || new Date().getMonth() + 1;
+      return sendJson(response, 200, getDailyStatusForMonth(year, month));
+    }
+
+    if (url.pathname === "/api/daily-status" && request.method === "POST") {
+      const user = requireAdmin(request, response);
+      if (!user) return;
+      const body = await readBody(request);
+      const { employeeId, date, statusCode } = body;
+      if (!employeeId || !date) return sendJson(response, 400, { message: "employeeId va date kerak" });
+      if (!VALID_STATUS_CODES.has(statusCode)) return sendJson(response, 400, { message: "Noto'g'ri statusCode" });
+      upsertDailyStatus(employeeId, date, statusCode);
+      await saveDb();
+      return sendJson(response, 200, { ok: true, employeeId, date, statusCode });
+    }
+
+    // ─── Filming Word Export ─────────────────────────────────────────────────
+    if (url.pathname === "/api/filming/export-word" && request.method === "POST") {
+      const user = requireAdmin(request, response);
+      if (!user) return;
+      const body = await readBody(request);
+      const { date, rows = [] } = body;
+      if (!date) return sendJson(response, 400, { message: "date kerak" });
+      const buffer = await generateFilmingWordBuffer(date, rows);
+      const fileName = `tasvirga-olish-jadvali-${date}.docx`;
+      const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type,Authorization" };
+      response.writeHead(200, {
+        ...CORS,
+        "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "Content-Disposition": `attachment; filename="${fileName}"`,
+        "Content-Length": buffer.length
+      });
+      return response.end(buffer);
     }
 
     if (request.method === "GET" && url.pathname === "/api/dashboard") {

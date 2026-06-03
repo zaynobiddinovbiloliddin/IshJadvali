@@ -962,7 +962,7 @@ function App() {
                   onToggleOverview={() => setShowAllOverview((value) => !value)}
                 />
               )}
-              {page === "monthly" && <MonthlyPage dashboard={dashboard} weekStart={weekStart} fullscreen onClose={closeMonthly} />}
+              {page === "monthly" && <MonthlyPage dashboard={dashboard} weekStart={weekStart} fullscreen onClose={closeMonthly} currentUser={currentUser} />}
               {page === "documents" && <DocumentsPage employees={dashboard.employees} onNotify={notify} onSaveEmployee={saveEmployee} />}
               {page === "shooting" && <ShootingPage onNotify={notify} />}
               {page === "reports" && <ReportsPage dashboard={dashboard} />}
@@ -1636,195 +1636,262 @@ function ShootingPage({ onNotify }) {
   );
 }
 
-function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose }) {
-  const monthInfo = useMemo(() => {
-    const base = new Date(`${weekStart}T00:00:00`);
-    const year = base.getFullYear();
-    const month = base.getMonth();
-    const totalDays = new Date(year, month + 1, 0).getDate();
-    return {
-      title: `${MONTH_NAMES[month]} ${year}`,
-      days: Array.from({ length: totalDays }, (_, index) => index + 1)
-    };
-  }, [weekStart]);
+const DAILY_STATUSES = {
+  empty: { label: "", bg: "#e2e8f0", fg: "#94a3b8", name: "Bo'sh" },
+  I:     { label: "I", bg: "#22c55e", fg: "#fff",    name: "Ishda" },
+  S:     { label: "S", bg: "#3b82f6", fg: "#fff",    name: "Studiyada" },
+  T:     { label: "T", bg: "#eab308", fg: "#fff",    name: "TJK guruhi" },
+  K:     { label: "K", bg: "#f97316", fg: "#fff",    name: "Komandirovka" },
+  D:     { label: "D", bg: "#ef4444", fg: "#fff",    name: "Dam olish" },
+  M:     { label: "M", bg: "#a855f7", fg: "#fff",    name: "Ta'til" },
+  O:     { label: "O", bg: "#6b7280", fg: "#fff",    name: "Otpiska" },
+  A:     { label: "A", bg: "#06b6d4", fg: "#fff",    name: "Administratsiya" },
+  P:     { label: "P", bg: "#ec4899", fg: "#fff",    name: "Prezidentskiy" }
+};
+const DAILY_CYCLE = ["empty", "I", "S", "T", "K", "D", "M", "O", "A", "P"];
+const WORKING_DAILY = ["I", "S", "T", "A", "P"];
 
-  const operators = useMemo(() => {
-    const existing = dashboard.employees.map((employee) => employee.name);
-    const names = [...existing, ...OPERATOR_NAMES].filter((name, index, list) => list.indexOf(name) === index);
-    return names.slice(0, 48).map((name, index) => ({ id: index + 1, name }));
-  }, [dashboard.employees]);
-
-  const initialMatrix = useMemo(() => {
-    const matrix = {};
-    operators.forEach((operator) => {
-      matrix[operator.id] = monthInfo.days.map((day) => {
-        if ((operator.id + day) % 7 === 0) return "rest";
-        if ((operator.id * 2 + day) % 11 === 0) return "tjk";
-        if ((operator.id * 3 + day) % 13 === 0) return "studio";
-        return "work";
-      });
-    });
-    return matrix;
-  }, [monthInfo.days, operators]);
-
-  const [matrix, setMatrix] = useState(initialMatrix);
+function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, currentUser }) {
+  const now = new Date();
+  const [year, setYear]   = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [statuses, setStatuses]   = useState({});
+  const [loading, setLoading]     = useState(true);
+  const [savingCell, setSavingCell] = useState(null);
   const [selectedCell, setSelectedCell] = useState(null);
 
+  const employees = dashboard.employees;
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const days = useMemo(() => Array.from({ length: daysInMonth }, (_, i) => i + 1), [year, month, daysInMonth]);
+  const pad2 = (n) => String(n).padStart(2, "0");
+  const monthPrefix = `${year}-${pad2(month)}`;
+
   useEffect(() => {
-    setMatrix(initialMatrix);
-    setSelectedCell(null);
-  }, [initialMatrix]);
+    setLoading(true);
+    api(`/api/daily-status?year=${year}&month=${month}`)
+      .then((data) => setStatuses(data.statuses || {}))
+      .catch(() => setStatuses({}))
+      .finally(() => setLoading(false));
+  }, [year, month]);
 
-  const totals = useMemo(() => {
-    const values = Object.values(matrix).flat();
-    return {
-      work: values.filter((value) => value === "work").length,
-      rest: values.filter((value) => value === "rest").length,
-      tjk: values.filter((value) => value === "tjk").length,
-      studio: values.filter((value) => value === "studio").length,
-      administration: values.filter((value) => value === "administration").length,
-      presidential: values.filter((value) => value === "presidential").length,
-      hours: values.reduce((sum, value) => sum + (MONTHLY_STATUS_OPTIONS[value]?.hours || 0), 0)
-    };
-  }, [matrix]);
-
-  function getShift(operatorId, day, status) {
-    if (status !== "work") {
-      return MONTHLY_STATUS_OPTIONS[status].shift;
-    }
-    return SHIFT_LABELS[(operatorId + day) % 3];
+  function getCode(empId, day) {
+    return statuses[empId]?.[`${monthPrefix}-${pad2(day)}`] || "empty";
   }
 
-  function toggleCell(operator, dayIndex) {
-    const current = matrix[operator.id]?.[dayIndex] || "work";
-    const currentIndex = MONTHLY_STATUS_SEQUENCE.indexOf(current);
-    const next = MONTHLY_STATUS_SEQUENCE[(currentIndex + 1) % MONTHLY_STATUS_SEQUENCE.length];
-    const day = monthInfo.days[dayIndex];
+  async function handleCellClick(emp, day) {
+    if (!isAdmin(currentUser)) return;
+    const dateStr = `${monthPrefix}-${pad2(day)}`;
+    const cur = getCode(emp.id, day);
+    const next = DAILY_CYCLE[(DAILY_CYCLE.indexOf(cur) + 1) % DAILY_CYCLE.length];
+    const cellKey = `${emp.id}-${day}`;
 
-    setMatrix((currentMatrix) => ({
-      ...currentMatrix,
-      [operator.id]: currentMatrix[operator.id].map((value, index) => (index === dayIndex ? next : value))
-    }));
-    setSelectedCell({
-      operator: operator.name,
-      day,
-      status: next,
-      shift: getShift(operator.id, day, next)
-    });
+    setStatuses((prev) => ({ ...prev, [emp.id]: { ...(prev[emp.id] || {}), [dateStr]: next } }));
+    setSelectedCell({ empName: emp.name, day, code: next, info: DAILY_STATUSES[next] });
+    setSavingCell(cellKey);
+    try {
+      await api("/api/daily-status", { method: "POST", body: JSON.stringify({ employeeId: emp.id, date: dateStr, statusCode: next }) });
+    } catch (err) {
+      setStatuses((prev) => ({ ...prev, [emp.id]: { ...(prev[emp.id] || {}), [dateStr]: cur } }));
+      setSelectedCell(null);
+    } finally {
+      setSavingCell(null);
+    }
+  }
+
+  const totals = useMemo(() => {
+    const r = { I: 0, S: 0, T: 0, K: 0, D: 0, M: 0, O: 0, A: 0, P: 0, working: 0, rest: 0, hours: 0 };
+    for (const emp of employees) {
+      const empSt = statuses[emp.id] || {};
+      for (let d = 1; d <= daysInMonth; d++) {
+        const code = empSt[`${monthPrefix}-${pad2(d)}`] || "empty";
+        if (code !== "empty") {
+          if (r[code] !== undefined) r[code]++;
+          if (WORKING_DAILY.includes(code)) { r.working++; r.hours += 9; }
+          if (["D", "M", "O"].includes(code)) r.rest++;
+        }
+      }
+    }
+    return r;
+  }, [statuses, employees, year, month, daysInMonth, monthPrefix]);
+
+  function getRowTotals(empId) {
+    const empSt = statuses[empId] || {};
+    const r = { working: 0, rest: 0, hours: 0 };
+    for (let d = 1; d <= daysInMonth; d++) {
+      const code = empSt[`${monthPrefix}-${pad2(d)}`] || "empty";
+      if (WORKING_DAILY.includes(code)) { r.working++; r.hours += 9; }
+      if (["D", "M", "O"].includes(code)) r.rest++;
+    }
+    return r;
+  }
+
+  function prevMonth() { if (month === 1) { setMonth(12); setYear((y) => y - 1); } else setMonth((m) => m - 1); }
+  function nextMonth() { if (month === 12) { setMonth(1); setYear((y) => y + 1); } else setMonth((m) => m + 1); }
+
+  async function exportWordForDate(targetDate) {
+    try {
+      const data = await api(`/api/daily-status/working?date=${targetDate}`);
+      const workingEmps = data.employees || [];
+      if (!workingEmps.length) { alert("Bu kunda ishlaydigan xodim belgilanmagan"); return; }
+      const rows = workingEmps.map((emp) => ({
+        cameraNumber: "", exitTime: "",
+        operatorsText: emp.name,
+        topic: "", reportersText: "",
+        equipment: "HD jamlanmasi, mikrofon, chiroq, avtotransport"
+      }));
+      const token = window.localStorage.getItem("authToken");
+      const resp = await fetch(`${API_BASE}/api/filming/export-word`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ date: targetDate, rows })
+      });
+      if (!resp.ok) { alert("Word yaratishda xato"); return; }
+      const blob = await resp.blob();
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `tasvirga-olish-jadvali-${targetDate}.docx`;
+      document.body.appendChild(link); link.click(); link.remove();
+    } catch (err) { alert("Xato: " + err.message); }
   }
 
   const monthlyBody = (
-    <>
-      <div className="monthly-head">
-        <div>
-          <h2>{monthInfo.title}</h2>
-          <p>{operators.length} operator uchun oylik ish grafigi</p>
+    <div className="monthly-container">
+      <div className="monthly-nav">
+        <button type="button" onClick={prevMonth}>← Oldingi</button>
+        <div className="monthly-nav-title">
+          <h2>{MONTH_NAMES[month - 1]} {year}</h2>
+          <p>{employees.length} xodim uchun oylik ish grafigi</p>
         </div>
-        <div className="monthly-counts">
-          <span><b>{totals.work}</b> ish</span>
-          <span><b>{totals.tjk}</b> TJK</span>
-          <span><b>{totals.studio}</b> studiya</span>
-          <span><b>{totals.administration}</b> admin</span>
-          <span><b>{totals.presidential}</b> prez</span>
-          <span><b>{totals.rest}</b> dam</span>
-          <span><b>{totals.hours}</b> soat</span>
-        </div>
+        <button type="button" onClick={nextMonth}>Keyingi →</button>
       </div>
 
-      <div className="monthly-table-wrap" role="region" aria-label="Oylik operatorlar grafigi">
-        <div className="monthly-table" style={{ gridTemplateColumns: `132px repeat(${monthInfo.days.length}, 34px) 58px 58px 58px 58px 58px 58px 72px` }}>
-          <div className="month-sticky month-header">Operator</div>
-          {monthInfo.days.map((day) => <div className="month-header day" key={day}>{day}</div>)}
-          <div className="month-header summary">K</div>
-          <div className="month-header summary">T</div>
-          <div className="month-header summary">S</div>
-          <div className="month-header summary">A</div>
-          <div className="month-header summary">P</div>
-          <div className="month-header summary">Dam</div>
-          <div className="month-header summary">Soat</div>
-
-          {operators.map((operator) => {
-            const days = matrix[operator.id] || [];
-            const workCount = days.filter((value) => value === "work").length;
-            const restCount = days.filter((value) => value === "rest").length;
-            const tjkCount = days.filter((value) => value === "tjk").length;
-            const studioCount = days.filter((value) => value === "studio").length;
-            const administrationCount = days.filter((value) => value === "administration").length;
-            const presidentialCount = days.filter((value) => value === "presidential").length;
-            const hourCount = days.reduce((sum, value) => sum + (MONTHLY_STATUS_OPTIONS[value]?.hours || 0), 0);
-
-            return (
-              <React.Fragment key={operator.id}>
-                <div className="month-sticky operator-name"><b>{operator.id}</b>{operator.name}</div>
-                {days.map((value, index) => (
-                  <button
-                    className={`month-cell ${value}`}
-                    type="button"
-                    key={`${operator.id}-${index}`}
-                    title={`${operator.name}, ${monthInfo.days[index]}-${MONTH_NAMES[new Date(`${weekStart}T00:00:00`).getMonth()]}`}
-                    onClick={() => toggleCell(operator, index)}
-                  >
-                    {MONTHLY_STATUS_OPTIONS[value]?.label || "K"}
-                  </button>
-                ))}
-                <div className="month-total work">{workCount}</div>
-                <div className="month-total tjk">{tjkCount}</div>
-                <div className="month-total studio">{studioCount}</div>
-                <div className="month-total administration">{administrationCount}</div>
-                <div className="month-total presidential">{presidentialCount}</div>
-                <div className="month-total rest">{restCount}</div>
-                <div className="month-total hours">{hourCount}</div>
-              </React.Fragment>
-            );
-          })}
-        </div>
+      <div className="monthly-summary">
+        {[["I","Ishda"],["S","Studiya"],["T","TJK"],["K","Safar"],["D","Dam"],["M","Ta'til"]].map(([code, label]) => (
+          <span key={code}><b style={{ color: DAILY_STATUSES[code].bg }}>{totals[code]}</b> {label}</span>
+        ))}
+        <span><b>{totals.hours}</b> soat</span>
       </div>
+
+      <div className="monthly-legend">
+        {Object.entries(DAILY_STATUSES).filter(([k]) => k !== "empty").map(([code, info]) => (
+          <span key={code} className="monthly-legend-chip" style={{ background: info.bg, color: info.fg }}>{code} — {info.name}</span>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="monthly-loading">Yuklanmoqda...</div>
+      ) : (
+        <div className="monthly-scroll" role="region" aria-label="Oylik grafik">
+          <table className="monthly-table">
+            <thead>
+              <tr>
+                <th className="mth-num">#</th>
+                <th className="mth-name">Xodim</th>
+                {days.map((d) => {
+                  const dt = new Date(year, month - 1, d);
+                  const wd = dt.getDay();
+                  const isToday = dt.toDateString() === now.toDateString();
+                  return <th key={d} className={`mth-day${wd === 0 || wd === 6 ? " weekend" : ""}${isToday ? " today" : ""}`}>{d}</th>;
+                })}
+                <th className="mth-sum">Ish</th>
+                <th className="mth-sum">Dam</th>
+                <th className="mth-sum">Soat</th>
+              </tr>
+            </thead>
+            <tbody>
+              {employees.map((emp, idx) => {
+                const rt = getRowTotals(emp.id);
+                return (
+                  <tr key={emp.id} className="mtr">
+                    <td className="mtd-num">{idx + 1}</td>
+                    <td className="mtd-name">{emp.name}</td>
+                    {days.map((d) => {
+                      const code = getCode(emp.id, d);
+                      const info = DAILY_STATUSES[code];
+                      const cellKey = `${emp.id}-${d}`;
+                      const saving = savingCell === cellKey;
+                      const dt = new Date(year, month - 1, d);
+                      const wd = dt.getDay();
+                      return (
+                        <td key={d} className={`mtd-cell${wd === 0 || wd === 6 ? " weekend" : ""}`}>
+                          <button
+                            type="button"
+                            className={`mc${saving ? " mc-saving" : ""}`}
+                            style={{ background: info.bg, color: info.fg, opacity: saving ? 0.6 : 1 }}
+                            onClick={() => handleCellClick(emp, d)}
+                            disabled={!isAdmin(currentUser)}
+                            title={`${emp.name}, ${d}-${MONTH_NAMES[month - 1]}: ${info.name}`}
+                          >
+                            {saving ? "⟳" : info.label}
+                          </button>
+                        </td>
+                      );
+                    })}
+                    <td className="mtd-total working">{rt.working}</td>
+                    <td className="mtd-total rest">{rt.rest}</td>
+                    <td className="mtd-total hours">{rt.hours}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {selectedCell && (
+        <div className="monthly-cell-info">
+          <strong>{selectedCell.empName}</strong>
+          <span>{selectedCell.day}-{MONTH_NAMES[month - 1]}:</span>
+          <span className="mci-badge" style={{ background: selectedCell.info.bg, color: selectedCell.info.fg }}>
+            {selectedCell.code} — {selectedCell.info.name}
+          </span>
+          {WORKING_DAILY.includes(selectedCell.code) && <span className="mci-word">✓ Word jadvalga tushadi</span>}
+          {!WORKING_DAILY.includes(selectedCell.code) && selectedCell.code !== "empty" && <span className="mci-noword">✗ Word jadvalga tushmaydi</span>}
+        </div>
+      )}
+
+      {isAdmin(currentUser) && (
+        <div className="monthly-export">
+          <strong>Word jadval export</strong>
+          <p>Kunni tanlang — o'sha kundagi ishdagi xodimlar Word jadvalga tushadi</p>
+          <div className="monthly-export-row">
+            {[0, 1, 2, 3].map((offset) => {
+              const dt = new Date(); dt.setDate(dt.getDate() + offset);
+              const dStr = dt.toISOString().slice(0, 10);
+              if (dt.getMonth() + 1 !== month || dt.getFullYear() !== year) return null;
+              return (
+                <button key={dStr} type="button" className="mex-btn" onClick={() => exportWordForDate(dStr)}>
+                  <FileText size={14} /> {dt.getDate()}-{MONTH_NAMES[month - 1]}
+                </button>
+              );
+            })}
+            <input type="date" className="mex-picker" onChange={(e) => e.target.value && exportWordForDate(e.target.value)} />
+          </div>
+        </div>
+      )}
 
       <div className="time-panel">
         <div className="time-panel-icon"><Clock3 size={18} /></div>
         <div>
           <strong>Vaqt belgilari</strong>
-          <p>
-            {selectedCell
-              ? `${selectedCell.operator}: ${selectedCell.day}-kun, ${selectedCell.shift}, ${MONTHLY_STATUS_OPTIONS[selectedCell.status]?.hours || 0} soat`
-              : "Katakni bosing, shu operatorning kunlik vaqti shu yerda chiqadi."}
-          </p>
+          <p>{selectedCell ? `${selectedCell.empName}: ${selectedCell.day}-kun — ${selectedCell.info.name}` : isAdmin(currentUser) ? "Katakni bosing — status o'zgartirish uchun" : "Jadval ko'rish rejimi"}</p>
         </div>
       </div>
-
-      <section className="legend-card compact">
-        <LegendItem tone="work" label="Ko'k katak - ishlagan kun" />
-        <LegendItem tone="rest" label="Qizil katak - dam kuni" />
-        <LegendItem tone="tjk" label="Sariq katak - TJK guruhi" />
-        <LegendItem tone="studio" label="Yashil katak - studiyada" />
-        <LegendItem tone="administration" label="A - Administratsiya" />
-        <LegendItem tone="presidential" label="P - Prezidentskiy" />
-      </section>
-    </>
+    </div>
   );
 
-  if (!fullscreen) {
-    return <section className="monthly-page">{monthlyBody}</section>;
-  }
+  if (!fullscreen) return <section className="monthly-page">{monthlyBody}</section>;
 
   return createPortal((
     <div className="monthly-fullscreen-backdrop" role="dialog" aria-modal="true" aria-label="Oylik grafik" onClick={onClose}>
       <section className="monthly-fullscreen" onClick={(event) => event.stopPropagation()}>
         <header className="monthly-fullscreen-head">
-          <button type="button" onClick={onClose} aria-label="Chiqish">
-            <ChevronLeft size={20} />
-            Chiqish
-          </button>
-          <div>
-            <strong>Oylik grafik</strong>
-            <span>{monthInfo.title}</span>
-          </div>
+          <button type="button" onClick={onClose} aria-label="Chiqish"><ChevronLeft size={20} />Chiqish</button>
+          <div><strong>Oylik grafik</strong><span>{MONTH_NAMES[month - 1]} {year}</span></div>
           <i />
         </header>
         <div className="monthly-fullscreen-body">
-          <section className="monthly-page">
-            {monthlyBody}
-          </section>
+          <section className="monthly-page">{monthlyBody}</section>
         </div>
       </section>
     </div>
