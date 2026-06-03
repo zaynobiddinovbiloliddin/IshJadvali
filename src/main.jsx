@@ -870,7 +870,7 @@ function App() {
 
       <aside className="desktop-sidebar">
         <div className="desktop-sidebar-brand">
-          <img src="/logo.svg" alt="O'zbekiston 24"
+          <img src="/logo.jpg" alt="O'zbekiston 24"
             onError={(e) => { e.target.style.display = "none"; }}
           />
         </div>
@@ -908,7 +908,7 @@ function App() {
           </button>
           <div className="topbar-brand">
             <img
-              src="/logo.svg"
+              src="/logo.jpg"
               alt="O'zbekiston 24"
               className="topbar-logo"
               onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
