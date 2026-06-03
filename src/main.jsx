@@ -496,8 +496,13 @@ function App() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [showAllOverview, setShowAllOverview] = useState(false);
   const [error, setError] = useState("");
-  const [theme, setTheme] = useState(() => window.localStorage.getItem("theme") || "light");
+  const [theme, setTheme] = useState(() => {
+    const saved = window.localStorage.getItem("theme") || "light";
+    document.documentElement.dataset.theme = saved;
+    return saved;
+  });
   const [currentUser, setCurrentUser] = useState(() => readStoredJson("currentUser", null));
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [departments, setDepartments] = useState([]);
   const [navDirection, setNavDirection] = useState("next");
   const [toasts, setToasts] = useState([]);
@@ -610,12 +615,17 @@ function App() {
   }
 
   function handleLogout() {
+    setShowLogoutConfirm(true);
+  }
+
+  function performLogout() {
+    setShowLogoutConfirm(false);
     window.localStorage.removeItem("currentUser");
     window.localStorage.removeItem("authToken");
     window.localStorage.removeItem("authTokens");
     setCurrentUser(null);
     setPage("weekly");
-    notify("Tizimdan chiqildi");
+    notify("Tizimdan chiqildi", "info");
   }
 
   function openMonthly(fromPage = page) {
@@ -859,7 +869,7 @@ function App() {
     ["monthly", "Oylik grafik", Clock3],
     ["shooting", "Tasvir jadvali", FileText],
     ["reports", "Hisobotlar", ChartColumn],
-    ["audit", "Audit jurnal", ShieldCheck],
+    ...(isAdmin(currentUser) ? [["audit", "Audit jurnal", ShieldCheck]] : []),
     ...(isSuper(currentUser) ? [["users", "Foydalanuvchilar", UserCheck]] : []),
     ["profile", "Profil", User]
   ];
@@ -965,7 +975,7 @@ function App() {
                 />
               )}
               {page === "monthly" && <MonthlyPage dashboard={dashboard} weekStart={weekStart} fullscreen onClose={closeMonthly} currentUser={currentUser} onNotify={notify} />}
-              {page === "documents" && <DocumentsPage employees={dashboard.employees} onNotify={notify} onSaveEmployee={saveEmployee} />}
+              {page === "documents" && <DocumentsPage employees={dashboard.employees} onNotify={notify} onSaveEmployee={saveEmployee} currentUser={currentUser} />}
               {page === "shooting" && <ShootingPage onNotify={notify} />}
               {page === "reports" && <ReportsPage dashboard={dashboard} />}
               {page === "audit" && <AuditPage />}
@@ -995,6 +1005,25 @@ function App() {
       </div>
 
       <ToastViewport items={toasts} />
+
+      {showLogoutConfirm && createPortal((
+        <div className="modal-backdrop" role="dialog" aria-modal="true" onClick={() => setShowLogoutConfirm(false)}>
+          <div className="schedule-modal logout-confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="logout-confirm-body">
+              <span className="logout-confirm-icon">👋</span>
+              <h3>Chiqish</h3>
+              <p>Haqiqatan ham tizimdan chiqmoqchimisiz?</p>
+            </div>
+            <div className="logout-confirm-actions">
+              <button type="button" className="btn-ghost" onClick={() => setShowLogoutConfirm(false)}>Bekor</button>
+              <button type="button" className="btn-danger" onClick={performLogout}>
+                <LogOut size={15} />
+                Chiqish
+              </button>
+            </div>
+          </div>
+        </div>
+      ), document.body)}
     </div>
   );
 }
@@ -1461,6 +1490,7 @@ function ShootingPage({ onNotify }) {
     reportersText: row.reporters.join("\n")
   })));
   const [addOpen, setAddOpen] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const [draftRow, setDraftRow] = useState(blankRow);
   const addFormRef = useRef(null);
 
@@ -1532,12 +1562,25 @@ function ShootingPage({ onNotify }) {
           <p>29 aprel 2026 yil uchun Excel uslubidagi forma</p>
         </div>
         <div className="shooting-action-buttons">
-          <button type="button" onClick={() => setAddOpen(true)}>
-            <Plus size={17} />
-            Yangi jadval
-          </button>
+          {!isSaved && (
+            <button type="button" onClick={() => setAddOpen(true)}>
+              <Plus size={17} />
+              Yangi jadval
+            </button>
+          )}
+          {isSaved ? (
+            <button type="button" className="edit-unlock-btn" onClick={() => setIsSaved(false)}>
+              <Edit3 size={17} />
+              Tahrirlash
+            </button>
+          ) : (
+            <button type="button" onClick={() => { onNotify("Jadval saqlandi ✓"); setIsSaved(true); }}>
+              <Save size={17} />
+              Saqlash
+            </button>
+          )}
           <button type="button" onClick={downloadExcel}>
-            <Save size={17} />
+            <FileSpreadsheet size={17} />
             Excel
           </button>
           <button type="button" onClick={() => window.print()}>
@@ -1575,15 +1618,15 @@ function ShootingPage({ onNotify }) {
                   <tr className="equipment-row">
                     <td colSpan="3">Kerakli jihoz va texnika:</td>
                     <td colSpan="2">
-                      <input value={row.equipment} onChange={(event) => updateRow(index, "equipment", event.target.value)} aria-label="Kerakli jihoz va texnika" />
+                      <input value={row.equipment} onChange={(event) => !isSaved && updateRow(index, "equipment", event.target.value)} readOnly={isSaved} className={isSaved ? "readonly-cell" : ""} aria-label="Kerakli jihoz va texnika" />
                     </td>
                   </tr>
                   <tr>
-                    <td className="camera-cell"><textarea value={row.camera} onChange={(event) => updateRow(index, "camera", event.target.value)} aria-label="Kamera raqami" /></td>
-                    <td className="time-cell"><textarea value={row.time} onChange={(event) => updateRow(index, "time", event.target.value)} aria-label="Chiqish vaqti" /></td>
-                    <td><textarea value={row.operatorsText} onChange={(event) => updateRow(index, "operatorsText", event.target.value)} aria-label="Operator va texnik xodim" /></td>
-                    <td className="topic-cell"><textarea value={row.topic} onChange={(event) => updateRow(index, "topic", event.target.value)} aria-label="Tadbir o'tkazilish joyi va mavzusi" /></td>
-                    <td><textarea value={row.reportersText} onChange={(event) => updateRow(index, "reportersText", event.target.value)} aria-label="Muxbirlar" /></td>
+                    <td className="camera-cell"><textarea value={row.camera} onChange={(event) => !isSaved && updateRow(index, "camera", event.target.value)} readOnly={isSaved} className={isSaved ? "readonly-cell" : ""} aria-label="Kamera raqami" /></td>
+                    <td className="time-cell"><textarea value={row.time} onChange={(event) => !isSaved && updateRow(index, "time", event.target.value)} readOnly={isSaved} className={isSaved ? "readonly-cell" : ""} aria-label="Chiqish vaqti" /></td>
+                    <td><textarea value={row.operatorsText} onChange={(event) => !isSaved && updateRow(index, "operatorsText", event.target.value)} readOnly={isSaved} className={isSaved ? "readonly-cell" : ""} aria-label="Operator va texnik xodim" /></td>
+                    <td className="topic-cell"><textarea value={row.topic} onChange={(event) => !isSaved && updateRow(index, "topic", event.target.value)} readOnly={isSaved} className={isSaved ? "readonly-cell" : ""} aria-label="Tadbir o'tkazilish joyi va mavzusi" /></td>
+                    <td><textarea value={row.reportersText} onChange={(event) => !isSaved && updateRow(index, "reportersText", event.target.value)} readOnly={isSaved} className={isSaved ? "readonly-cell" : ""} aria-label="Muxbirlar" /></td>
                   </tr>
                 </React.Fragment>
               ))}
@@ -2800,7 +2843,7 @@ function EmployeeManager({ employees, onDelete, onNotify, onSave }) {
   );
 }
 
-function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
+function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
   const [selectedId, setSelectedId] = useState(employees[0]?.id || "");
   const [draft, setDraft] = useState(null);
   const [editDraft, setEditDraft] = useState(null);
@@ -2929,24 +2972,28 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
             <span>{draft.role}</span>
           </div>
         </div>
-        <div className="document-view-actions">
-          <button className={documentMode === "word" ? "active" : ""} type="button" onClick={() => setDocumentMode("word")}>
-            <FileText size={16} />
-            Word ko'rish
+        {isAdmin(currentUser) && (
+          <div className="document-view-actions">
+            <button className={documentMode === "word" ? "active" : ""} type="button" onClick={() => setDocumentMode("word")}>
+              <FileText size={16} />
+              Word ko'rish
+            </button>
+            <button className={documentMode === "excel" ? "active" : ""} type="button" onClick={() => setDocumentMode("excel")}>
+              <FileSpreadsheet size={16} />
+              Excel ko'rish
+            </button>
+            <button type="button" onClick={() => downloadEmployeeFiles(draft)}>
+              <Download size={16} />
+              Yuklab olish
+            </button>
+          </div>
+        )}
+        {isAdmin(currentUser) && (
+          <button className="document-edit-open" type="button" onClick={openEdit}>
+            <Edit3 size={17} />
+            Ma'lumotlarni tahrirlash
           </button>
-          <button className={documentMode === "excel" ? "active" : ""} type="button" onClick={() => setDocumentMode("excel")}>
-            <FileSpreadsheet size={16} />
-            Excel ko'rish
-          </button>
-          <button type="button" onClick={() => downloadEmployeeFiles(draft)}>
-            <Download size={16} />
-            Yuklab olish
-          </button>
-        </div>
-        <button className="document-edit-open" type="button" onClick={openEdit}>
-          <Edit3 size={17} />
-          Ma'lumotlarni tahrirlash
-        </button>
+        )}
       </section>
 
       <EmployeeDocumentView employee={draft} mode={documentMode} />
@@ -3393,6 +3440,7 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
   const [editOpen, setEditOpen] = useState(false);
   const [draft, setDraft] = useState(currentUser);
   const [contactDraft, setContactDraft] = useState({ type: "Muxbir", name: "", vehicle: "", phone: "" });
+  const [contactSearch, setContactSearch] = useState("");
   const [contactFormOpen, setContactFormOpen] = useState(false);
   const [todaySlide, setTodaySlide] = useState(0);
   const [selectedDate, setSelectedDate] = useState(() => toInputDate(new Date()));
@@ -3469,19 +3517,12 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
 
   function submitProfile(event) {
     event.preventDefault();
-    const required = [
-      ["profile-name", draft.name, "Ism familiyani kiriting."],
-      ["profile-email", draft.email, "Emailni kiriting."],
-      ["profile-role", draft.role, "Rolni kiriting."]
-    ];
-    const invalid = required.find(([, value]) => !String(value || "").trim());
-    if (invalid) {
-      onNotify(invalid[2], "error");
-      formRef.current?.querySelector(`[name='${invalid[0]}']`)?.focus();
+    if (!String(draft.name || "").trim()) {
+      onNotify("Ism familiyani kiriting.", "error");
+      formRef.current?.querySelector("[name='profile-name']")?.focus();
       return;
     }
-
-    onUpdateUser(draft);
+    onUpdateUser({ name: draft.name, phone: draft.phone, telegram: draft.telegram, avatar: draft.avatar });
     setEditOpen(false);
   }
 
@@ -3504,8 +3545,21 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
     }
   }
 
+  const filteredContacts = (dashboard.contacts || []).filter((c) => {
+    const q = contactSearch.toLowerCase().trim();
+    return !q || [c.name, c.phone, c.vehicle, c.type].join(" ").toLowerCase().includes(q);
+  });
+
   return (
     <section className="profile-page">
+      <div className="profile-topbar">
+        <h2>Profil</h2>
+        <button type="button" className="logout-top-btn" onClick={onLogout}>
+          <LogOut size={16} />
+          Chiqish
+        </button>
+      </div>
+
       <div className="profile-hero">
         <span className="profile-avatar large">
           {currentUser.avatar ? <img src={currentUser.avatar} alt={currentUser.name} /> : <User size={38} />}
@@ -3513,7 +3567,6 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
         <div>
           <strong>{currentUser.name}</strong>
           <p>{currentUser.role}</p>
-          <em>{currentUser.email}</em>
         </div>
         <button type="button" aria-label="Profilni tahrirlash" onClick={() => setEditOpen((value) => !value)}>
           <Edit3 size={17} />
@@ -3524,9 +3577,7 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
         <section className="profile-edit-card">
           <div className="section-head">
             <h2>Profilni tahrirlash</h2>
-            <button type="button" onClick={() => setEditOpen(false)}>
-              Yopish
-            </button>
+            <button type="button" onClick={() => setEditOpen(false)}>Yopish</button>
           </div>
           <form ref={formRef} className="profile-edit-form" onSubmit={submitProfile}>
             <div className="avatar-upload-field profile-avatar-upload">
@@ -3548,12 +3599,12 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
               <input name="profile-name" value={draft.name || ""} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Administrator" />
             </label>
             <label>
-              Email
-              <input name="profile-email" type="email" value={draft.email || ""} onChange={(event) => setDraft({ ...draft, email: event.target.value })} placeholder="admin@uz24.local" />
+              Telefon
+              <input name="profile-phone" value={draft.phone || ""} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} placeholder="+998 90 000 00 00" inputMode="tel" />
             </label>
             <label>
-              Rol
-              <input name="profile-role" value={draft.role || ""} onChange={(event) => setDraft({ ...draft, role: event.target.value })} placeholder="Jadval administratori" />
+              Telegram
+              <input name="profile-telegram" value={draft.telegram || ""} onChange={(event) => setDraft({ ...draft, telegram: event.target.value })} placeholder="@username" />
             </label>
             <button type="submit">
               <Save size={17} />
@@ -3661,8 +3712,18 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
           )}
         </div>
 
+        <label className="contact-search">
+          <Search size={14} />
+          <input
+            value={contactSearch}
+            onChange={(e) => setContactSearch(e.target.value)}
+            placeholder="Ism yoki telefon..."
+          />
+          {contactSearch && <button type="button" onClick={() => setContactSearch("")}>✕</button>}
+        </label>
+
         <div className="contact-list">
-          {contacts.length ? contacts.map((contact) => (
+          {filteredContacts.length ? filteredContacts.map((contact) => (
             <article key={contact.id} className="contact-row">
               <span className={contact.type === "Haydovchi" ? "driver" : ""}>
                 {contact.type === "Haydovchi" ? <Car size={16} /> : <User size={16} />}
@@ -3681,7 +3742,7 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
                 </button>
               )}
             </article>
-          )) : <EmptyCard text="Kontaktlar hali kiritilmagan" />}
+          )) : <EmptyCard text={contactSearch ? "Qidiruv natijalari yo'q" : "Kontaktlar hali kiritilmagan"} />}
         </div>
       </section>
 
@@ -3753,16 +3814,7 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
         </div>
         <ToggleRow label="Bildirishnomalar" active={notify} onClick={() => setNotify((value) => !value)} />
         <ToggleRow label="Dark mode" active={theme === "dark"} onClick={() => onThemeChange(theme === "dark" ? "light" : "dark")} />
-        <button className="settings-row button" type="button" onClick={onRefresh}>
-          <RefreshCcw size={17} />
-          <span>Ma'lumotlarni yangilash</span>
-        </button>
       </section>
-
-      <button className="logout-button" type="button" onClick={() => window.confirm("Haqiqatan ham akkauntdan chiqib ketmoqchimisiz?") && onLogout()}>
-        <LogOut size={18} />
-        Chiqish
-      </button>
     </section>
   );
 }
@@ -4121,7 +4173,7 @@ function MenuPanel({ onClose, onPageChange, onOpenMonthly, panelRef, currentUser
     ["monthly", "Oylik grafik", Clock3],
     ["shooting", "Tasvir jadvali", FileText],
     ["reports", "Hisobotlar", ChartColumn],
-    ["audit", "Audit jurnal", ShieldCheck],
+    ...(isAdmin(currentUser) ? [["audit", "Audit jurnal", ShieldCheck]] : []),
     ...(isSuper(currentUser) ? [["users", "Foydalanuvchilar", UserCheck]] : []),
     ["profile", "Profil", User]
   ];

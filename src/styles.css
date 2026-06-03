@@ -8222,3 +8222,129 @@ body { overflow-x: hidden; }
 }
 
 .cell-dropdown-check { margin-left: auto; color: var(--accent); font-weight: 700; font-size: 0.85rem; }
+
+/* ─── Fix 10: Logo circular ─────────────────────────────────────────────────── */
+.topbar-logo {
+  height: 36px !important;
+  width: 36px !important;
+  object-fit: cover;
+  border-radius: 50%;
+  background: #fff;
+  padding: 2px;
+  flex-shrink: 0;
+}
+.desktop-sidebar-brand img {
+  height: 40px;
+  width: 40px;
+  object-fit: cover;
+  border-radius: 50%;
+  background: #fff;
+  padding: 2px;
+}
+.auth-logo {
+  height: 80px;
+  width: 80px;
+  object-fit: cover;
+  border-radius: 50%;
+  background: #fff;
+  padding: 4px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+[data-theme="dark"] .topbar-logo,
+[data-theme="dark"] .desktop-sidebar-brand img,
+[data-theme="dark"] .auth-logo {
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+}
+
+/* ─── Fix 3: Print CSS ───────────────────────────────────────────────────────── */
+@media print {
+  body * { visibility: hidden; }
+  .shooting-page, .shooting-page * { visibility: visible; }
+  .shooting-page {
+    position: absolute;
+    left: 0; top: 0;
+    width: 100%;
+    padding: 0 !important;
+  }
+  .shooting-actions, .shooting-action-buttons, .add-row-form, button { display: none !important; }
+  .shooting-table-wrap { overflow: visible !important; width: 100% !important; }
+  .shooting-table { width: 100% !important; font-size: 10px !important; page-break-inside: auto; }
+  .shooting-table tr { page-break-inside: avoid; page-break-after: auto; }
+  .shooting-table td, .shooting-table th { padding: 4px !important; border: 1px solid #000 !important; }
+  .equipment-row td { background: #BDD7EE !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  .excel-notice { color: red !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  @page { size: A4 landscape; margin: 1cm; }
+}
+
+/* ─── Fix 4: Shooting readonly ───────────────────────────────────────────────── */
+.readonly-cell {
+  background: var(--bg) !important;
+  cursor: default !important;
+  pointer-events: none;
+  border-color: transparent !important;
+  resize: none;
+  color: var(--text-primary) !important;
+}
+.edit-unlock-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 16px;
+  background: var(--warning-light); color: var(--warning);
+  border: 1.5px solid var(--warning); border-radius: var(--radius-md);
+  font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  transition: all var(--transition);
+}
+.edit-unlock-btn:hover { background: var(--warning); color: #fff; }
+
+/* ─── Fix 9: Logout top button + modal ──────────────────────────────────────── */
+.profile-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 4px;
+}
+.profile-topbar h2 { font-size: 1.1rem; font-weight: 700; margin: 0; }
+.logout-top-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 16px;
+  background: var(--danger-light); color: var(--danger);
+  border: 1.5px solid var(--danger); border-radius: var(--radius-md);
+  font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  transition: all var(--transition);
+}
+.logout-top-btn:hover { background: var(--danger); color: #fff; }
+.logout-confirm-modal { max-width: 360px; }
+.logout-confirm-body { text-align: center; padding: 8px 0 16px; }
+.logout-confirm-icon { font-size: 2.5rem; }
+.logout-confirm-body h3 { margin-top: 10px; font-size: 1.1rem; font-weight: 700; }
+.logout-confirm-body p { color: var(--text-secondary); font-size: 0.875rem; margin-top: 6px; }
+.logout-confirm-actions { display: flex; gap: 10px; }
+.logout-confirm-actions .btn-ghost {
+  flex: 1; padding: 12px; border: 1.5px solid var(--border);
+  border-radius: var(--radius-md); background: transparent;
+  cursor: pointer; font-weight: 600; color: var(--text-primary);
+  transition: all var(--transition);
+}
+.logout-confirm-actions .btn-ghost:hover { background: var(--bg); }
+.logout-confirm-actions .btn-danger {
+  flex: 1; padding: 12px; background: var(--danger); color: #fff;
+  border: none; border-radius: var(--radius-md); cursor: pointer;
+  font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: all var(--transition);
+}
+.logout-confirm-actions .btn-danger:hover { background: #dc2626; }
+
+/* ─── Fix 8: Contact search ─────────────────────────────────────────────────── */
+.contact-search {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; margin: 8px 0;
+  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-md);
+  color: var(--text-secondary);
+}
+.contact-search input {
+  flex: 1; border: none; background: transparent; outline: none;
+  font-size: 0.83rem; color: var(--text-primary); min-height: unset; padding: 0;
+}
+.contact-search button {
+  background: none; border: none; cursor: pointer; padding: 0 2px;
+  color: var(--text-secondary); font-size: 0.9rem;
+  min-height: unset; min-width: unset;
+}

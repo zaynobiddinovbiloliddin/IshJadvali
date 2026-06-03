@@ -167,10 +167,11 @@ async function loadDb() {
       attendance: Array.isArray(parsed.attendance) ? parsed.attendance.map(normalizeAttendanceRecord).filter(Boolean) : [],
       contacts: Array.isArray(parsed.contacts) ? parsed.contacts.map(normalizeContact).filter(Boolean) : initialContacts,
       users,
-      dailyStatuses: Array.isArray(parsed.dailyStatuses) ? parsed.dailyStatuses : []
+      dailyStatuses: Array.isArray(parsed.dailyStatuses) ? parsed.dailyStatuses : [],
+      auditLogs: Array.isArray(parsed.auditLogs) ? parsed.auditLogs : []
     };
   } catch {
-    return { generation: 0, employees: initialEmployees.map(normalizeEmployee), schedules: {}, attendance: [], contacts: initialContacts, users: initialUsers, dailyStatuses: [] };
+    return { generation: 0, employees: initialEmployees.map(normalizeEmployee), schedules: {}, attendance: [], contacts: initialContacts, users: initialUsers, dailyStatuses: [], auditLogs: [] };
   }
 }
 
@@ -244,6 +245,13 @@ async function saveDb() {
   if (!existsSync(backupFile)) {
     await writeFile(backupFile, data);
   }
+}
+
+// ─── Audit log ───────────────────────────────────────────────────────────────
+function pushAuditLog(action, entity, entityId, details) {
+  if (!db.auditLogs) db.auditLogs = [];
+  db.auditLogs.push({ id: Date.now(), action, entity, entityId: String(entityId || ""), details: details || "", createdAt: new Date().toISOString() });
+  if (db.auditLogs.length > 500) db.auditLogs = db.auditLogs.slice(-500);
 }
 
 // ─── Token auth ──────────────────────────────────────────────────────────────
@@ -692,6 +700,7 @@ async function createEmployee(payload) {
   });
 
   db.employees.push(employee);
+  pushAuditLog("CREATE", "Employee", id, `${employee.name} qo'shildi`);
   await saveDb();
   return scheduleEmployee(employee);
 }
@@ -713,14 +722,16 @@ async function updateEmployee(id, payload) {
     refreshScheduleDerivedData(schedule);
   }
 
+  pushAuditLog("UPDATE", "Employee", id, `${db.employees[index].name} yangilandi`);
   await saveDb();
   return scheduleEmployee(db.employees[index]);
 }
 
 async function deleteEmployee(id) {
-  const exists = db.employees.some((employee) => String(employee.id) === String(id));
-  if (!exists) throw new Error("Xodim topilmadi");
+  const toDelete = db.employees.find((employee) => String(employee.id) === String(id));
+  if (!toDelete) throw new Error("Xodim topilmadi");
   if (db.employees.length <= 1) throw new Error("Oxirgi xodimni o'chirib bo'lmaydi");
+  pushAuditLog("DELETE", "Employee", id, `${toDelete.name} o'chirildi`);
   db.employees = db.employees.filter((employee) => String(employee.id) !== String(id));
   db.attendance = db.attendance.filter((record) => String(record.employeeId) !== String(id));
 
@@ -1097,6 +1108,12 @@ export async function handleRequest(request, response) {
       db.users.splice(idx, 1);
       await saveDb();
       return sendJson(response, 200, { ok: true });
+    }
+
+    // ─── Audit Logs ─────────────────────────────────────────────────────────
+    if (url.pathname === "/api/audit-logs" && request.method === "GET") {
+      const logs = [...(db.auditLogs || [])].reverse().slice(0, 200);
+      return sendJson(response, 200, { logs });
     }
 
     // ─── Daily Status ───────────────────────────────────────────────────────
