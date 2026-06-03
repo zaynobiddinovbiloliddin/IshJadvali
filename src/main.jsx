@@ -15,6 +15,8 @@ import {
   Coffee,
   Download,
   Edit3,
+  Eye,
+  EyeOff,
   FileSpreadsheet,
   FileText,
   Info,
@@ -962,7 +964,7 @@ function App() {
                   onToggleOverview={() => setShowAllOverview((value) => !value)}
                 />
               )}
-              {page === "monthly" && <MonthlyPage dashboard={dashboard} weekStart={weekStart} fullscreen onClose={closeMonthly} currentUser={currentUser} />}
+              {page === "monthly" && <MonthlyPage dashboard={dashboard} weekStart={weekStart} fullscreen onClose={closeMonthly} currentUser={currentUser} onNotify={notify} />}
               {page === "documents" && <DocumentsPage employees={dashboard.employees} onNotify={notify} onSaveEmployee={saveEmployee} />}
               {page === "shooting" && <ShootingPage onNotify={notify} />}
               {page === "reports" && <ReportsPage dashboard={dashboard} />}
@@ -1648,16 +1650,92 @@ const DAILY_STATUSES = {
   A:     { label: "A", bg: "#06b6d4", fg: "#fff",    name: "Administratsiya" },
   P:     { label: "P", bg: "#ec4899", fg: "#fff",    name: "Prezidentskiy" }
 };
-const DAILY_CYCLE = ["empty", "I", "S", "T", "K", "D", "M", "O", "A", "P"];
 const WORKING_DAILY = ["I", "S", "T", "A", "P"];
 
-function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, currentUser }) {
+function localDateStr(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+// ─── Cell dropdown (Portal, avoids overflow-x clipping) ──────────────────────
+function CellDropdown({ currentCode, buttonRect, onSelect, onClose }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    function onPointer(e) { if (!ref.current?.contains(e.target)) onClose(); }
+    document.addEventListener("pointerdown", onPointer);
+    return () => document.removeEventListener("pointerdown", onPointer);
+  }, [onClose]);
+
+  const left = Math.min(
+    Math.max(4, buttonRect.left + buttonRect.width / 2 - 80),
+    window.innerWidth - 172
+  );
+  const top = buttonRect.bottom + 6;
+
+  return createPortal(
+    <div ref={ref} className="cell-dropdown" style={{ position: "fixed", top, left, zIndex: 9999 }}>
+      {Object.entries(DAILY_STATUSES).map(([code, info]) => (
+        <button
+          key={code}
+          type="button"
+          className={`cell-dropdown-item${currentCode === code ? " active" : ""}`}
+          onClick={() => { onSelect(code); onClose(); }}
+        >
+          <span className="cell-dropdown-dot" style={{ background: info.bg, color: info.fg }}>{info.label}</span>
+          {info.name || "Bo'sh"}
+          {currentCode === code && <span className="cell-dropdown-check">✓</span>}
+        </button>
+      ))}
+    </div>,
+    document.body
+  );
+}
+
+function StatusCell({ emp, day, code, adminMode, onSelect }) {
+  const [open, setOpen] = useState(false);
+  const [rect, setRect] = useState(null);
+  const btnRef = useRef(null);
+  const info = DAILY_STATUSES[code] || DAILY_STATUSES.empty;
+
+  const close = useCallback(() => setOpen(false), []);
+
+  function handleClick() {
+    if (!adminMode) return;
+    setRect(btnRef.current.getBoundingClientRect());
+    setOpen((v) => !v);
+  }
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        className="mc"
+        style={{ background: info.bg, color: info.fg }}
+        onClick={handleClick}
+        disabled={!adminMode}
+        title={adminMode ? `${emp.name}: ${info.name} — bosing` : info.name}
+      >
+        {info.label}
+      </button>
+      {open && rect && (
+        <CellDropdown
+          currentCode={code}
+          buttonRect={rect}
+          onSelect={(newCode) => onSelect(emp, day, newCode)}
+          onClose={close}
+        />
+      )}
+    </>
+  );
+}
+
+function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, currentUser, onNotify }) {
   const now = new Date();
   const [year, setYear]   = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [statuses, setStatuses]   = useState({});
   const [loading, setLoading]     = useState(true);
-  const [savingCell, setSavingCell] = useState(null);
   const [selectedCell, setSelectedCell] = useState(null);
 
   const employees = dashboard.employees;
@@ -1670,7 +1748,7 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
     setLoading(true);
     api(`/api/daily-status?year=${year}&month=${month}`)
       .then((data) => setStatuses(data.statuses || {}))
-      .catch(() => setStatuses({}))
+      .catch(() => { setStatuses({}); onNotify?.("Statuslarni yuklashda xato", "error"); })
       .finally(() => setLoading(false));
   }, [year, month]);
 
@@ -1678,23 +1756,21 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
     return statuses[empId]?.[`${monthPrefix}-${pad2(day)}`] || "empty";
   }
 
-  async function handleCellClick(emp, day) {
+  async function handleCellSelect(emp, day, newCode) {
     if (!isAdmin(currentUser)) return;
     const dateStr = `${monthPrefix}-${pad2(day)}`;
-    const cur = getCode(emp.id, day);
-    const next = DAILY_CYCLE[(DAILY_CYCLE.indexOf(cur) + 1) % DAILY_CYCLE.length];
-    const cellKey = `${emp.id}-${day}`;
+    const oldCode = getCode(emp.id, day);
 
-    setStatuses((prev) => ({ ...prev, [emp.id]: { ...(prev[emp.id] || {}), [dateStr]: next } }));
-    setSelectedCell({ empName: emp.name, day, code: next, info: DAILY_STATUSES[next] });
-    setSavingCell(cellKey);
+    setStatuses((prev) => ({ ...prev, [emp.id]: { ...(prev[emp.id] || {}), [dateStr]: newCode } }));
+    setSelectedCell({ empName: emp.name, day, code: newCode, info: DAILY_STATUSES[newCode] });
+
     try {
-      await api("/api/daily-status", { method: "POST", body: JSON.stringify({ employeeId: emp.id, date: dateStr, statusCode: next }) });
+      await api("/api/daily-status", { method: "POST", body: JSON.stringify({ employeeId: emp.id, date: dateStr, statusCode: newCode }) });
+      onNotify?.(`${emp.name}: ${DAILY_STATUSES[newCode]?.name || "Bo'sh"} ✓`);
     } catch (err) {
-      setStatuses((prev) => ({ ...prev, [emp.id]: { ...(prev[emp.id] || {}), [dateStr]: cur } }));
+      setStatuses((prev) => ({ ...prev, [emp.id]: { ...(prev[emp.id] || {}), [dateStr]: oldCode } }));
       setSelectedCell(null);
-    } finally {
-      setSavingCell(null);
+      onNotify?.("Saqlashda xato: " + err.message, "error");
     }
   }
 
@@ -1732,10 +1808,12 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
     try {
       const data = await api(`/api/daily-status/working?date=${targetDate}`);
       const workingEmps = data.employees || [];
-      if (!workingEmps.length) { alert("Bu kunda ishlaydigan xodim belgilanmagan"); return; }
+      if (!workingEmps.length) {
+        onNotify?.(`${targetDate}: ishlaydigan xodim belgilanmagan`, "warning");
+        return;
+      }
       const rows = workingEmps.map((emp) => ({
-        cameraNumber: "", exitTime: "",
-        operatorsText: emp.name,
+        cameraNumber: "", exitTime: "", operatorsText: emp.name,
         topic: "", reportersText: "",
         equipment: "HD jamlanmasi, mikrofon, chiroq, avtotransport"
       }));
@@ -1745,13 +1823,14 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ date: targetDate, rows })
       });
-      if (!resp.ok) { alert("Word yaratishda xato"); return; }
+      if (!resp.ok) { onNotify?.("Word yaratishda xato", "error"); return; }
       const blob = await resp.blob();
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = `tasvirga-olish-jadvali-${targetDate}.docx`;
       document.body.appendChild(link); link.click(); link.remove();
-    } catch (err) { alert("Xato: " + err.message); }
+      onNotify?.(`Word fayl tayyorlandi (${targetDate}) ✓`);
+    } catch (err) { onNotify?.("Xato: " + err.message, "error"); }
   }
 
   const monthlyBody = (
@@ -1771,6 +1850,26 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
         ))}
         <span><b>{totals.hours}</b> soat</span>
       </div>
+
+      {isAdmin(currentUser) && (
+        <div className="monthly-export">
+          <strong>Word jadval export</strong>
+          <p>Kunni tanlang — ishdagi xodimlar Word jadvalga tushadi</p>
+          <div className="monthly-export-row">
+            {[0, 1, 2, 3].map((offset) => {
+              const dt = new Date(); dt.setDate(dt.getDate() + offset);
+              const dStr = localDateStr(dt);
+              if (dt.getMonth() + 1 !== month || dt.getFullYear() !== year) return null;
+              return (
+                <button key={dStr} type="button" className="mex-btn" onClick={() => exportWordForDate(dStr)}>
+                  <FileText size={14} /> {dt.getDate()}-{MONTH_NAMES[month - 1]}
+                </button>
+              );
+            })}
+            <input type="date" className="mex-picker" onChange={(e) => e.target.value && exportWordForDate(e.target.value)} />
+          </div>
+        </div>
+      )}
 
       <div className="monthly-legend">
         {Object.entries(DAILY_STATUSES).filter(([k]) => k !== "empty").map(([code, info]) => (
@@ -1807,23 +1906,17 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
                     <td className="mtd-name">{emp.name}</td>
                     {days.map((d) => {
                       const code = getCode(emp.id, d);
-                      const info = DAILY_STATUSES[code];
-                      const cellKey = `${emp.id}-${d}`;
-                      const saving = savingCell === cellKey;
                       const dt = new Date(year, month - 1, d);
                       const wd = dt.getDay();
                       return (
                         <td key={d} className={`mtd-cell${wd === 0 || wd === 6 ? " weekend" : ""}`}>
-                          <button
-                            type="button"
-                            className={`mc${saving ? " mc-saving" : ""}`}
-                            style={{ background: info.bg, color: info.fg, opacity: saving ? 0.6 : 1 }}
-                            onClick={() => handleCellClick(emp, d)}
-                            disabled={!isAdmin(currentUser)}
-                            title={`${emp.name}, ${d}-${MONTH_NAMES[month - 1]}: ${info.name}`}
-                          >
-                            {saving ? "⟳" : info.label}
-                          </button>
+                          <StatusCell
+                            emp={emp}
+                            day={d}
+                            code={code}
+                            adminMode={isAdmin(currentUser)}
+                            onSelect={handleCellSelect}
+                          />
                         </td>
                       );
                     })}
@@ -1850,31 +1943,11 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
         </div>
       )}
 
-      {isAdmin(currentUser) && (
-        <div className="monthly-export">
-          <strong>Word jadval export</strong>
-          <p>Kunni tanlang — o'sha kundagi ishdagi xodimlar Word jadvalga tushadi</p>
-          <div className="monthly-export-row">
-            {[0, 1, 2, 3].map((offset) => {
-              const dt = new Date(); dt.setDate(dt.getDate() + offset);
-              const dStr = dt.toISOString().slice(0, 10);
-              if (dt.getMonth() + 1 !== month || dt.getFullYear() !== year) return null;
-              return (
-                <button key={dStr} type="button" className="mex-btn" onClick={() => exportWordForDate(dStr)}>
-                  <FileText size={14} /> {dt.getDate()}-{MONTH_NAMES[month - 1]}
-                </button>
-              );
-            })}
-            <input type="date" className="mex-picker" onChange={(e) => e.target.value && exportWordForDate(e.target.value)} />
-          </div>
-        </div>
-      )}
-
       <div className="time-panel">
         <div className="time-panel-icon"><Clock3 size={18} /></div>
         <div>
           <strong>Vaqt belgilari</strong>
-          <p>{selectedCell ? `${selectedCell.empName}: ${selectedCell.day}-kun — ${selectedCell.info.name}` : isAdmin(currentUser) ? "Katakni bosing — status o'zgartirish uchun" : "Jadval ko'rish rejimi"}</p>
+          <p>{selectedCell ? `${selectedCell.empName}: ${selectedCell.day}-kun — ${selectedCell.info.name}` : isAdmin(currentUser) ? "Katak ustiga bosing — status tanlash uchun" : "Jadval ko'rish rejimi"}</p>
         </div>
       </div>
     </div>
@@ -2729,8 +2802,8 @@ function EmployeeManager({ employees, onDelete, onNotify, onSave }) {
 
 function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
   const [selectedId, setSelectedId] = useState(employees[0]?.id || "");
-  const selectedEmployee = employees.find((employee) => String(employee.id) === String(selectedId)) || employees[0];
-  const [draft, setDraft] = useState(selectedEmployee || null);
+  const [draft, setDraft] = useState(null);
+  const [editDraft, setEditDraft] = useState(null);
   const [editOpen, setEditOpen] = useState(false);
   const [documentMode, setDocumentMode] = useState("word");
   const [saving, setSaving] = useState(false);
@@ -2753,17 +2826,33 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
     if (String(emp.id) !== String(selectedId)) setSelectedId(emp.id);
   }, [employees, selectedId]);
 
+  function openEdit() {
+    if (!draft) return;
+    setEditDraft({
+      id: draft.id,
+      name: draft.name || "",
+      role: draft.role || "",
+      phone: draft.phone || "",
+      telegram: draft.telegram || "",
+      department: draft.department || "operator",
+      address: draft.address || "",
+      portfolio: (draft.portfolio || []).map((item) => ({ ...item })),
+      avatar: draft.avatar || ""
+    });
+    setEditOpen(true);
+  }
+
   function updatePortfolio(index, field, value) {
-    const portfolio = [...(draft.portfolio || [])];
+    const portfolio = [...(editDraft.portfolio || [])];
     portfolio[index] = { ...(portfolio[index] || {}), [field]: value };
-    setDraft({ ...draft, portfolio });
+    setEditDraft({ ...editDraft, portfolio });
   }
 
   function addPortfolioItem() {
-    setDraft({
-      ...draft,
+    setEditDraft({
+      ...editDraft,
       portfolio: [
-        ...(draft.portfolio || []),
+        ...(editDraft.portfolio || []),
         { title: "", url: "", date: new Date().toISOString().slice(0, 10) }
       ]
     });
@@ -2771,17 +2860,17 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
   }
 
   function removePortfolioItem(index) {
-    setDraft({
-      ...draft,
-      portfolio: (draft.portfolio || []).filter((_, itemIndex) => itemIndex !== index)
+    setEditDraft({
+      ...editDraft,
+      portfolio: (editDraft.portfolio || []).filter((_, i) => i !== index)
     });
   }
 
   async function submit(event) {
     event.preventDefault();
     const requiredFields = [
-      ["documents-name", draft.name, "Ism familiyani kiriting."],
-      ["documents-role", draft.role, "Lavozimini kiriting."]
+      ["documents-name", editDraft.name, "Ism familiyani kiriting."],
+      ["documents-role", editDraft.role, "Lavozimini kiriting."]
     ];
     const invalid = requiredFields.find(([, value]) => !String(value || "").trim());
     if (invalid) {
@@ -2790,17 +2879,27 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
       return;
     }
 
-    const invalidPortfolio = (draft.portfolio || []).findIndex((item) => !String(item.title || "").trim() || !String(item.url || "").trim());
+    const invalidPortfolio = (editDraft.portfolio || []).findIndex((item) => !String(item.title || "").trim() || !String(item.url || "").trim());
     if (invalidPortfolio !== -1) {
       onNotify("Portfolio uchun syomka nomi va linkini to'liq kiriting.", "error");
-      const item = (draft.portfolio || [])[invalidPortfolio];
+      const item = (editDraft.portfolio || [])[invalidPortfolio];
       const field = !String(item?.title || "").trim() ? "title" : "url";
       formRef.current?.querySelector(`[name='portfolio-${field}-${invalidPortfolio}']`)?.focus();
       return;
     }
 
     setSaving(true);
-    const saved = await onSaveEmployee(draft);
+    const saved = await onSaveEmployee({
+      id: editDraft.id,
+      name: editDraft.name,
+      role: editDraft.role,
+      phone: editDraft.phone,
+      telegram: editDraft.telegram,
+      department: editDraft.department,
+      address: editDraft.address,
+      portfolio: editDraft.portfolio,
+      avatar: editDraft.avatar
+    });
     setSaving(false);
     if (!saved) return;
     setEditOpen(false);
@@ -2844,7 +2943,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
             Yuklab olish
           </button>
         </div>
-        <button className="document-edit-open" type="button" onClick={() => setEditOpen(true)}>
+        <button className="document-edit-open" type="button" onClick={openEdit}>
           <Edit3 size={17} />
           Ma'lumotlarni tahrirlash
         </button>
@@ -2863,7 +2962,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
           </button>
         ))}
       </section>
-      {editOpen && createPortal((
+      {editOpen && editDraft && createPortal((
         <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Hujjatlarni tahrirlash" onClick={() => setEditOpen(false)}>
           <form ref={formRef} className="schedule-modal documents-modal" onSubmit={submit} onClick={(event) => event.stopPropagation()}>
             <span className="modal-handle" />
@@ -2876,15 +2975,15 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
             </div>
             <label>
               Ism familiya
-              <input name="documents-name" value={draft.name || ""} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Abduqodirxo'jayev Izzat" />
+              <input name="documents-name" value={editDraft.name || ""} onChange={(event) => setEditDraft({ ...editDraft, name: event.target.value })} placeholder="Abduqodirxo'jayev Izzat" />
             </label>
             <label>
               Lavozimi
-              <input name="documents-role" value={draft.role || ""} onChange={(event) => setDraft({ ...draft, role: event.target.value })} placeholder="Tasvir yozish operatori" />
+              <input name="documents-role" value={editDraft.role || ""} onChange={(event) => setEditDraft({ ...editDraft, role: event.target.value })} placeholder="Tasvir yozish operatori" />
             </label>
             <label>
               Bo'lim
-              <select value={draft.department || "operator"} onChange={(event) => setDraft({ ...draft, department: event.target.value })}>
+              <select value={editDraft.department || "operator"} onChange={(event) => setEditDraft({ ...editDraft, department: event.target.value })}>
                 {DEPARTMENTS.map((department) => (
                   <option key={department.id} value={department.id}>{department.label}</option>
                 ))}
@@ -2893,11 +2992,11 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
             <div className="modal-grid two">
               <label>
                 Telefon
-                <input name="documents-phone" value={draft.phone || ""} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} placeholder="+998 90 000 00 00" inputMode="tel" />
+                <input name="documents-phone" value={editDraft.phone || ""} onChange={(event) => setEditDraft({ ...editDraft, phone: event.target.value })} placeholder="+998 90 000 00 00" inputMode="tel" />
               </label>
               <label>
                 Telegram
-                <input name="documents-telegram" value={draft.telegram || ""} onChange={(event) => setDraft({ ...draft, telegram: event.target.value })} placeholder="@username" />
+                <input name="documents-telegram" value={editDraft.telegram || ""} onChange={(event) => setEditDraft({ ...editDraft, telegram: event.target.value })} placeholder="@username" />
               </label>
             </div>
             <section className="portfolio-editor modal-portfolio">
@@ -2908,7 +3007,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
                   Link
                 </button>
               </div>
-              {(draft.portfolio || []).map((item, index) => (
+              {(editDraft.portfolio || []).map((item, index) => (
                 <article className="portfolio-row" key={`${index}-${item.url}`}>
                   <input name={`portfolio-title-${index}`} value={item.title || ""} onChange={(event) => updatePortfolio(index, "title", event.target.value)} placeholder="Syomka nomi" />
                   <input name={`portfolio-url-${index}`} value={item.url || ""} onChange={(event) => updatePortfolio(index, "url", event.target.value)} placeholder="Video yoki efir linki" />
@@ -2918,7 +3017,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee }) {
                   </button>
                 </article>
               ))}
-              {!(draft.portfolio || []).length && <p className="portfolio-empty">Efirga ketgan syomka linklarini shu yerda yig'ib borasiz.</p>}
+              {!(editDraft.portfolio || []).length && <p className="portfolio-empty">Efirga ketgan syomka linklarini shu yerda yig'ib borasiz.</p>}
             </section>
             <button type="submit" disabled={saving}>
               <Save size={17} />
@@ -3905,10 +4004,10 @@ function UsersPage({ currentUser, onNotify }) {
                 Login (username)
                 <input
                   value={form.username}
-                  onChange={(e) => !editUser && setForm({ ...form, username: e.target.value })}
+                  onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase().replace(/\s/g, "") })}
                   placeholder="username"
                   autoComplete="off"
-                  readOnly={!!editUser}
+                  readOnly={editUser?.id === currentUser?.id}
                 />
               </label>
               <label>
@@ -3929,7 +4028,7 @@ function UsersPage({ currentUser, onNotify }) {
                     onClick={() => setShowPassword((v) => !v)}
                     aria-label={showPassword ? "Yashirish" : "Ko'rsatish"}
                   >
-                    {showPassword ? <Moon size={15} /> : <Sun size={15} />}
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
               </label>
