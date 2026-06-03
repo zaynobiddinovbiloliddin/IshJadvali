@@ -865,7 +865,7 @@ async function readBody(request) {
 }
 
 async function serveStatic(request, response) {
-  const url = new URL(request.url, `http://${request.headers.host}`);
+  const url = parseRequestUrl(request);
   const safePath = normalize(url.pathname).replace(/^(\.\.[/\\])+/, "");
   const requestedPath = safePath === "/" ? "/index.html" : safePath;
   const filePath = join(__dirname, "dist", requestedPath);
@@ -889,10 +889,21 @@ async function serveStatic(request, response) {
   }
 }
 
+function parseRequestUrl(request) {
+  const raw = request.url || "/";
+  // Leading-zero IP (e.g. 095.111.247.157) is invalid in Node URL — use localhost as base
+  const host = (request.headers.host || "localhost").replace(/\b0+(\d)/g, "$1");
+  try {
+    return new URL(raw, `http://${host}`);
+  } catch {
+    return new URL(raw.split("?")[0] || "/", "http://localhost");
+  }
+}
+
 export async function handleRequest(request, response) {
   if (request.method === "OPTIONS") return sendJson(response, 200, {});
 
-  const url = new URL(request.url, `http://${request.headers.host}`);
+  const url = parseRequestUrl(request);
 
   try {
     if (request.method === "GET" && url.pathname === "/api/health") {
