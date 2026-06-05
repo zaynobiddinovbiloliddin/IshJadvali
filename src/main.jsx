@@ -896,6 +896,14 @@ function App() {
               {label}
             </button>
           ))}
+          <button
+            type="button"
+            className="desktop-sidebar-btn desktop-sidebar-theme-btn"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          >
+            {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+            {theme === "dark" ? "Light mode" : "Dark mode"}
+          </button>
         </nav>
         <div className="desktop-sidebar-user">
           <span className="avatar avatar-sm avatar-initials" style={{ backgroundColor: "#6366f1" }}>
@@ -935,7 +943,7 @@ function App() {
           </button>
         </header>
 
-        {menuOpen && <MenuPanel panelRef={menuPanelRef} onClose={() => setMenuOpen(false)} onPageChange={setPage} onOpenMonthly={openMonthly} currentUser={currentUser} />}
+        {menuOpen && <MenuPanel panelRef={menuPanelRef} onClose={() => setMenuOpen(false)} onPageChange={setPage} onOpenMonthly={openMonthly} currentUser={currentUser} theme={theme} onThemeChange={setTheme} />}
         {notificationsOpen && <NotificationsPanel panelRef={notificationsPanelRef} items={dashboard.notifications} />}
 
         <main className="content">
@@ -4165,7 +4173,7 @@ function UsersPage({ currentUser, onNotify }) {
   );
 }
 
-function MenuPanel({ onClose, onPageChange, onOpenMonthly, panelRef, currentUser }) {
+function MenuPanel({ onClose, onPageChange, onOpenMonthly, panelRef, currentUser, theme, onThemeChange }) {
   const links = [
     ["weekly", "Ish jadvali", CalendarDays],
     ["studio", "Jamoa va bo'limlar", UsersRound],
@@ -4195,6 +4203,15 @@ function MenuPanel({ onClose, onPageChange, onOpenMonthly, panelRef, currentUser
           {label}
         </button>
       ))}
+      <div className="menu-panel-divider" />
+      <button
+        type="button"
+        className="menu-panel-theme-btn"
+        onClick={() => { onThemeChange?.(theme === "dark" ? "light" : "dark"); onClose(); }}
+      >
+        {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
+        {theme === "dark" ? "Light mode" : "Dark mode"}
+      </button>
     </aside>
   );
 }

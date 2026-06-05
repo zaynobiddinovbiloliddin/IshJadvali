@@ -57,7 +57,7 @@
   --card-bg: #1e293b;
   --border: #334155;
   --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
+  --text-secondary: #cbd5e1;
   --skeleton-bg: #334155;
   --accent-light: rgba(99, 102, 241, 0.15);
   --success-light: rgba(34, 197, 94, 0.15);
@@ -7616,6 +7616,44 @@ body { overflow-x: hidden; }
   stroke-width: 2.5;
 }
 
+.desktop-sidebar-theme-btn {
+  margin-top: 6px;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  padding-top: 14px;
+  color: var(--text-secondary) !important;
+}
+.desktop-sidebar-theme-btn:hover {
+  color: var(--accent) !important;
+  background: var(--accent-light);
+}
+
+.menu-panel-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+.menu-panel-theme-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  width: 100%;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-weight: 700;
+  font-size: 0.86rem;
+}
+.menu-panel-theme-btn:hover {
+  background: var(--surface-muted);
+  color: var(--accent);
+}
+
 .desktop-sidebar-user {
   display: flex;
   align-items: center;
@@ -8730,6 +8768,87 @@ body { overflow-x: hidden; }
 /* ── Toggle switch track ─────────────────────────────────────────── */
 [data-theme="dark"] .toggle-row i {
   background: #475569;
+}
+
+/* ── Barcha hardcoded qora/kulrang matnlarni oq qilish ───────────── */
+[data-theme="dark"] .metric-card span,
+[data-theme="dark"] .metric-card strong {
+  color: var(--text-primary) !important;
+}
+[data-theme="dark"] .section-head span,
+[data-theme="dark"] .section-head button {
+  color: var(--text-secondary) !important;
+}
+[data-theme="dark"] .attendance-scan label,
+[data-theme="dark"] .attendance-metrics span,
+[data-theme="dark"] .attendance-list span,
+[data-theme="dark"] .attendance-empty,
+[data-theme="dark"] .attendance-recent span {
+  color: var(--text-secondary) !important;
+}
+[data-theme="dark"] .attendance-metrics strong,
+[data-theme="dark"] .attendance-list strong,
+[data-theme="dark"] .attendance-list em,
+[data-theme="dark"] .attendance-scan button {
+  color: var(--text-primary) !important;
+}
+[data-theme="dark"] .monthly-head h2,
+[data-theme="dark"] .monthly-counts b,
+[data-theme="dark"] .month-header,
+[data-theme="dark"] .operator-name {
+  color: var(--text-primary) !important;
+}
+[data-theme="dark"] .monthly-head p,
+[data-theme="dark"] .monthly-counts span {
+  color: var(--text-secondary) !important;
+}
+[data-theme="dark"] .team-page,
+[data-theme="dark"] .team-search input,
+[data-theme="dark"] .team-actions button,
+[data-theme="dark"] .team-tabs button {
+  color: var(--text-primary) !important;
+}
+[data-theme="dark"] .team-search span {
+  color: var(--text-secondary) !important;
+}
+[data-theme="dark"] .monthly-fullscreen-head strong {
+  color: var(--text-primary) !important;
+}
+[data-theme="dark"] .monthly-fullscreen-head span {
+  color: var(--text-secondary) !important;
+}
+[data-theme="dark"] .month-total {
+  color: var(--text-primary) !important;
+}
+[data-theme="dark"] .operator-name b {
+  color: var(--text-secondary) !important;
+}
+[data-theme="dark"] .notification-panel strong,
+[data-theme="dark"] .menu-panel strong {
+  color: var(--text-primary) !important;
+}
+[data-theme="dark"] .notification-panel p,
+[data-theme="dark"] .menu-panel button {
+  color: var(--text-primary) !important;
+}
+[data-theme="dark"] .date-group-head span {
+  color: var(--text-secondary) !important;
+}
+[data-theme="dark"] .staff-row strong,
+[data-theme="dark"] .compact-staff strong {
+  color: var(--text-primary) !important;
+}
+[data-theme="dark"] .staff-row span,
+[data-theme="dark"] .compact-staff span {
+  color: var(--text-secondary) !important;
+}
+[data-theme="dark"] .hero-block h2,
+[data-theme="dark"] .hero-block strong {
+  color: var(--text-primary) !important;
+}
+[data-theme="dark"] .hero-block p,
+[data-theme="dark"] .hero-block span {
+  color: var(--text-secondary) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
