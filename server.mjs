@@ -168,7 +168,9 @@ async function loadDb() {
       contacts: Array.isArray(parsed.contacts) ? parsed.contacts.map(normalizeContact).filter(Boolean) : initialContacts,
       users,
       dailyStatuses: Array.isArray(parsed.dailyStatuses) ? parsed.dailyStatuses : [],
-      auditLogs: Array.isArray(parsed.auditLogs) ? parsed.auditLogs : []
+      auditLogs: Array.isArray(parsed.auditLogs) ? parsed.auditLogs : [],
+      tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
+      notifications: Array.isArray(parsed.notifications) ? parsed.notifications : []
     };
   } catch {
     return { generation: 0, employees: initialEmployees.map(normalizeEmployee), schedules: {}, attendance: [], contacts: initialContacts, users: initialUsers, dailyStatuses: [], auditLogs: [] };
@@ -252,6 +254,43 @@ function pushAuditLog(action, entity, entityId, details) {
   if (!db.auditLogs) db.auditLogs = [];
   db.auditLogs.push({ id: Date.now(), action, entity, entityId: String(entityId || ""), details: details || "", createdAt: new Date().toISOString() });
   if (db.auditLogs.length > 500) db.auditLogs = db.auditLogs.slice(-500);
+}
+
+// ─── Task / Notification helpers ─────────────────────────────────────────────
+function nextTaskId() {
+  if (!db.tasks?.length) return 1;
+  return Math.max(...db.tasks.map((t) => t.id)) + 1;
+}
+function nextNotifId() {
+  if (!db.notifications?.length) return 1;
+  return Math.max(...db.notifications.map((n) => n.id)) + 1;
+}
+function createNotif(userId, title, message, type = "task", taskId = null) {
+  if (!db.notifications) db.notifications = [];
+  db.notifications.push({ id: nextNotifId(), userId, title, message, type, isRead: false, taskId, createdAt: new Date().toISOString() });
+  // max 300 notif per user
+  const own = db.notifications.filter((n) => n.userId === userId);
+  if (own.length > 300) {
+    const stale = new Set(own.slice(0, own.length - 300).map((n) => n.id));
+    db.notifications = db.notifications.filter((n) => !stale.has(n.id));
+  }
+}
+function getAuthUser(request, response, adminOnly = false) {
+  const token = parseTokenUser(request);
+  if (!token) { sendJson(response, 401, { message: "Tizimga kirish zarur" }); return null; }
+  const user = db.users.find((u) => u.id === token.id);
+  if (!user || !user.isActive) { sendJson(response, 401, { message: "Foydalanuvchi topilmadi" }); return null; }
+  if (adminOnly && !["admin", "superadmin"].includes(user.role)) { sendJson(response, 403, { message: "Ruxsat yo'q — faqat admin" }); return null; }
+  return user;
+}
+function enrichTask(t) {
+  const toUser = db.users.find((u) => u.id === t.assignedToId);
+  const byUser = db.users.find((u) => u.id === t.assignedById);
+  return {
+    ...t,
+    assignedTo: toUser ? { id: toUser.id, fullName: toUser.fullName, username: toUser.username } : { id: t.assignedToId, fullName: "Noma'lum", username: "" },
+    assignedBy: byUser ? { id: byUser.id, fullName: byUser.fullName, username: byUser.username } : { id: t.assignedById, fullName: "Noma'lum", username: "" }
+  };
 }
 
 // ─── Token auth ──────────────────────────────────────────────────────────────
@@ -1230,6 +1269,91 @@ export async function handleRequest(request, response) {
     const statusMatch = url.pathname.match(/^\/api\/schedules\/(\d{4}-\d{2}-\d{2})\/status$/);
     if (statusMatch && request.method === "PUT") {
       return sendJson(response, 200, await updatePersonStatus(statusMatch[1], await readBody(request)));
+    }
+
+    // ─── Tasks ──────────────────────────────────────────────────────────────
+    if (url.pathname === "/api/tasks" && request.method === "GET") {
+      const user = getAuthUser(request, response);
+      if (!user) return;
+      if (!db.tasks) db.tasks = [];
+      const tasks = (["admin", "superadmin"].includes(user.role)
+        ? db.tasks.filter((t) => t.assignedById === user.id)
+        : db.tasks.filter((t) => t.assignedToId === user.id))
+        .map(enrichTask)
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      return sendJson(response, 200, { success: true, tasks });
+    }
+
+    if (url.pathname === "/api/tasks" && request.method === "POST") {
+      const user = getAuthUser(request, response, true);
+      if (!user) return;
+      const { title, description, assignedToId, dueDate } = await readBody(request);
+      if (!title?.trim()) return sendJson(response, 400, { message: "Vazifa nomini kiriting" });
+      if (!assignedToId) return sendJson(response, 400, { message: "Xodimni tanlang" });
+      const toId = Number(assignedToId);
+      const assignee = db.users.find((u) => u.id === toId);
+      if (!assignee) return sendJson(response, 404, { message: "Xodim topilmadi" });
+      if (!db.tasks) db.tasks = [];
+      const now = new Date().toISOString();
+      const task = { id: nextTaskId(), title: String(title).trim(), description: description ? String(description).trim() : null, assignedToId: toId, assignedById: user.id, status: "PENDING", rejectReason: null, dueDate: dueDate || null, completedAt: null, createdAt: now, updatedAt: now };
+      db.tasks.push(task);
+      createNotif(toId, "📋 Yangi vazifa tayinlandi", `${user.fullName || user.username} sizga vazifa yubordi: "${task.title}"`, "task", task.id);
+      pushAuditLog("CREATE", "Task", task.id, `"${task.title}" vazifasi ${assignee.fullName} ga tayinlandi`);
+      await saveDb();
+      return sendJson(response, 201, { success: true, task: enrichTask(task) });
+    }
+
+    const taskStatusMatch = url.pathname.match(/^\/api\/tasks\/(\d+)\/status$/);
+    if (taskStatusMatch && request.method === "PATCH") {
+      const user = getAuthUser(request, response);
+      if (!user) return;
+      const taskId = Number(taskStatusMatch[1]);
+      const { status, rejectReason } = await readBody(request);
+      const valid = ["ACCEPTED", "COMPLETED", "REJECTED"];
+      if (!valid.includes(status)) return sendJson(response, 400, { message: "Noto'g'ri status" });
+      if (!db.tasks) db.tasks = [];
+      const idx = db.tasks.findIndex((t) => t.id === taskId);
+      if (idx === -1) return sendJson(response, 404, { message: "Vazifa topilmadi" });
+      const task = db.tasks[idx];
+      if (task.assignedToId !== user.id) return sendJson(response, 403, { message: "Ruxsat yo'q" });
+      db.tasks[idx] = { ...task, status, rejectReason: status === "REJECTED" ? (rejectReason || "") : null, completedAt: status === "COMPLETED" ? new Date().toISOString() : task.completedAt, updatedAt: new Date().toISOString() };
+      const msgs = {
+        ACCEPTED: { title: "✅ Vazifa qabul qilindi", message: `${user.fullName} "${task.title}" vazifasini qabul qildi`, type: "info" },
+        COMPLETED: { title: "🎉 Vazifa bajarildi!", message: `${user.fullName} "${task.title}" vazifasini bajardi`, type: "success" },
+        REJECTED: { title: "❌ Vazifa rad etildi", message: `${user.fullName} "${task.title}" vazifasini rad etdi. Sabab: ${rejectReason || "Ko'rsatilmagan"}`, type: "warning" }
+      };
+      const m = msgs[status];
+      createNotif(task.assignedById, m.title, m.message, m.type, taskId);
+      await saveDb();
+      return sendJson(response, 200, { success: true, task: db.tasks[idx] });
+    }
+
+    // ─── Notifications ───────────────────────────────────────────────────────
+    if (url.pathname === "/api/notifications" && request.method === "GET") {
+      const user = getAuthUser(request, response);
+      if (!user) return;
+      if (!db.notifications) db.notifications = [];
+      const notifs = db.notifications.filter((n) => n.userId === user.id).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 50);
+      return sendJson(response, 200, { success: true, notifications: notifs, unreadCount: notifs.filter((n) => !n.isRead).length });
+    }
+
+    const notifReadMatch = url.pathname.match(/^\/api\/notifications\/(\d+)\/read$/);
+    if (notifReadMatch && request.method === "PATCH") {
+      const user = getAuthUser(request, response);
+      if (!user) return;
+      if (!db.notifications) db.notifications = [];
+      const idx = db.notifications.findIndex((n) => n.id === Number(notifReadMatch[1]) && n.userId === user.id);
+      if (idx !== -1) { db.notifications[idx].isRead = true; await saveDb(); }
+      return sendJson(response, 200, { success: true });
+    }
+
+    if (url.pathname === "/api/notifications/read-all" && request.method === "PATCH") {
+      const user = getAuthUser(request, response);
+      if (!user) return;
+      if (!db.notifications) db.notifications = [];
+      db.notifications = db.notifications.map((n) => n.userId === user.id ? { ...n, isRead: true } : n);
+      await saveDb();
+      return sendJson(response, 200, { success: true });
     }
 
     if (url.pathname.startsWith("/api/")) {

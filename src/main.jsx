@@ -494,6 +494,8 @@ function App() {
   const [loadingMessage, setLoadingMessage] = useState("Yuklanmoqda...");
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [showAllOverview, setShowAllOverview] = useState(false);
   const [error, setError] = useState("");
   const [theme, setTheme] = useState(() => {
@@ -551,6 +553,22 @@ function App() {
     document.documentElement.dataset.theme = theme;
     window.localStorage.setItem("theme", theme);
   }, [theme]);
+
+  const loadNotifications = useCallback(async () => {
+    if (!currentUser) return;
+    try {
+      const data = await api("/api/notifications");
+      setNotifications(data.notifications || []);
+      setUnreadCount(data.unreadCount || 0);
+    } catch {}
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    loadNotifications();
+    const interval = setInterval(loadNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [currentUser, loadNotifications]);
 
   useEffect(() => {
     if (page === "monthly") {
@@ -850,6 +868,7 @@ function App() {
     if (page === "audit") return "Audit jurnal";
     if (page === "profile") return "Profil";
     if (page === "users") return "Foydalanuvchilar";
+    if (page === "tasks") return "Vazifalar";
     return "Ish jadvali";
   }, [page]);
 
@@ -869,6 +888,7 @@ function App() {
     ["monthly", "Oylik grafik", Clock3],
     ["shooting", "Tasvir jadvali", FileText],
     ["reports", "Hisobotlar", ChartColumn],
+    ["tasks", "Vazifalar", BriefcaseBusiness],
     ...(isAdmin(currentUser) ? [["audit", "Audit jurnal", ShieldCheck]] : []),
     ...(isSuper(currentUser) ? [["users", "Foydalanuvchilar", UserCheck]] : []),
     ["profile", "Profil", User]
@@ -935,16 +955,32 @@ function App() {
               O'Z<strong>24</strong>
             </span>
           </div>
-          <button ref={notificationsButtonRef} className="icon-button" type="button" aria-label="Bildirishnomalar" onClick={() => {
+          <button ref={notificationsButtonRef} className="icon-button notification-bell" type="button" aria-label="Bildirishnomalar" onClick={() => {
             setNotificationsOpen((value) => !value);
             setMenuOpen(false);
           }}>
             <Bell size={20} fill="currentColor" />
+            {unreadCount > 0 && (
+              <span className="notification-badge">{unreadCount > 99 ? "99+" : unreadCount}</span>
+            )}
           </button>
         </header>
 
         {menuOpen && <MenuPanel panelRef={menuPanelRef} onClose={() => setMenuOpen(false)} onPageChange={setPage} onOpenMonthly={openMonthly} currentUser={currentUser} theme={theme} onThemeChange={setTheme} />}
-        {notificationsOpen && <NotificationsPanel panelRef={notificationsPanelRef} items={dashboard.notifications} />}
+        {notificationsOpen && (
+          <NotificationsPanel
+            panelRef={notificationsPanelRef}
+            notifications={notifications}
+            onMarkRead={async (id) => {
+              await api(`/api/notifications/${id}/read`, { method: "PATCH" });
+              loadNotifications();
+            }}
+            onMarkAllRead={async () => {
+              await api("/api/notifications/read-all", { method: "PATCH" });
+              loadNotifications();
+            }}
+          />
+        )}
 
         <main className="content">
           {error && <div className="error-banner">{error}</div>}
@@ -986,6 +1022,9 @@ function App() {
               {page === "documents" && <DocumentsPage employees={dashboard.employees} onNotify={notify} onSaveEmployee={saveEmployee} currentUser={currentUser} />}
               {page === "shooting" && <ShootingPage onNotify={notify} />}
               {page === "reports" && <ReportsPage dashboard={dashboard} />}
+              {page === "tasks" && (
+                <VazifalarPage currentUser={currentUser} onNotify={notify} onNotificationsRefresh={loadNotifications} />
+              )}
               {page === "audit" && <AuditPage />}
               {page === "users" && isSuper(currentUser) && (
                 <UsersPage currentUser={currentUser} onNotify={notify} />
@@ -4181,6 +4220,7 @@ function MenuPanel({ onClose, onPageChange, onOpenMonthly, panelRef, currentUser
     ["monthly", "Oylik grafik", Clock3],
     ["shooting", "Tasvir jadvali", FileText],
     ["reports", "Hisobotlar", ChartColumn],
+    ["tasks", "Vazifalar", BriefcaseBusiness],
     ...(isAdmin(currentUser) ? [["audit", "Audit jurnal", ShieldCheck]] : []),
     ...(isSuper(currentUser) ? [["users", "Foydalanuvchilar", UserCheck]] : []),
     ["profile", "Profil", User]
@@ -4216,12 +4256,240 @@ function MenuPanel({ onClose, onPageChange, onOpenMonthly, panelRef, currentUser
   );
 }
 
-function NotificationsPanel({ items, panelRef }) {
+function NotificationsPanel({ panelRef, notifications, onMarkRead, onMarkAllRead }) {
+  const unread = notifications.filter((n) => !n.isRead);
+  const typeIcon = { success: "✅", warning: "⚠️", task: "📋", info: "ℹ️" };
+
   return (
     <aside ref={panelRef} className="floating-panel notification-panel">
-      <strong>Bildirishnomalar</strong>
-      {items.map((item) => <p key={item}>{item}</p>)}
+      <div className="notif-panel-head">
+        <strong>Bildirishnomalar</strong>
+        {unread.length > 0 && (
+          <button className="notif-read-all" onClick={onMarkAllRead}>Hammasini o'qi</button>
+        )}
+      </div>
+      {notifications.length === 0 ? (
+        <div className="notif-empty">
+          <span>🔔</span>
+          <p>Bildirishnomalar yo'q</p>
+        </div>
+      ) : (
+        <div className="notif-list">
+          {notifications.map((n) => (
+            <div
+              key={n.id}
+              className={`notif-item${!n.isRead ? " unread" : ""} type-${n.type}`}
+              onClick={() => !n.isRead && onMarkRead(n.id)}
+            >
+              <div className="notif-icon">{typeIcon[n.type] || "ℹ️"}</div>
+              <div className="notif-body">
+                <strong>{n.title}</strong>
+                <p>{n.message}</p>
+                <time>{new Date(n.createdAt).toLocaleString("uz-UZ", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</time>
+              </div>
+              {!n.isRead && <span className="notif-dot" />}
+            </div>
+          ))}
+        </div>
+      )}
     </aside>
+  );
+}
+
+// ─── VazifalarPage ────────────────────────────────────────────────────────────
+function VazifalarPage({ currentUser, onNotify, onNotificationsRefresh }) {
+  const [tasks, setTasks] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [draft, setDraft] = useState({ title: "", description: "", assignedToId: "", dueDate: "" });
+  const [rejectModal, setRejectModal] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => { loadTasks(); loadUsers(); }, []);
+
+  async function loadTasks() {
+    try {
+      const data = await api("/api/tasks");
+      setTasks(data.tasks || []);
+    } catch (err) { onNotify(err.message, "error"); }
+    finally { setLoading(false); }
+  }
+
+  async function loadUsers() {
+    try {
+      const data = await api("/api/users");
+      setUsers((data.users || []).filter((u) => u.isActive));
+    } catch {}
+  }
+
+  async function createTask(e) {
+    e.preventDefault();
+    if (!draft.title.trim()) { onNotify("Vazifa nomini kiriting", "error"); return; }
+    if (!draft.assignedToId) { onNotify("Xodimni tanlang", "error"); return; }
+    setSubmitting(true);
+    try {
+      await api("/api/tasks", { method: "POST", body: JSON.stringify(draft) });
+      onNotify("Vazifa muvaffaqiyatli yuborildi ✓");
+      setModalOpen(false);
+      setDraft({ title: "", description: "", assignedToId: "", dueDate: "" });
+      loadTasks();
+    } catch (err) { onNotify(err.message, "error"); }
+    finally { setSubmitting(false); }
+  }
+
+  async function updateStatus(taskId, status, reason = "") {
+    try {
+      await api(`/api/tasks/${taskId}/status`, { method: "PATCH", body: JSON.stringify({ status, rejectReason: reason }) });
+      const msgs = { ACCEPTED: "Vazifa qabul qilindi ✓", COMPLETED: "Vazifa bajarildi ✓", REJECTED: "Vazifa rad etildi" };
+      onNotify(msgs[status] || "Yangilandi");
+      onNotificationsRefresh?.();
+      loadTasks();
+    } catch (err) { onNotify(err.message, "error"); }
+  }
+
+  const STATUS_INFO = {
+    PENDING:   { label: "Kutilmoqda", color: "#f59e0b", bg: "#fef3c7" },
+    ACCEPTED:  { label: "Qabul qilindi", color: "#3b82f6", bg: "#dbeafe" },
+    COMPLETED: { label: "Bajarildi", color: "#22c55e", bg: "#dcfce7" },
+    REJECTED:  { label: "Rad etildi", color: "#ef4444", bg: "#fee2e2" }
+  };
+
+  return (
+    <section className="tasks-page">
+      <div className="tasks-header">
+        <div>
+          <h2>Vazifalar</h2>
+          <p>Jami {tasks.length} ta vazifa</p>
+        </div>
+        {isAdmin(currentUser) && (
+          <button className="btn-primary" type="button" onClick={() => setModalOpen(true)}>
+            <Plus size={17} /> Yangi vazifa
+          </button>
+        )}
+      </div>
+
+      {loading ? <SkeletonPage /> : (
+        <div className="tasks-list">
+          {tasks.length === 0 ? (
+            <div className="empty-card">
+              <span className="empty-icon">📋</span>
+              <p>Hozircha vazifalar yo'q</p>
+            </div>
+          ) : tasks.map((task) => {
+            const info = STATUS_INFO[task.status] || STATUS_INFO.PENDING;
+            return (
+              <div key={task.id} className="task-card">
+                <div className="task-card-header">
+                  <strong>{task.title}</strong>
+                  <span className="task-status-badge" style={{ background: info.bg, color: info.color }}>{info.label}</span>
+                </div>
+                {task.description && <p className="task-description">{task.description}</p>}
+                <div className="task-meta">
+                  {isAdmin(currentUser)
+                    ? <span>👤 {task.assignedTo?.fullName}</span>
+                    : <span>📤 {task.assignedBy?.fullName}</span>
+                  }
+                  {task.dueDate && <span>📅 {new Date(task.dueDate).toLocaleDateString("uz-UZ")}</span>}
+                  <span>🕐 {new Date(task.createdAt).toLocaleDateString("uz-UZ")}</span>
+                </div>
+                {task.rejectReason && (
+                  <div className="task-reject-reason"><strong>Sabab:</strong> {task.rejectReason}</div>
+                )}
+                {!isAdmin(currentUser) && task.status === "PENDING" && (
+                  <div className="task-actions">
+                    <button className="task-accept-btn" type="button" onClick={() => updateStatus(task.id, "ACCEPTED")}>✅ Qabul qilish</button>
+                    <button className="task-reject-btn" type="button" onClick={() => { setRejectModal(task); setRejectReason(""); }}>❌ Rad etish</button>
+                  </div>
+                )}
+                {!isAdmin(currentUser) && task.status === "ACCEPTED" && (
+                  <div className="task-actions">
+                    <button className="task-complete-btn" type="button" onClick={() => updateStatus(task.id, "COMPLETED")}>🎉 Bajarildi</button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Yangi vazifa modal */}
+      {modalOpen && createPortal((
+        <div className="modal-backdrop" onClick={() => setModalOpen(false)}>
+          <form className="schedule-modal task-create-modal" onSubmit={createTask} onClick={(e) => e.stopPropagation()}>
+            <span className="modal-handle" />
+            <div className="modal-head">
+              <strong>Yangi vazifa tayinlash</strong>
+              <button type="button" className="modal-close" onClick={() => setModalOpen(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <label className="modal-field">
+                <span>Vazifa nomi *</span>
+                <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Vazifa nomini kiriting" required />
+              </label>
+              <label className="modal-field">
+                <span>Tavsif (ixtiyoriy)</span>
+                <textarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="Vazifa haqida batafsil..." rows={3} />
+              </label>
+              <label className="modal-field">
+                <span>Xodim tanlash *</span>
+                <select value={draft.assignedToId} onChange={(e) => setDraft({ ...draft, assignedToId: e.target.value })} required>
+                  <option value="">— Xodimni tanlang —</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>{u.fullName} ({u.role})</option>
+                  ))}
+                </select>
+              </label>
+              <label className="modal-field">
+                <span>Muddat (ixtiyoriy)</span>
+                <input type="date" value={draft.dueDate} onChange={(e) => setDraft({ ...draft, dueDate: e.target.value })} />
+              </label>
+              <button type="submit" className="btn-primary" style={{ width: "100%", marginTop: 4 }} disabled={submitting}>
+                <Send size={16} /> {submitting ? "Yuborilmoqda..." : "Yuborish"}
+              </button>
+            </div>
+          </form>
+        </div>
+      ), document.body)}
+
+      {/* Rad etish modal */}
+      {rejectModal && createPortal((
+        <div className="modal-backdrop" onClick={() => setRejectModal(null)}>
+          <div className="schedule-modal task-create-modal" onClick={(e) => e.stopPropagation()}>
+            <span className="modal-handle" />
+            <div className="modal-head">
+              <strong>Rad etish sababi</strong>
+              <button type="button" className="modal-close" onClick={() => setRejectModal(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <p className="task-reject-hint">"{rejectModal.title}" — nima sababdan rad etyapsiz?</p>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Sababni kiriting..."
+                rows={4}
+                className="task-reject-textarea"
+              />
+              <div className="task-reject-actions">
+                <button type="button" className="btn-ghost" onClick={() => setRejectModal(null)}>Bekor</button>
+                <button
+                  type="button"
+                  className="btn-danger"
+                  onClick={() => {
+                    if (!rejectReason.trim()) { onNotify("Sababni kiriting", "error"); return; }
+                    updateStatus(rejectModal.id, "REJECTED", rejectReason);
+                    setRejectModal(null);
+                  }}
+                >
+                  Rad etish
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ), document.body)}
+    </section>
   );
 }
 
@@ -4270,6 +4538,7 @@ function BottomNav({ page, onPageChange }) {
   const items = [
     { id: "weekly", label: "Jadval", icon: CalendarDays },
     { id: "studio", label: "Jamoa", icon: UsersRound },
+    { id: "tasks", label: "Vazifalar", icon: BriefcaseBusiness },
     { id: "documents", label: "Hujjatlar", icon: ShieldCheck },
     { id: "profile", label: "Profil", icon: User }
   ];
