@@ -8348,3 +8348,494 @@ body { overflow-x: hidden; }
   color: var(--text-secondary); font-size: 0.9rem;
   min-height: unset; min-width: unset;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   DARK MODE — Keng qamrovli override-lar (hardcoded ranglar uchun)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Fullscreen modal ────────────────────────────────────────────── */
+[data-theme="dark"] .monthly-fullscreen-backdrop {
+  background: var(--bg);
+}
+[data-theme="dark"] .monthly-fullscreen-head {
+  background: var(--card-bg);
+  border-bottom-color: var(--border);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+}
+[data-theme="dark"] .monthly-fullscreen-head button {
+  color: var(--text-primary);
+  background: rgba(99,102,241,0.15);
+}
+[data-theme="dark"] .monthly-fullscreen-head strong {
+  color: var(--text-primary);
+}
+[data-theme="dark"] .monthly-fullscreen-head span {
+  color: var(--text-secondary);
+}
+
+/* ── Metric cards ────────────────────────────────────────────────── */
+[data-theme="dark"] .metric-card {
+  background: var(--card-bg);
+  border-color: var(--border);
+}
+[data-theme="dark"] .metric-card span {
+  color: var(--text-secondary);
+}
+[data-theme="dark"] .metric-icon.green  { background: rgba(34,197,94,0.15); }
+[data-theme="dark"] .metric-icon.blue   { background: rgba(59,130,246,0.15); }
+[data-theme="dark"] .metric-icon.purple { background: rgba(109,78,232,0.15); }
+[data-theme="dark"] .metric-icon.orange { background: rgba(245,158,11,0.15); }
+[data-theme="dark"] .metric-icon.yellow { background: rgba(161,98,7,0.15); }
+
+/* ── Week nav + create button ────────────────────────────────────── */
+[data-theme="dark"] .week-nav button {
+  color: var(--text-primary);
+  background: var(--card-bg);
+  border-color: var(--border);
+}
+[data-theme="dark"] .create-button.flat {
+  border-color: var(--border);
+}
+
+/* ── Day tabs ────────────────────────────────────────────────────── */
+[data-theme="dark"] .day-tabs button {
+  color: var(--text-primary);
+  background: var(--card-bg);
+  border-color: var(--border);
+  box-shadow: none;
+}
+[data-theme="dark"] .day-tabs {
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+}
+
+/* ── Group / studio / today / overview / legend cards ────────────── */
+[data-theme="dark"] .group-card,
+[data-theme="dark"] .studio-panel,
+[data-theme="dark"] .attendance-panel,
+[data-theme="dark"] .today-card,
+[data-theme="dark"] .overview-card,
+[data-theme="dark"] .legend-card {
+  background: var(--card-bg);
+  border-color: var(--border);
+}
+
+/* ── Staff rows ──────────────────────────────────────────────────── */
+[data-theme="dark"] .staff-row {
+  background: rgba(34,197,94,0.07);
+  border-color: rgba(34,197,94,0.18);
+}
+[data-theme="dark"] .staff-row.department-pull {
+  background: rgba(37,99,235,0.08);
+  border-color: rgba(37,99,235,0.22);
+  border-left-color: #3b82f6;
+}
+[data-theme="dark"] .staff-row.department-operator {
+  background: rgba(22,163,74,0.08);
+  border-color: rgba(22,163,74,0.22);
+  border-left-color: #22c55e;
+}
+[data-theme="dark"] .staff-row.department-dron {
+  background: rgba(245,158,11,0.08);
+  border-color: rgba(245,158,11,0.22);
+  border-left-color: #f59e0b;
+}
+[data-theme="dark"] .staff-row.department-tjk {
+  background: rgba(37,99,235,0.08);
+  border-color: rgba(37,99,235,0.22);
+  border-left-color: #3b82f6;
+}
+
+/* ── Compact staff ───────────────────────────────────────────────── */
+[data-theme="dark"] .compact-staff {
+  background: rgba(37,99,235,0.08);
+  border-color: rgba(37,99,235,0.22);
+  border-left-color: #3b82f6;
+}
+[data-theme="dark"] .compact-staff em {
+  color: #dcfce7;
+  background: rgba(34,197,94,0.18);
+}
+[data-theme="dark"] .compact-staff em.rest {
+  color: #fecaca;
+  background: rgba(239,68,68,0.18);
+}
+[data-theme="dark"] .compact-staff em.trip {
+  color: #fde68a;
+  background: rgba(250,204,21,0.18);
+}
+[data-theme="dark"] .compact-staff em.tjk {
+  color: #bfdbfe;
+  background: rgba(59,130,246,0.18);
+}
+[data-theme="dark"] .compact-staff em.administration {
+  color: #ddd6fe;
+  background: rgba(124,58,237,0.18);
+}
+[data-theme="dark"] .compact-staff em.presidential {
+  color: #fde68a;
+  background: rgba(245,158,11,0.18);
+}
+[data-theme="dark"] .compact-staff em.backup {
+  color: #bbf7d0;
+  background: rgba(34,197,94,0.15);
+}
+
+/* ── People list row badges ──────────────────────────────────────── */
+[data-theme="dark"] .people-list-row em {
+  color: #dcfce7;
+  background: rgba(34,197,94,0.18);
+}
+[data-theme="dark"] .people-list-row.rest em,
+[data-theme="dark"] .people-list-row.vacation em,
+[data-theme="dark"] .people-list-row.sick em {
+  color: #fecaca;
+  background: rgba(239,68,68,0.18);
+}
+[data-theme="dark"] .people-list-row.trip em {
+  color: #fde68a;
+  background: rgba(250,204,21,0.18);
+}
+[data-theme="dark"] .people-list-row.tjk em {
+  color: #bfdbfe;
+  background: rgba(59,130,246,0.18);
+}
+[data-theme="dark"] .people-list-row.administration em {
+  color: #ddd6fe;
+  background: rgba(124,58,237,0.18);
+}
+[data-theme="dark"] .people-list-row.presidential em {
+  color: #fde68a;
+  background: rgba(245,158,11,0.18);
+}
+
+/* ── Attendance section ──────────────────────────────────────────── */
+[data-theme="dark"] .attendance-head > span {
+  color: #dcfce7;
+  background: rgba(34,197,94,0.18);
+}
+[data-theme="dark"] .attendance-scan label {
+  color: var(--text-secondary);
+}
+[data-theme="dark"] .attendance-scan select {
+  border-color: var(--border);
+  color: var(--text-primary);
+  background: var(--card-bg);
+}
+[data-theme="dark"] .attendance-scan button {
+  color: var(--text-primary);
+  background: #334155;
+}
+[data-theme="dark"] .attendance-metrics div {
+  background: #1e293b;
+}
+[data-theme="dark"] .attendance-metrics strong {
+  color: var(--text-primary);
+}
+[data-theme="dark"] .attendance-metrics span {
+  color: var(--text-secondary);
+}
+[data-theme="dark"] .attendance-list article {
+  background: var(--card-bg);
+  border-color: var(--border);
+  border-left-color: #475569;
+}
+[data-theme="dark"] .attendance-list article.active {
+  background: rgba(34,197,94,0.09);
+  border-left-color: #22c55e;
+}
+[data-theme="dark"] .attendance-list strong,
+[data-theme="dark"] .attendance-list em {
+  color: var(--text-primary);
+}
+[data-theme="dark"] .attendance-list span,
+[data-theme="dark"] .attendance-empty {
+  color: var(--text-secondary);
+}
+[data-theme="dark"] .attendance-recent span {
+  color: var(--text-secondary);
+  background: #1e293b;
+}
+
+/* ── Monthly head + time panel ────────────────────────────────────── */
+[data-theme="dark"] .monthly-head,
+[data-theme="dark"] .time-panel {
+  background: var(--card-bg);
+  border-color: var(--border);
+}
+[data-theme="dark"] .monthly-head h2,
+[data-theme="dark"] .monthly-counts b {
+  color: var(--text-primary);
+}
+[data-theme="dark"] .monthly-head p,
+[data-theme="dark"] .monthly-counts span {
+  color: var(--text-secondary);
+}
+
+/* ── Monthly old-grid table wrap ─────────────────────────────────── */
+[data-theme="dark"] .monthly-table-wrap {
+  background: var(--card-bg);
+  border-color: var(--border);
+  box-shadow: none;
+}
+[data-theme="dark"] .month-header,
+[data-theme="dark"] .operator-name,
+[data-theme="dark"] .month-cell,
+[data-theme="dark"] .month-total {
+  border-color: var(--border);
+}
+[data-theme="dark"] .month-header {
+  color: var(--text-primary);
+  background: #1e293b;
+}
+[data-theme="dark"] .month-header.day {
+  color: var(--text-secondary);
+}
+[data-theme="dark"] .month-header.summary {
+  background: #172033;
+}
+[data-theme="dark"] .operator-name {
+  color: var(--text-primary);
+  background: var(--card-bg);
+}
+[data-theme="dark"] .operator-name b {
+  color: var(--text-secondary);
+  background: #334155;
+}
+[data-theme="dark"] .month-cell.empty,
+[data-theme="dark"] .month-cell.vacation {
+  background: #1e293b;
+  color: transparent;
+}
+[data-theme="dark"] .month-cell.vacation {
+  color: #94a3b8;
+}
+[data-theme="dark"] .month-total {
+  color: var(--text-primary);
+  background: var(--card-bg);
+}
+[data-theme="dark"] .month-total.work        { color: #4ade80; }
+[data-theme="dark"] .month-total.rest        { color: #f87171; }
+[data-theme="dark"] .month-total.tjk         { color: #93c5fd; }
+[data-theme="dark"] .month-total.trip        { color: #fde68a; }
+[data-theme="dark"] .month-total.studio      { color: #6ee7b7; }
+[data-theme="dark"] .month-total.administration { color: #c4b5fd; }
+
+/* ── New monthly table (mth/mtd classes) ──────────────────────────── */
+[data-theme="dark"] .monthly-table thead th {
+  background: var(--card-bg);
+  border-bottom-color: var(--border);
+}
+[data-theme="dark"] .mtd-num,
+[data-theme="dark"] .mtd-name {
+  background: var(--card-bg);
+  border-bottom-color: var(--border);
+  color: var(--text-primary);
+}
+[data-theme="dark"] .mtd-cell,
+[data-theme="dark"] .mtd-total {
+  border-bottom-color: var(--border);
+}
+[data-theme="dark"] .mtd-cell.weekend {
+  background: rgba(239,68,68,0.07);
+}
+[data-theme="dark"] .mtr:hover td {
+  background: rgba(99,102,241,0.1);
+}
+
+/* ── Team page ───────────────────────────────────────────────────── */
+[data-theme="dark"] .team-page {
+  color: var(--text-primary);
+}
+[data-theme="dark"] .team-search {
+  background: var(--card-bg);
+  border-color: var(--border);
+  box-shadow: none;
+}
+[data-theme="dark"] .team-search span {
+  color: var(--text-secondary);
+}
+[data-theme="dark"] .team-search input {
+  color: var(--text-primary);
+}
+[data-theme="dark"] .team-actions button {
+  color: var(--text-primary);
+}
+[data-theme="dark"] .team-tabs button {
+  color: var(--text-primary);
+}
+
+/* ── Section head ────────────────────────────────────────────────── */
+[data-theme="dark"] .section-head span,
+[data-theme="dark"] .section-head button {
+  color: var(--text-secondary);
+}
+
+/* ── Notification panel ──────────────────────────────────────────── */
+[data-theme="dark"] .notification-panel p {
+  color: var(--text-secondary);
+}
+
+/* ── Danger button ───────────────────────────────────────────────── */
+[data-theme="dark"] .danger-button {
+  color: #fca5a5;
+  background: rgba(239,68,68,0.14);
+}
+
+/* ── Reports table badges ────────────────────────────────────────── */
+[data-theme="dark"] .reports-table em {
+  color: #dcfce7;
+  background: rgba(34,197,94,0.18);
+}
+[data-theme="dark"] .reports-table em.rest,
+[data-theme="dark"] .reports-table em.vacation,
+[data-theme="dark"] .reports-table em.otpiska {
+  color: #fecaca;
+  background: rgba(239,68,68,0.18);
+}
+[data-theme="dark"] .reports-table em.trip,
+[data-theme="dark"] .reports-table em.presidential {
+  color: #fde68a;
+  background: rgba(245,158,11,0.18);
+}
+[data-theme="dark"] .reports-table em.tjk,
+[data-theme="dark"] .reports-table em.administration {
+  color: #bfdbfe;
+  background: rgba(59,130,246,0.18);
+}
+
+/* ── Word document profile badge ────────────────────────────────── */
+[data-theme="dark"] .word-document-profile em {
+  color: #dcfce7;
+  background: rgba(34,197,94,0.18);
+}
+
+/* ── Excel / employee-excel ──────────────────────────────────────── */
+[data-theme="dark"] .excel-document-head {
+  color: #6ee7b7;
+  background: rgba(6,78,59,0.45);
+}
+[data-theme="dark"] .excel-document-head span {
+  color: #34d399;
+}
+[data-theme="dark"] .employee-excel-table {
+  border-color: var(--border);
+}
+[data-theme="dark"] .employee-excel-table span,
+[data-theme="dark"] .employee-excel-table strong {
+  border-color: var(--border);
+  color: var(--text-primary);
+  background: var(--card-bg);
+}
+
+/* ── Toggle switch track ─────────────────────────────────────────── */
+[data-theme="dark"] .toggle-row i {
+  background: #475569;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   OYLIK GRAFIK — Responsive 375px gacha
+   ═══════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 420px) {
+  .monthly-fullscreen-body {
+    padding: 8px;
+  }
+  .monthly-container {
+    gap: 10px;
+  }
+  .monthly-nav {
+    gap: 6px;
+  }
+  .monthly-nav button {
+    padding: 6px 10px;
+    font-size: 0.76rem;
+    min-width: 0;
+  }
+  .monthly-nav-title h2 {
+    font-size: 0.92rem;
+  }
+  .monthly-nav-title p {
+    font-size: 0.67rem;
+  }
+  .monthly-summary {
+    gap: 6px;
+    padding: 8px 10px;
+  }
+  .monthly-summary span {
+    font-size: 0.72rem;
+  }
+  .monthly-legend {
+    gap: 4px;
+  }
+  .monthly-legend-chip {
+    font-size: 0.62rem;
+    padding: 2px 5px;
+  }
+  .mth-num  { min-width: 22px; padding: 5px 3px; font-size: 0.65rem; }
+  .mth-name { min-width: 85px; padding: 5px 6px; font-size: 0.7rem; left: 22px; }
+  .mth-day  { min-width: 24px; padding: 4px 2px; font-size: 0.62rem; }
+  .mth-sum  { min-width: 28px; padding: 4px 4px; font-size: 0.62rem; }
+  .mtd-num  { min-width: 22px; padding: 4px 3px; font-size: 0.62rem; }
+  .mtd-name { min-width: 85px; padding: 4px 6px; font-size: 0.7rem; left: 22px; }
+  .mtd-cell { padding: 1px; }
+  .mtd-total{ padding: 4px 4px; font-size: 0.68rem; }
+  .mc       { width: 22px; height: 22px; font-size: 0.62rem; border-radius: 4px; }
+  .monthly-export {
+    padding: 10px;
+    gap: 6px;
+  }
+  .monthly-export strong {
+    font-size: 0.8rem;
+  }
+  .monthly-export p {
+    font-size: 0.7rem;
+  }
+  .monthly-export-row {
+    gap: 5px;
+  }
+  .mex-btn {
+    padding: 6px 9px;
+    font-size: 0.72rem;
+  }
+  .mex-picker {
+    font-size: 0.72rem;
+    padding: 6px 7px;
+    max-width: 130px;
+  }
+  .monthly-cell-info {
+    padding: 8px 10px;
+    font-size: 0.76rem;
+    gap: 6px;
+  }
+  .time-panel {
+    gap: 8px;
+    padding: 10px 12px;
+  }
+  .time-panel strong {
+    font-size: 13px;
+  }
+  .time-panel p {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 375px) {
+  .monthly-nav button {
+    padding: 5px 8px;
+    font-size: 0.72rem;
+  }
+  .mth-name { min-width: 78px; }
+  .mtd-name { min-width: 78px; }
+  .monthly-fullscreen-head {
+    padding: 8px 10px;
+    min-height: 52px;
+  }
+  .monthly-fullscreen-head button {
+    padding: 0 8px;
+    font-size: 0.72rem;
+    min-height: 32px;
+  }
+  .monthly-fullscreen-head strong {
+    font-size: 13px;
+  }
+}

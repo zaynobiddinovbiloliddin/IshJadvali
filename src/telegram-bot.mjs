@@ -46,29 +46,113 @@ async function readDb() {
   }
 }
 
-// ─── JSON backup ─────────────────────────────────────────────
+// ─── SQL backup ──────────────────────────────────────────────
+
+function sqlStr(v) {
+  if (v === null || v === undefined) return "NULL";
+  return `'${String(v).replace(/'/g, "''")}'`;
+}
 
 async function createBackup() {
-  const date = new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-");
-  const fileName = `backup-${date}.json`;
+  const now = new Date();
+  const dateTag = now.toISOString().slice(0, 19).replace(/[T:]/g, "-");
+  const fileName = `backup-${dateTag}.sql`;
   const filePath = join("/tmp", fileName);
 
   if (!existsSync(DB_FILE)) throw new Error("Ma'lumotlar bazasi fayli topilmadi");
 
   const raw = await readFile(DB_FILE, "utf8");
-  const dbData = JSON.parse(raw);
+  const db = JSON.parse(raw);
+  const ts = now.toISOString();
 
-  const summary = {
-    backupDate: new Date().toISOString(),
-    employees: dbData.employees?.length || 0,
-    schedules: Object.keys(dbData.schedules || {}).length,
-    contacts: dbData.contacts?.length || 0,
-    attendance: dbData.attendance?.length || 0,
-    data: dbData
-  };
+  const lines = [
+    `-- O'zbekiston 24 IshJadvali — SQL Backup`,
+    `-- Sana: ${ts}`,
+    `-- Xodimlar: ${db.employees?.length || 0}, Kontaktlar: ${db.contacts?.length || 0}`,
+    `-- Davomat: ${db.attendance?.length || 0}, Jadvallar: ${Object.keys(db.schedules || {}).length}`,
+    `-- ============================================================`,
+    ``,
+    `BEGIN;`,
+    ``
+  ];
 
-  writeFileSync(filePath, JSON.stringify(summary, null, 2));
-  return { filePath, fileName };
+  // Employees
+  lines.push(`-- ── Employee (${db.employees?.length || 0} ta) ─────────────────────`);
+  if (db.employees?.length) {
+    lines.push(`TRUNCATE TABLE "Employee" CASCADE;`);
+    for (const e of db.employees) {
+      const portfolio = sqlStr(JSON.stringify(e.portfolio || []));
+      const documents = sqlStr(JSON.stringify(e.documents || {}));
+      lines.push(
+        `INSERT INTO "Employee" (id,name,role,phone,telegram,department,avatar,address,portfolio,documents,"isActive","createdAt","updatedAt") VALUES ` +
+        `(${e.id},${sqlStr(e.name)},${sqlStr(e.role)},${sqlStr(e.phone)},${sqlStr(e.telegram)},` +
+        `${sqlStr(e.department)},${sqlStr(e.avatar)},${sqlStr(e.address)},${portfolio}::jsonb,${documents}::jsonb,` +
+        `${e.isActive !== false},${sqlStr(e.createdAt || ts)},${sqlStr(e.updatedAt || ts)});`
+      );
+    }
+  }
+  lines.push(``);
+
+  // Contacts
+  lines.push(`-- ── Contact (${db.contacts?.length || 0} ta) ──────────────────────`);
+  if (db.contacts?.length) {
+    lines.push(`TRUNCATE TABLE "Contact";`);
+    for (const c of db.contacts) {
+      lines.push(
+        `INSERT INTO "Contact" (id,type,name,vehicle,phone,"createdAt") VALUES ` +
+        `(${sqlStr(c.id)},${sqlStr(c.type)},${sqlStr(c.name)},${sqlStr(c.vehicle)},${sqlStr(c.phone)},${sqlStr(c.createdAt || ts)});`
+      );
+    }
+  }
+  lines.push(``);
+
+  // Attendance
+  lines.push(`-- ── Attendance (${db.attendance?.length || 0} ta) ─────────────────`);
+  if (db.attendance?.length) {
+    lines.push(`TRUNCATE TABLE "Attendance";`);
+    for (const a of db.attendance) {
+      lines.push(
+        `INSERT INTO "Attendance" (id,"employeeId","checkIn","checkOut","createdAt") VALUES ` +
+        `(${sqlStr(a.id)},${a.employeeId || 0},${sqlStr(a.checkIn || ts)},${a.checkOut ? sqlStr(a.checkOut) : "NULL"},${sqlStr(a.createdAt || ts)});`
+      );
+    }
+  }
+  lines.push(``);
+
+  // DailyStatuses
+  const dsList = db.dailyStatuses || [];
+  lines.push(`-- ── DailyStatus (${dsList.length} ta) ─────────────────────────`);
+  if (dsList.length) {
+    lines.push(`TRUNCATE TABLE "DailyStatus";`);
+    for (const ds of dsList) {
+      lines.push(
+        `INSERT INTO "DailyStatus" (id,"employeeId",date,code,"createdAt","updatedAt") VALUES ` +
+        `(${sqlStr(ds.id)},${ds.employeeId || 0},${sqlStr(ds.date)},${sqlStr(ds.code)},${sqlStr(ds.createdAt || ts)},${sqlStr(ds.updatedAt || ts)});`
+      );
+    }
+  }
+  lines.push(``);
+
+  // Users (parolsiz)
+  const users = (db.users || []).map((u) => ({ ...u, password: "***" }));
+  lines.push(`-- ── User (${users.length} ta, parol yashirilgan) ───────────────`);
+  if (users.length) {
+    lines.push(`-- TRUNCATE TABLE "User"; -- xavfsizlik uchun kommentda`);
+    for (const u of users) {
+      lines.push(
+        `-- INSERT INTO "User" (id,username,role,"createdAt") VALUES ` +
+        `(${sqlStr(u.id)},${sqlStr(u.username)},${sqlStr(u.role)},${sqlStr(u.createdAt || ts)});`
+      );
+    }
+  }
+  lines.push(``);
+
+  lines.push(`COMMIT;`);
+  lines.push(``);
+  lines.push(`-- Backup hajmi: ${(raw.length / 1024).toFixed(1)} KB  |  ${ts}`);
+
+  writeFileSync(filePath, lines.join("\n"));
+  return { filePath, fileName, stats: { employees: db.employees?.length || 0, contacts: db.contacts?.length || 0, attendance: db.attendance?.length || 0, dailyStatuses: dsList.length } };
 }
 
 // ─── Word document helpers ───────────────────────────────────
@@ -256,7 +340,7 @@ async function createFilmingScheduleWord() {
   return { filePath, fileName };
 }
 
-// ─── Send backup + schedule ──────────────────────────────────
+// ─── Send backup ─────────────────────────────────────────────
 
 export async function sendBackupAndSchedule() {
   const now = new Date().toLocaleString("uz-UZ", {
@@ -268,37 +352,31 @@ export async function sendBackupAndSchedule() {
   });
 
   let backupPath = null;
-  let wordPath = null;
 
   try {
     const backup = await createBackup();
     backupPath = backup.filePath;
-
-    const dbData = await readDb();
-    const empCount = dbData.employees?.length || 0;
-    const schedCount = Object.keys(dbData.schedules || {}).length;
+    const { stats } = backup;
 
     await bot.sendDocument(CHAT_ID, backup.filePath, {
-      caption: `📦 *Backup* — ${now}\n👥 Xodimlar: ${empCount} ta\n📅 Jadvallar: ${schedCount} ta\nBarcha ma'lumotlar JSON formatida`,
+      caption:
+        `🗄 *SQL Backup* — ${now}\n` +
+        `👥 Xodimlar: ${stats.employees} ta\n` +
+        `📋 Davomat: ${stats.attendance} ta\n` +
+        `📅 Kunlik status: ${stats.dailyStatuses} ta\n` +
+        `📞 Kontaktlar: ${stats.contacts} ta\n` +
+        `_Fayl: \`.sql\` — PostgreSQL INSERT statements_`,
       parse_mode: "Markdown"
     });
 
-    const word = await createFilmingScheduleWord();
-    wordPath = word.filePath;
-    await bot.sendDocument(CHAT_ID, word.filePath, {
-      caption: `📋 *Tasvirga olish jadvali* — ${now}\nBugungi kunlik jadval`,
-      parse_mode: "Markdown"
-    });
-
-    console.log(`✅ Telegram: backup + jadval yuborildi — ${now}`);
+    console.log(`✅ Telegram SQL backup yuborildi — ${now}`);
   } catch (err) {
     console.error("❌ Telegram xato:", err.message);
     try {
-      await bot.sendMessage(CHAT_ID, `❌ Xato yuz berdi: ${err.message}`);
+      await bot.sendMessage(CHAT_ID, `❌ Backup xato: ${err.message}`);
     } catch {}
   } finally {
     if (backupPath && existsSync(backupPath)) unlinkSync(backupPath);
-    if (wordPath && existsSync(wordPath)) unlinkSync(wordPath);
   }
 }
 
@@ -310,14 +388,11 @@ export function startTelegramBot() {
     return;
   }
 
-  console.log("🤖 Telegram bot ishga tushdi (har kuni 08:00 va 20:00 da yuboradi)");
+  console.log("🤖 Telegram bot ishga tushdi (06:00–22:00, har 30 daqiqada SQL backup)");
 
-  // 5 soniyadan keyin birinchi marta yuborish
-  setTimeout(() => sendBackupAndSchedule(), 5000);
+  // Har 30 daqiqada: 06:00, 06:30, 07:00, … 21:30
+  cron.schedule("0,30 6-21 * * *", () => sendBackupAndSchedule(), { timezone: "Asia/Tashkent" });
 
-  // Har kuni ertalab 08:00 da
-  cron.schedule("0 8 * * *", () => sendBackupAndSchedule(), { timezone: "Asia/Tashkent" });
-
-  // Har kuni kechqurun 20:00 da
-  cron.schedule("0 20 * * *", () => sendBackupAndSchedule(), { timezone: "Asia/Tashkent" });
+  // Soat 22:00 da (oxirgi backup)
+  cron.schedule("0 22 * * *", () => sendBackupAndSchedule(), { timezone: "Asia/Tashkent" });
 }
