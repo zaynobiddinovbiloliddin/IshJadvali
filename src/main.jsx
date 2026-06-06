@@ -2891,6 +2891,15 @@ function EmployeeManager({ employees, onDelete, onNotify, onSave }) {
   );
 }
 
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
   const [selectedId, setSelectedId] = useState(employees[0]?.id || "");
   const [draft, setDraft] = useState(null);
@@ -2899,6 +2908,10 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
   const [documentMode, setDocumentMode] = useState("word");
   const [saving, setSaving] = useState(false);
   const formRef = useRef(null);
+  const [documents, setDocuments] = useState([]);
+  const [docsLoading, setDocsLoading] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [lightbox, setLightbox] = useState(null);
 
   useEffect(() => {
     const emp = employees.find((e) => String(e.id) === String(selectedId)) || employees[0] || null;
@@ -2916,6 +2929,54 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
     });
     if (String(emp.id) !== String(selectedId)) setSelectedId(emp.id);
   }, [employees, selectedId]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    loadDocuments(selectedId);
+  }, [selectedId]);
+
+  async function loadDocuments(empId) {
+    setDocsLoading(true);
+    try {
+      const data = await api(`/api/employees/${empId}/documents`);
+      setDocuments(data.documents || []);
+    } catch (err) {
+      onNotify(err.message, "error");
+    } finally {
+      setDocsLoading(false);
+    }
+  }
+
+  async function uploadDocuments(files) {
+    if (!files?.length) return;
+    setUploadLoading(true);
+    try {
+      for (const file of Array.from(files)) {
+        const data = await readFileAsBase64(file);
+        await api(`/api/employees/${selectedId}/documents`, {
+          method: "POST",
+          body: JSON.stringify({ filename: file.name, data })
+        });
+      }
+      onNotify(`${files.length} ta hujjat yuklandi ✓`);
+      await loadDocuments(selectedId);
+    } catch (err) {
+      onNotify(err.message, "error");
+    } finally {
+      setUploadLoading(false);
+    }
+  }
+
+  async function deleteDocument(filename) {
+    if (!window.confirm(`"${filename.replace(/^\d+_/, "")}" hujjatini o'chirasizmi?`)) return;
+    try {
+      await api(`/api/employees/${selectedId}/documents/${encodeURIComponent(filename)}`, { method: "DELETE" });
+      onNotify("Hujjat o'chirildi", "warning");
+      await loadDocuments(selectedId);
+    } catch (err) {
+      onNotify(err.message, "error");
+    }
+  }
 
   function openEdit() {
     if (!draft) return;
@@ -3046,6 +3107,71 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
 
       <EmployeeDocumentView employee={draft} mode={documentMode} />
 
+      <section className="employee-documents">
+        <div className="docs-header">
+          <div>
+            <strong>Xodim hujjatlari</strong>
+            <span>{documents.length} ta fayl</span>
+          </div>
+          {isAdmin(currentUser) && (
+            <label className={`docs-upload-btn${uploadLoading ? " loading" : ""}`}>
+              <Upload size={15} />
+              {uploadLoading ? "Yuklanmoqda..." : "Fayl yuklash"}
+              <input
+                type="file"
+                multiple
+                accept=".jpg,.jpeg,.png,.pdf"
+                style={{ display: "none" }}
+                onChange={(e) => { uploadDocuments(e.target.files); e.target.value = ""; }}
+                disabled={uploadLoading}
+              />
+            </label>
+          )}
+        </div>
+
+        {docsLoading ? (
+          <div className="docs-loading">Yuklanmoqda...</div>
+        ) : documents.length === 0 ? (
+          <div className="docs-empty">
+            <span>📄</span>
+            <p>Hujjatlar yuklanmagan</p>
+            {isAdmin(currentUser) && <p className="docs-hint">JPG, PNG yoki PDF fayllarni yuklang</p>}
+          </div>
+        ) : (
+          <div className="docs-grid">
+            {documents.map((doc) => (
+              <div key={doc.name} className="doc-card">
+                {doc.isImage ? (
+                  <div className="doc-preview" onClick={() => setLightbox(doc)} style={{ cursor: "pointer" }}>
+                    <img src={doc.url} alt={doc.name} className="doc-thumbnail" loading="lazy" />
+                    <div className="doc-overlay"><Eye size={18} /></div>
+                  </div>
+                ) : (
+                  <div className="doc-preview doc-pdf">
+                    <FileText size={32} />
+                    <p>PDF</p>
+                  </div>
+                )}
+                <div className="doc-info">
+                  <span className="doc-name">{doc.name.replace(/^\d+_/, "")}</span>
+                  <span className="doc-size">{(doc.size / 1024).toFixed(0)} KB</span>
+                </div>
+                <div className="doc-actions">
+                  <a href={doc.url} download className="doc-download-btn" title="Yuklab olish">
+                    <Download size={14} />
+                  </a>
+                  {isAdmin(currentUser) && (
+                    <button className="doc-delete-btn" type="button" onClick={() => deleteDocument(doc.name)} title="O'chirish">
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
       <section className="documents-summary">
         {employees.map((employee) => (
           <button className={`${String(employee.id) === String(draft.id) ? "active" : ""} department-${employee.department || "operator"}`} key={employee.id} type="button" onClick={() => setSelectedId(employee.id)}>
@@ -3121,6 +3247,22 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
           </form>
         </div>
       ), document.body)}
+
+      {lightbox && createPortal(
+        <div className="lightbox-backdrop" onClick={() => setLightbox(null)}>
+          <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
+            <button className="lightbox-close" type="button" onClick={() => setLightbox(null)}>✕</button>
+            <img src={lightbox.url} alt={lightbox.name.replace(/^\d+_/, "")} className="lightbox-img" />
+            <div className="lightbox-actions">
+              <a href={lightbox.url} download className="lightbox-download">
+                <Download size={16} />
+                Yuklab olish
+              </a>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </section>
   );
 }

@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { mkdir, readFile, readdir, rename, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,6 +11,7 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const PORT = Number(process.env.PORT || 3001);
 const DATA_DIR = process.env.VERCEL ? "/tmp/ish-jadvali" : join(__dirname, "data");
 export const DB_FILE = join(DATA_DIR, "mock-db.json");
+const UPLOADS_DIR = join(__dirname, "uploads", "documents");
 const JWT_SECRET = process.env.JWT_SECRET || "ishjadvali_secret_key";
 
 const initialUsers = [
@@ -1263,6 +1264,81 @@ export async function handleRequest(request, response) {
       return sendJson(response, 200, await deleteEmployee(employeeMatch[1]));
     }
 
+    // ─── Employee Documents ──────────────────────────────────────────────────
+    const empDocsMatch = url.pathname.match(/^\/api\/employees\/(\d+)\/documents$/);
+    if (empDocsMatch && request.method === "GET") {
+      const user = getAuthUser(request, response);
+      if (!user) return;
+      const empId = empDocsMatch[1];
+      const empDir = join(UPLOADS_DIR, empId);
+      if (!existsSync(empDir)) return sendJson(response, 200, { documents: [] });
+      const files = await readdir(empDir);
+      const documents = await Promise.all(files.map(async (file) => {
+        const info = await stat(join(empDir, file));
+        return {
+          name: file,
+          url: `/uploads/documents/${empId}/${file}`,
+          size: info.size,
+          uploadedAt: info.birthtime,
+          isImage: /\.(jpg|jpeg|png)$/i.test(file),
+          isPdf: /\.pdf$/i.test(file)
+        };
+      }));
+      return sendJson(response, 200, { documents });
+    }
+
+    if (empDocsMatch && request.method === "POST") {
+      const user = requireAdmin(request, response);
+      if (!user) return;
+      const empId = empDocsMatch[1];
+      const { filename, data } = await readBody(request);
+      if (!data) return sendJson(response, 400, { message: "Fayl ma'lumoti yuborilmadi" });
+      const ext = extname(filename || "").toLowerCase();
+      if (![".jpg", ".jpeg", ".png", ".pdf"].includes(ext)) {
+        return sendJson(response, 400, { message: "Faqat JPG, PNG yoki PDF fayllar" });
+      }
+      const base64Data = data.replace(/^data:[^;]+;base64,/, "");
+      const buffer = Buffer.from(base64Data, "base64");
+      if (buffer.length > 10 * 1024 * 1024) return sendJson(response, 400, { message: "Fayl hajmi 10MB dan oshmasin" });
+      const safeBase = (filename || "doc")
+        .slice(0, -(ext.length))
+        .replace(/[^a-zA-Z0-9_-]/g, "_")
+        .replace(/_{2,}/g, "_")
+        .replace(/^_|_$/g, "")
+        .slice(0, 40) || "doc";
+      const storedName = `${Date.now()}_${safeBase}${ext}`;
+      const empDir = join(UPLOADS_DIR, empId);
+      await mkdir(empDir, { recursive: true });
+      await writeFile(join(empDir, storedName), buffer);
+      pushAuditLog("UPLOAD", "EmployeeDocument", empId, `${storedName} yuklandi (${user.username})`);
+      return sendJson(response, 201, {
+        success: true,
+        document: {
+          name: storedName,
+          url: `/uploads/documents/${empId}/${storedName}`,
+          size: buffer.length,
+          isImage: /\.(jpg|jpeg|png)$/i.test(storedName),
+          isPdf: /\.pdf$/i.test(storedName)
+        }
+      });
+    }
+
+    const empDocFileMatch = url.pathname.match(/^\/api\/employees\/(\d+)\/documents\/([^/]+)$/);
+    if (empDocFileMatch && request.method === "DELETE") {
+      const user = requireAdmin(request, response);
+      if (!user) return;
+      const [, empId, encodedFilename] = empDocFileMatch;
+      const filename = decodeURIComponent(encodedFilename);
+      if (filename.includes("..") || /[/\\]/.test(filename)) {
+        return sendJson(response, 403, { message: "Ruxsat yo'q" });
+      }
+      const filePath = join(UPLOADS_DIR, empId, filename);
+      if (!existsSync(filePath)) return sendJson(response, 404, { message: "Fayl topilmadi" });
+      await unlink(filePath);
+      pushAuditLog("DELETE", "EmployeeDocument", empId, `${filename} o'chirildi (${user.username})`);
+      return sendJson(response, 200, { success: true });
+    }
+
     const contactMatch = url.pathname.match(/^\/api\/contacts\/([^/]+)$/);
     if (contactMatch && request.method === "DELETE") {
       return sendJson(response, 200, await deleteContact(decodeURIComponent(contactMatch[1])));
@@ -1390,6 +1466,21 @@ export async function handleRequest(request, response) {
 
     if (url.pathname.startsWith("/api/")) {
       return sendJson(response, 404, { message: "API topilmadi" });
+    }
+
+    if (url.pathname.startsWith("/uploads/")) {
+      const safePath = normalize(url.pathname).replace(/^(\.\.[/\\])+/, "");
+      const filePath = join(__dirname, safePath);
+      if (!normalize(filePath).startsWith(normalize(join(__dirname, "uploads")))) {
+        response.writeHead(403); return response.end("Forbidden");
+      }
+      try {
+        const file = await readFile(filePath);
+        const ext = extname(filePath).toLowerCase();
+        const ct = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".pdf": "application/pdf" }[ext] || "application/octet-stream";
+        response.writeHead(200, { "Content-Type": ct, "Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=86400" });
+        return response.end(file);
+      } catch { response.writeHead(404); return response.end("Not found"); }
     }
 
     return serveStatic(request, response);

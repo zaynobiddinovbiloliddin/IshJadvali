@@ -9133,3 +9133,184 @@ body { overflow-x: hidden; }
     font-size: 13px;
   }
 }
+
+/* ─── Employee Documents ──────────────────────────────────────────────────── */
+.employee-documents {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-top: 16px;
+}
+.docs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.docs-header strong { font-size: 0.95rem; font-weight: 700; display: block; }
+.docs-header span { font-size: 0.78rem; color: var(--text-secondary); }
+.docs-upload-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--accent);
+  color: white;
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+  user-select: none;
+}
+.docs-upload-btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
+.docs-upload-btn.loading { opacity: 0.7; cursor: not-allowed; pointer-events: none; }
+.docs-loading { padding: 32px; text-align: center; color: var(--text-secondary); font-size: 0.875rem; }
+.docs-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+.docs-empty span { font-size: 2.5rem; }
+.docs-empty p { font-size: 0.875rem; margin: 0; }
+.docs-hint { font-size: 0.78rem !important; color: var(--text-secondary); }
+.docs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+@media (max-width: 480px) { .docs-grid { grid-template-columns: repeat(2, 1fr); } }
+.doc-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--bg);
+  transition: all var(--transition);
+}
+.doc-card:hover { border-color: var(--accent); box-shadow: var(--shadow-md); }
+.doc-preview {
+  position: relative;
+  width: 100%;
+  height: 120px;
+  overflow: hidden;
+  background: var(--skeleton-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.doc-thumbnail { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
+.doc-card:hover .doc-thumbnail { transform: scale(1.05); }
+.doc-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity var(--transition);
+  color: white;
+}
+.doc-card:hover .doc-overlay { opacity: 1; }
+.doc-pdf { flex-direction: column; gap: 6px; color: var(--text-secondary); }
+.doc-pdf p { font-size: 0.72rem; font-weight: 700; color: var(--danger); margin: 0; }
+.doc-info { padding: 8px 10px 4px; }
+.doc-name {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-primary);
+}
+.doc-size { font-size: 0.68rem; color: var(--text-secondary); }
+.doc-actions { display: flex; padding: 4px 8px 8px; gap: 6px; }
+.doc-download-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  background: var(--accent-light);
+  color: var(--accent);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition: all var(--transition);
+}
+.doc-download-btn:hover { background: var(--accent); color: white; }
+.doc-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  background: var(--danger-light);
+  color: var(--danger);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.doc-delete-btn:hover { background: var(--danger); color: white; }
+
+/* Lightbox */
+.lightbox-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.92);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.15s ease;
+}
+.lightbox-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: min(92vw, 900px);
+}
+.lightbox-close {
+  position: absolute;
+  top: -44px;
+  right: 0;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: white;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition);
+}
+.lightbox-close:hover { background: rgba(255,255,255,0.3); }
+.lightbox-img { max-width: 92vw; max-height: 78vh; object-fit: contain; border-radius: var(--radius-md); display: block; }
+.lightbox-actions { display: flex; justify-content: center; }
+.lightbox-download {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  background: var(--accent);
+  color: white;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all var(--transition);
+}
+.lightbox-download:hover { background: var(--accent-hover); }
