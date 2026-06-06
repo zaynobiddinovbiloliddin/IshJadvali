@@ -19,7 +19,7 @@ const initialUsers = [
   { id: 2, username: "admin01", password: hashSync("Admin@2025", 10), fullName: "Jadval Administratori", role: "admin", isActive: true, createdAt: new Date().toISOString() }
 ];
 const departments = [
-  { id: "pull", name: "Pull xizmati" },
+  { id: "pull", name: "Pool xizmati" },
   { id: "operator", name: "Operatorlar" },
   { id: "dron", name: "Dron bo'limi" },
   { id: "tjk", name: "TJK guruhi" }
