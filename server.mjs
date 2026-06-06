@@ -735,11 +735,43 @@ async function createEmployee(payload) {
   const employee = cleanEmployeePayload({
     ...payload,
     id,
-    avatar: payload.avatar?.trim() || createAvatar(payload.name, id)
+    avatar: payload.avatar?.trim() ||
+      `https://i.pravatar.cc/160?u=${encodeURIComponent(payload.name + Date.now())}`
   });
 
   db.employees.push(employee);
   pushAuditLog("CREATE", "Employee", id, `${employee.name} qo'shildi`);
+
+  // Auto-create linked user account (Pass@1234 default)
+  try {
+    const baseName = (payload.name || "").split(/[\s.]+/)[0]
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+    const baseUsername = baseName.slice(0, 15) || `user${id}`;
+
+    let username = baseUsername;
+    let counter = 1;
+    while (db.users.find((u) => u.username === username)) {
+      username = `${baseUsername}${counter}`;
+      counter++;
+    }
+
+    const newUser = {
+      id: Math.max(0, ...db.users.map((u) => u.id)) + 1,
+      username,
+      password: hashSync("Pass@1234", 10),
+      fullName: payload.name.trim(),
+      role: "xodim",
+      isActive: true,
+      employeeId: id,
+      createdAt: new Date().toISOString()
+    };
+    db.users.push(newUser);
+    pushAuditLog("CREATE", "User", newUser.id, `${employee.name} uchun @${username} login yaratildi`);
+  } catch (userErr) {
+    console.error("User auto-create error:", userErr.message);
+  }
+
   await saveDb();
   return scheduleEmployee(employee);
 }

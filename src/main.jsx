@@ -1016,6 +1016,7 @@ function App() {
                   onMoveWeek={moveWeek}
                   navDirection={navDirection}
                   onToggleOverview={() => setShowAllOverview((value) => !value)}
+                  onOpenMonthly={openMonthly}
                 />
               )}
               {page === "monthly" && <MonthlyPage dashboard={dashboard} weekStart={weekStart} fullscreen onClose={closeMonthly} currentUser={currentUser} onNotify={notify} />}
@@ -1740,7 +1741,7 @@ const DAILY_STATUSES = {
   A:     { label: "A", bg: "#06b6d4", fg: "#fff",    name: "Administratsiya" },
   P:     { label: "P", bg: "#ec4899", fg: "#fff",    name: "Prezidentskiy" }
 };
-const WORKING_DAILY = ["I", "S", "T", "A", "P"];
+const WORKING_DAILY = ["I", "S", "T", "K", "A", "P"];
 
 function localDateStr(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -2188,9 +2189,9 @@ function WeeklyPage({ activeDay, currentUser, dashboard, onCreate, onDeleteSched
       </section>
 
       {isAdmin(currentUser) && (
-        <button className="create-button" type="button" onClick={onCreate}>
-          <RefreshCcw size={17} />
-          Yangi jadval yaratish
+        <button className="create-button" type="button" onClick={() => onOpenMonthly("weekly")}>
+          <CalendarDays size={17} />
+          Oylik grafikda belgilash
         </button>
       )}
       {isSuper(currentUser) && dashboard.week.saved && (
@@ -2213,7 +2214,7 @@ function WeeklyPage({ activeDay, currentUser, dashboard, onCreate, onDeleteSched
   );
 }
 
-function StudioPage({ currentUser, departments, onLoadDepartments, dashboard, onCreate, onDeleteEmployee, onNotify, onSaveEmployee }) {
+function StudioPage({ currentUser, departments, onLoadDepartments, dashboard, onCreate, onDeleteEmployee, onNotify, onSaveEmployee, onOpenMonthly }) {
   const blankEmployee = { name: "", role: "", phone: "", telegram: "", department: "operator", avatar: "", portfolio: [] };
   const [activeDepartment, setActiveDepartment] = useState("all");
   const [deptModalOpen, setDeptModalOpen] = useState(false);
@@ -2302,9 +2303,9 @@ function StudioPage({ currentUser, departments, onLoadDepartments, dashboard, on
           </button>
         )}
         {isAdmin(currentUser) && (
-          <button className="primary" type="button" onClick={() => setScheduleModalOpen(true)}>
+          <button className="primary" type="button" onClick={() => onOpenMonthly?.()}>
             <CalendarDays size={15} />
-            Yangi Jadval Yaratish
+            Oylik grafikda belgilash
           </button>
         )}
       </div>
