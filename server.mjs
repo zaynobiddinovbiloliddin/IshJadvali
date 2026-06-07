@@ -15,9 +15,77 @@ const UPLOADS_DIR = join(__dirname, "uploads", "documents");
 const JWT_SECRET = process.env.JWT_SECRET || "ishjadvali_secret_key";
 
 const initialUsers = [
-  { id: 1, username: "superadmin", password: hashSync("Super@2025", 10), fullName: "Super Administrator", role: "superadmin", isActive: true, createdAt: new Date().toISOString() },
-  { id: 2, username: "admin01", password: hashSync("Admin@2025", 10), fullName: "Jadval Administratori", role: "admin", isActive: true, createdAt: new Date().toISOString() }
+  // Faqat ma'lumotlar fayli mavjud bo'lmaganda (yangi o'rnatish) ishlatiladi — boshlang'ich PIN: 20250001 / 20250002
+  { id: 1, username: "superadmin", pinCode: hashSync("20250001", 10), fullName: "Super Administrator", role: "superadmin", isActive: true, createdAt: new Date().toISOString() },
+  { id: 2, username: "admin01", pinCode: hashSync("20250002", 10), fullName: "Jadval Administratori", role: "admin", isActive: true, createdAt: new Date().toISOString() }
 ];
+
+// ─── PIN auth helpers ────────────────────────────────────────────────────────
+function generatePinCandidate() {
+  return String(Math.floor(10000000 + Math.random() * 90000000));
+}
+
+// PIN-lar hash holida saqlanadi (tuz har xil bo'lgani uchun hashni qidirib bo'lmaydi),
+// shu sabab yagonalikni mavjud hashlar bilan compareSync orqali tekshiramiz.
+function generateUniquePin() {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const candidate = generatePinCandidate();
+    if (!db.users.some((u) => u.pinCode && compareSync(candidate, u.pinCode))) return candidate;
+  }
+  throw new Error("Yagona PIN kod yaratib bo'lmadi");
+}
+
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_LOCKOUT_MS = 60_000;
+const loginAttempts = new Map();
+
+function getClientIp(request) {
+  const forwarded = request.headers["x-real-ip"] || request.headers["x-forwarded-for"];
+  if (forwarded) return String(forwarded).split(",")[0].trim();
+  return request.socket?.remoteAddress || "unknown";
+}
+
+function checkLoginLock(ip) {
+  const entry = loginAttempts.get(ip);
+  if (!entry) return 0;
+  if (entry.lockedUntil > Date.now()) return Math.ceil((entry.lockedUntil - Date.now()) / 1000);
+  if (entry.lockedUntil) loginAttempts.delete(ip);
+  return 0;
+}
+
+function registerLoginFailure(ip) {
+  const entry = loginAttempts.get(ip) || { count: 0, lockedUntil: 0 };
+  entry.count += 1;
+  if (entry.count >= LOGIN_MAX_ATTEMPTS) {
+    entry.lockedUntil = Date.now() + LOGIN_LOCKOUT_MS;
+    entry.count = 0;
+  }
+  loginAttempts.set(ip, entry);
+}
+
+function clearLoginFailures(ip) {
+  loginAttempts.delete(ip);
+}
+
+// Bir martalik migratsiya: eski parol asosidagi foydalanuvchilarni PIN kodga o'tkazadi.
+// Yangi PIN-lar faqat shu jarayonda log orqali ko'rsatiladi — qayta ko'rinmaydi.
+async function migrateUsersToPin() {
+  const legacyUsers = db.users.filter((u) => u.password && !u.pinCode);
+  if (!legacyUsers.length) return;
+
+  console.log("=".repeat(60));
+  console.log(`PIN tizimiga o'tish: ${legacyUsers.length} ta foydalanuvchi uchun yangi PIN yaratildi.`);
+  console.log("Bu PIN-larni xavfsiz joyga yozib qo'ying — keyin qayta ko'rsatilmaydi:");
+  for (const user of legacyUsers) {
+    const pin = generateUniquePin();
+    user.pinCode = hashSync(pin, 10);
+    delete user.password;
+    console.log(`  - ${user.username} (${user.fullName || ""}) -> PIN: ${pin}`);
+  }
+  console.log("=".repeat(60));
+  await saveDb();
+}
+
 const departments = [
   { id: "pull", name: "Pool xizmati" },
   { id: "operator", name: "Operatorlar" },
@@ -138,6 +206,7 @@ const shortDayNames = ["Dush", "Sey", "Chor", "Pay", "Jum", "Shan", "Yak"];
 const monthShort = ["Yan", "Fev", "Mar", "Apr", "May", "Iyn", "Iyl", "Avg", "Sen", "Okt", "Noy", "Dek"];
 
 let db = await loadDb();
+await migrateUsersToPin();
 cleanOldBackups().catch(() => {});
 
 async function cleanOldBackups() {
@@ -743,7 +812,8 @@ async function createEmployee(payload) {
   db.employees.push(employee);
   pushAuditLog("CREATE", "Employee", id, `${employee.name} qo'shildi`);
 
-  // Auto-create linked user account (Pass@1234 default)
+  // Auto-create linked user account with a unique PIN kod
+  let credentials = null;
   try {
     const baseName = (payload.name || "").split(/[\s.]+/)[0]
       .toLowerCase()
@@ -757,10 +827,11 @@ async function createEmployee(payload) {
       counter++;
     }
 
+    const pin = generateUniquePin();
     const newUser = {
       id: Math.max(0, ...db.users.map((u) => u.id)) + 1,
       username,
-      password: hashSync("Pass@1234", 10),
+      pinCode: hashSync(pin, 10),
       fullName: payload.name.trim(),
       role: "xodim",
       isActive: true,
@@ -769,12 +840,13 @@ async function createEmployee(payload) {
     };
     db.users.push(newUser);
     pushAuditLog("CREATE", "User", newUser.id, `${employee.name} uchun @${username} login yaratildi`);
+    credentials = { username, pin };
   } catch (userErr) {
     console.error("User auto-create error:", userErr.message);
   }
 
   await saveDb();
-  return scheduleEmployee(employee);
+  return { ...scheduleEmployee(employee), generatedLogin: credentials };
 }
 
 async function updateEmployee(id, payload) {
@@ -1114,11 +1186,24 @@ export async function handleRequest(request, response) {
     }
 
     if (request.method === "POST" && url.pathname === "/api/auth/login") {
-      const { username, password } = await readBody(request);
-      const user = db.users.find((u) => u.username === username && u.isActive);
-      if (!user || !compareSync(String(password || ""), user.password)) {
-        return sendJson(response, 401, { message: "Login yoki parol noto'g'ri" });
+      const ip = getClientIp(request);
+      const lockedFor = checkLoginLock(ip);
+      if (lockedFor > 0) {
+        return sendJson(response, 429, { message: `Juda ko'p urinish. ${lockedFor} soniyadan so'ng qayta urinib ko'ring.` });
       }
+
+      const { pin } = await readBody(request);
+      if (!/^\d{8}$/.test(String(pin || ""))) {
+        return sendJson(response, 400, { message: "PIN kod 8 ta raqamdan iborat bo'lishi kerak" });
+      }
+
+      const user = db.users.find((u) => u.isActive && u.pinCode && compareSync(String(pin), u.pinCode));
+      if (!user) {
+        registerLoginFailure(ip);
+        return sendJson(response, 401, { message: "PIN kod noto'g'ri" });
+      }
+
+      clearLoginFailures(ip);
       const token = `${Buffer.from(JSON.stringify({ id: user.id, role: user.role })).toString("base64")}.${JWT_SECRET.slice(0, 8)}`;
       return sendJson(response, 200, {
         user: { id: user.id, username: user.username, fullName: user.fullName, role: user.role },
@@ -1127,23 +1212,26 @@ export async function handleRequest(request, response) {
     }
 
     if (request.method === "GET" && url.pathname === "/api/users") {
+      if (!requireAdmin(request, response)) return;
       return sendJson(response, 200, {
-        users: db.users.map(({ password: _pw, ...u }) => u)
+        users: db.users.map(({ pinCode: _pin, ...u }) => u)
       });
     }
 
     if (request.method === "POST" && url.pathname === "/api/users") {
+      if (!requireAdmin(request, response)) return;
       const body = await readBody(request);
-      if (!body.username || !body.password || !body.fullName) {
-        return sendJson(response, 400, { message: "username, password va fullName talab qilinadi" });
+      if (!body.username || !body.fullName) {
+        return sendJson(response, 400, { message: "username va fullName talab qilinadi" });
       }
       if (db.users.find((u) => u.username === body.username)) {
         return sendJson(response, 409, { message: "Bu username allaqachon mavjud" });
       }
+      const pin = generateUniquePin();
       const newUser = {
         id: Math.max(0, ...db.users.map((u) => u.id)) + 1,
         username: String(body.username).trim(),
-        password: hashSync(String(body.password), 10),
+        pinCode: hashSync(pin, 10),
         fullName: String(body.fullName).trim(),
         role: ["superadmin", "admin", "xodim"].includes(body.role) ? body.role : "xodim",
         isActive: true,
@@ -1151,26 +1239,32 @@ export async function handleRequest(request, response) {
       };
       db.users.push(newUser);
       await saveDb();
-      const { password: _pw, ...safeUser } = newUser;
-      return sendJson(response, 201, safeUser);
+      const { pinCode: _pin, ...safeUser } = newUser;
+      return sendJson(response, 201, { ...safeUser, generatedPin: pin });
     }
 
     const userMatch = url.pathname.match(/^\/api\/users\/(\d+)$/);
     if (userMatch && request.method === "PUT") {
+      if (!requireAdmin(request, response)) return;
       const uid = Number(userMatch[1]);
       const idx = db.users.findIndex((u) => u.id === uid);
       if (idx === -1) return sendJson(response, 404, { message: "Foydalanuvchi topilmadi" });
       const body = await readBody(request);
-      if (body.password) db.users[idx].password = hashSync(String(body.password), 10);
+      let generatedPin = null;
+      if (body.regeneratePin) {
+        generatedPin = generateUniquePin();
+        db.users[idx].pinCode = hashSync(generatedPin, 10);
+      }
       if (body.fullName) db.users[idx].fullName = String(body.fullName).trim();
       if (body.role && ["superadmin", "admin", "xodim"].includes(body.role)) db.users[idx].role = body.role;
       if (typeof body.isActive === "boolean") db.users[idx].isActive = body.isActive;
       await saveDb();
-      const { password: _pw, ...safeUser } = db.users[idx];
-      return sendJson(response, 200, safeUser);
+      const { pinCode: _pin, ...safeUser } = db.users[idx];
+      return sendJson(response, 200, generatedPin ? { ...safeUser, generatedPin } : safeUser);
     }
 
     if (userMatch && request.method === "DELETE") {
+      if (!requireAdmin(request, response)) return;
       const uid = Number(userMatch[1]);
       const idx = db.users.findIndex((u) => u.id === uid);
       if (idx === -1) return sendJson(response, 404, { message: "Foydalanuvchi topilmadi" });

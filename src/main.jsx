@@ -20,7 +20,6 @@ import {
   FileSpreadsheet,
   FileText,
   Info,
-  LogIn,
   LogOut,
   Menu,
   Moon,
@@ -508,6 +507,7 @@ function App() {
   const [departments, setDepartments] = useState([]);
   const [navDirection, setNavDirection] = useState("next");
   const [toasts, setToasts] = useState([]);
+  const [employeeCredentials, setEmployeeCredentials] = useState(null);
   const hasLoadedDashboard = useRef(false);
   const menuButtonRef = useRef(null);
   const notificationsButtonRef = useRef(null);
@@ -716,7 +716,14 @@ function App() {
       if (employee.id) {
         await api(`/api/employees/${employee.id}`, { method: "PUT", body: JSON.stringify(employee) });
       } else {
-        await api("/api/employees", { method: "POST", body: JSON.stringify(employee) });
+        const created = await api("/api/employees", { method: "POST", body: JSON.stringify(employee) });
+        if (created?.generatedLogin?.pin) {
+          setEmployeeCredentials({
+            fullName: employee.name,
+            username: created.generatedLogin.username,
+            pin: created.generatedLogin.pin,
+          });
+        }
       }
       await loadDashboard();
       notify(employee.id ? "Xodim ma'lumotlari saqlandi" : "Yangi xodim qo'shildi");
@@ -1072,6 +1079,36 @@ function App() {
           </div>
         </div>
       ), document.body)}
+
+      {employeeCredentials && createPortal((
+        <div className="modal-backdrop" role="dialog" aria-modal="true" onClick={() => setEmployeeCredentials(null)}>
+          <div className="schedule-modal pin-reveal-modal" style={{ maxWidth: 360 }} onClick={(e) => e.stopPropagation()}>
+            <span className="modal-handle" />
+            <div className="modal-head">
+              <strong>Xodim uchun kirish PIN kodi</strong>
+              <button type="button" className="modal-close-btn" onClick={() => setEmployeeCredentials(null)}>✕</button>
+            </div>
+            <p className="pin-reveal-name">{employeeCredentials.fullName} <span>@{employeeCredentials.username}</span></p>
+            <div className="pin-reveal-code">{employeeCredentials.pin}</div>
+            <p className="pin-reveal-warning">
+              Bu PIN faqat hozir ko'rsatilmoqda — keyin qayta ko'rib bo'lmaydi. Uni xodimga yozib/aytib qo'ying.
+            </p>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => {
+                  navigator.clipboard?.writeText(employeeCredentials.pin).catch(() => {});
+                  notify("PIN nusxalandi");
+                }}
+              >
+                Nusxalash
+              </button>
+              <button type="button" className="btn-primary" onClick={() => setEmployeeCredentials(null)}>Yopish</button>
+            </div>
+          </div>
+        </div>
+      ), document.body)}
     </div>
   );
 }
@@ -1250,35 +1287,53 @@ function DepartmentManagerModal({ departments, onClose, onSave, onDelete, onNoti
   ), document.body);
 }
 
+const PIN_LENGTH = 8;
+const PIN_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"];
+
 function AuthPage({ onAuth, onNotify, theme, onThemeChange }) {
-  const [form, setForm] = useState({ username: "", password: "" });
+  const [pin, setPin] = useState("");
+  const [showPin, setShowPin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [shake, setShake] = useState(false);
 
-  async function submit(event) {
-    event.preventDefault();
-    if (!form.username.trim() || !form.password.trim()) {
-      setError("Login va parolni kiriting");
-      return;
-    }
+  async function submitPin(value) {
     setLoading(true);
     setError("");
     try {
       const data = await api("/api/auth/login", {
         method: "POST",
-        body: JSON.stringify(form)
+        body: JSON.stringify({ pin: value })
       });
       onAuth(data.user, data.token);
     } catch (err) {
-      setError(err.message || "Login yoki parol noto'g'ri");
+      setError(err.message || "PIN kod noto'g'ri");
+      setShake(true);
+      setPin("");
+      setTimeout(() => setShake(false), 320);
     } finally {
       setLoading(false);
     }
   }
 
+  function pressKey(key) {
+    if (loading || key === "") return;
+    if (key === "del") {
+      setPin((prev) => prev.slice(0, -1));
+      return;
+    }
+    setError("");
+    setPin((prev) => {
+      if (prev.length >= PIN_LENGTH) return prev;
+      const next = prev + key;
+      if (next.length === PIN_LENGTH) setTimeout(() => submitPin(next), 150);
+      return next;
+    });
+  }
+
   return (
     <main className="auth-shell">
-      <section className="auth-panel">
+      <section className="auth-panel pin-auth-panel">
         <div className="auth-brand">
           <span><ShieldCheck size={24} /></span>
           <div>
@@ -1286,32 +1341,38 @@ function AuthPage({ onAuth, onNotify, theme, onThemeChange }) {
             <p>Ish jadvali boshqaruvi</p>
           </div>
         </div>
-        <form className="auth-form" onSubmit={submit}>
-          <label>
-            Login
-            <input
-              value={form.username}
-              onChange={(e) => setForm({ ...form, username: e.target.value })}
-              placeholder="superadmin"
-              autoComplete="username"
-            />
-          </label>
-          <label>
-            Parol
-            <input
-              type="password"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              placeholder="••••••••"
-              autoComplete="current-password"
-            />
-          </label>
-          {error && <p className="auth-error">{error}</p>}
-          <button type="submit" className="auth-submit" disabled={loading}>
-            <LogIn size={17} />
-            {loading ? "Kirish..." : "Kirish"}
-          </button>
-        </form>
+
+        <p className="pin-hint">8 xonali PIN kodingizni kiriting</p>
+
+        <div className={`pin-display${shake ? " pin-shake" : ""}`}>
+          {Array.from({ length: PIN_LENGTH }).map((_, i) => (
+            <span key={i} className={`pin-dot${i < pin.length ? " filled" : ""}`}>
+              {i < pin.length ? (showPin ? pin[i] : "•") : ""}
+            </span>
+          ))}
+        </div>
+
+        {error && <p className="auth-error pin-error">{error}</p>}
+
+        <button type="button" className="pin-show-toggle" onClick={() => setShowPin((v) => !v)}>
+          {showPin ? <EyeOff size={14} /> : <Eye size={14} />}
+          {showPin ? "PINni yashirish" : "PINni ko'rsatish"}
+        </button>
+
+        <div className="pin-keyboard">
+          {PIN_KEYS.map((key, i) => (
+            <button
+              key={i}
+              type="button"
+              className={`pin-key${key === "del" ? " pin-key-del" : ""}${key === "" ? " pin-key-empty" : ""}`}
+              onClick={() => pressKey(key)}
+              disabled={loading || key === ""}
+            >
+              {key === "del" ? "⌫" : key}
+            </button>
+          ))}
+        </div>
+
         <button className="theme-switch" type="button" onClick={() => onThemeChange(theme === "dark" ? "light" : "dark")}>
           {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
           {theme === "dark" ? "Light mode" : "Dark mode"}
@@ -4085,10 +4146,11 @@ function UsersPage({ currentUser, onNotify }) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editUser, setEditUser] = useState(null);
-  const [form, setForm] = useState({ username: "", password: "", fullName: "", role: "xodim" });
+  const [form, setForm] = useState({ username: "", fullName: "", role: "xodim" });
   const [saving, setSaving] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [search, setSearch] = useState("");
+  const [pinReveal, setPinReveal] = useState(null);
+  const [regeneratingId, setRegeneratingId] = useState(null);
 
   const ROLES = [
     { id: "superadmin", label: "Super admin" },
@@ -4111,28 +4173,24 @@ function UsersPage({ currentUser, onNotify }) {
 
   function openCreate() {
     setEditUser(null);
-    setForm({ username: "", password: "", fullName: "", role: "xodim" });
-    setShowPassword(false);
+    setForm({ username: "", fullName: "", role: "xodim" });
     setShowForm(true);
   }
 
   function openEdit(user) {
     setEditUser(user);
-    setForm({ username: user.username, password: "", fullName: user.fullName, role: user.role });
-    setShowPassword(false);
+    setForm({ username: user.username, fullName: user.fullName, role: user.role });
     setShowForm(true);
   }
 
   async function saveUser(event) {
     event.preventDefault();
     if (!form.fullName.trim()) { onNotify("To'liq ism kiritilmadi", "error"); return; }
-    if (!editUser && (!form.username.trim() || !form.password.trim())) { onNotify("Login va parol kiritilmadi", "error"); return; }
-    if (!editUser && form.password.length < 6) { onNotify("Parol kamida 6 belgi bo'lishi kerak", "error"); return; }
+    if (!editUser && !form.username.trim()) { onNotify("Login (username) kiritilmadi", "error"); return; }
     setSaving(true);
     try {
       const body = { fullName: form.fullName, role: form.role };
-      if (!editUser) { body.username = form.username; body.password = form.password; }
-      else if (form.password) body.password = form.password;
+      if (!editUser) body.username = form.username;
 
       if (editUser) {
         const updated = await api(`/api/users/${editUser.id}`, { method: "PUT", body: JSON.stringify(body) });
@@ -4140,8 +4198,10 @@ function UsersPage({ currentUser, onNotify }) {
         onNotify("Foydalanuvchi yangilandi");
       } else {
         const created = await api("/api/users", { method: "POST", body: JSON.stringify(body) });
-        setUsers((prev) => [...prev, created]);
+        const { generatedPin, ...safeUser } = created;
+        setUsers((prev) => [...prev, safeUser]);
         onNotify("Foydalanuvchi qo'shildi");
+        if (generatedPin) setPinReveal({ fullName: safeUser.fullName, username: safeUser.username, pin: generatedPin });
       }
       setShowForm(false);
     } catch (err) {
@@ -4158,6 +4218,21 @@ function UsersPage({ currentUser, onNotify }) {
       onNotify(updated.isActive ? "Foydalanuvchi faollashtirildi" : "Foydalanuvchi o'chirildi", updated.isActive ? "success" : "warning");
     } catch (err) {
       onNotify(err.message || "Xatolik", "error");
+    }
+  }
+
+  async function regeneratePin(user) {
+    if (!window.confirm(`${user.fullName} uchun yangi PIN kod yaratilsinmi? Eski PIN ishlamay qoladi.`)) return;
+    setRegeneratingId(user.id);
+    try {
+      const updated = await api(`/api/users/${user.id}`, { method: "PUT", body: JSON.stringify({ regeneratePin: true }) });
+      const { generatedPin, ...safeUser } = updated;
+      setUsers((prev) => prev.map((u) => u.id === safeUser.id ? safeUser : u));
+      if (generatedPin) setPinReveal({ fullName: safeUser.fullName, username: safeUser.username, pin: generatedPin });
+    } catch (err) {
+      onNotify(err.message || "Xatolik", "error");
+    } finally {
+      setRegeneratingId(null);
     }
   }
 
@@ -4252,28 +4327,11 @@ function UsersPage({ currentUser, onNotify }) {
                   readOnly={editUser?.id === currentUser?.id}
                 />
               </label>
-              <label>
-                Parol
-                {editUser && <span className="pw-hint">Bo'sh qoldiring — o'zgarmaydi</span>}
-                {!editUser && <span className="pw-hint">Kamida 6 belgi</span>}
-                <div className="pw-field-wrap">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    placeholder={editUser ? "••••••••" : "Yangi parol"}
-                    autoComplete="new-password"
-                  />
-                  <button
-                    type="button"
-                    className="pw-toggle"
-                    onClick={() => setShowPassword((v) => !v)}
-                    aria-label={showPassword ? "Yashirish" : "Ko'rsatish"}
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </label>
+              {!editUser && (
+                <p className="pw-hint pin-auto-hint">
+                  8 xonali PIN kod avtomatik yaratiladi va bir martagina ko'rsatiladi — uni xodimga yetkazib qo'ying.
+                </p>
+              )}
               <label>
                 Rol
                 <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
@@ -4287,6 +4345,37 @@ function UsersPage({ currentUser, onNotify }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {pinReveal && createPortal(
+        <div className="modal-backdrop" onClick={() => setPinReveal(null)}>
+          <div className="schedule-modal pin-reveal-modal" style={{ maxWidth: 360 }} onClick={(e) => e.stopPropagation()}>
+            <span className="modal-handle" />
+            <div className="modal-head">
+              <strong>Yangi PIN kod</strong>
+              <button type="button" className="modal-close-btn" onClick={() => setPinReveal(null)}>✕</button>
+            </div>
+            <p className="pin-reveal-name">{pinReveal.fullName} <span>@{pinReveal.username}</span></p>
+            <div className="pin-reveal-code">{pinReveal.pin}</div>
+            <p className="pin-reveal-warning">
+              Bu PIN faqat hozir ko'rsatilmoqda — keyin qayta ko'rib bo'lmaydi. Uni xodimga yozib/aytib qo'ying.
+            </p>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => {
+                  navigator.clipboard?.writeText(pinReveal.pin).catch(() => {});
+                  onNotify("PIN nusxalandi");
+                }}
+              >
+                Nusxalash
+              </button>
+              <button type="button" className="btn-primary" onClick={() => setPinReveal(null)}>Yopish</button>
+            </div>
           </div>
         </div>,
         document.body
@@ -4330,6 +4419,15 @@ function UsersPage({ currentUser, onNotify }) {
                   title="Tahrirlash"
                 >
                   <Edit3 size={15} />
+                </button>
+                <button
+                  type="button"
+                  className="action-btn pin-regen"
+                  onClick={() => regeneratePin(user)}
+                  disabled={regeneratingId === user.id}
+                  title="PIN kodni qayta yaratish"
+                >
+                  <RefreshCcw size={15} className={regeneratingId === user.id ? "spin" : ""} />
                 </button>
                 {user.id !== currentUser?.id && (
                   <button
