@@ -81,7 +81,7 @@ const MONTHLY_STATUS_OPTIONS = {
 };
 const MONTHLY_STATUS_SEQUENCE = ["work", "rest", "trip", "tjk", "studio", "vacation", "otpiska", "administration", "presidential"];
 const DEPARTMENTS = [
-  { id: "pull", label: "Pool xizmati", shortLabel: "Pool" },
+  { id: "pool", label: "Pool xizmati", shortLabel: "Pool" },
   { id: "operator", label: "Oddiy operatorlar", shortLabel: "Operator" },
   { id: "dron", label: "Dron bo'limi", shortLabel: "Dron" },
   { id: "tjk", label: "TJK guruhi", shortLabel: "TJK" }

@@ -7,25 +7,53 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model Employee {
-  id          Int       @id @default(autoincrement())
-  name        String
-  role        String    @default("Operator")
-  phone       String    @default("+998 90 000 00 00")
-  telegram    String    @default("")
-  department  String    @default("operator")
-  avatar      String    @default("")
-  address     String    @default("")
-  portfolio   Json      @default("[]")
-  documents   Json      @default("{}")
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+// Mirrors the shape of data/mock-db.json 1:1 so server.mjs can load the
+// entire in-memory `db` snapshot from Postgres and write it back unchanged —
+// the route handlers and response shaping stay untouched, guaranteeing the
+// API contract the frontend (src/main.jsx) depends on does not shift.
 
-  schedules    ScheduleEntry[]
-  attendances  Attendance[]
+model Employee {
+  id         Int      @id @default(autoincrement())
+  name       String
+  role       String   @default("Operator")
+  phone      String   @default("+998 90 000 00 00")
+  telegram   String   @default("")
+  department String   @default("operator")
+  avatar     String   @default("") @db.Text
+  address    String   @default("")
+  portfolio  Json     @default("[]")
+  documents  Json     @default("{}")
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
+model User {
+  id         Int      @id @default(autoincrement())
+  username   String   @unique
+  pinCode    String
+  fullName   String
+  role       String   @default("xodim")
+  isActive   Boolean  @default(true)
+  // Set when an account is auto-created alongside a new employee
+  // (server.mjs createEmployee). Written but never read back by the
+  // server today — kept for perfect round-trip fidelity.
+  employeeId Int?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Contact {
+  id        String   @id
+  type      String   @default("Muxbir")
+  name      String   @default("")
+  vehicle   String   @default("")
+  phone     String   @default("")
+  createdAt DateTime @default(now())
+}
+
+// One row per weekStart — `data` holds the full computed dashboard blob
+// (groups/metrics/overviewRows/reports/...) exactly as server.mjs builds it.
 model Schedule {
   id        String   @id @default(cuid())
   weekStart String   @unique
@@ -34,33 +62,10 @@ model Schedule {
   updatedAt DateTime @updatedAt
 }
 
-model ScheduleEntry {
-  id         Int      @id @default(autoincrement())
-  employeeId Int
-  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  weekStart  String
-  day        String
-  statusType String   @default("working")
-  groupId    String   @default("")
-  createdAt  DateTime @default(now())
-
-  @@unique([employeeId, weekStart, day, groupId])
-}
-
-model Contact {
-  id        String   @id @default(cuid())
-  type      String   @default("Muxbir")
-  name      String   @default("")
-  vehicle   String   @default("")
-  phone     String
-  createdAt DateTime @default(now())
-}
-
 model Attendance {
-  id           String    @id @default(cuid())
+  id           String    @id
   employeeId   Int
-  employee     Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  employeeName String
+  employeeName String    @default("")
   date         String
   checkIn      DateTime
   checkOut     DateTime?
@@ -68,8 +73,19 @@ model Attendance {
   createdAt    DateTime  @default(now())
 }
 
+model DailyStatus {
+  id         String   @id
+  employeeId Int
+  date       String
+  statusCode String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([employeeId, date])
+}
+
 model AuditLog {
-  id        Int      @id @default(autoincrement())
+  id        BigInt   @id
   action    String
   entity    String
   entityId  String?
@@ -77,15 +93,29 @@ model AuditLog {
   createdAt DateTime @default(now())
 }
 
-model User {
-  id        Int      @id @default(autoincrement())
-  username  String   @unique
-  password  String
-  role      String   @default("xodim") // "superadmin", "admin", "xodim"
-  fullName  String
-  isActive  Boolean  @default(true)
+model Task {
+  id           Int       @id
+  title        String
+  description  String?
+  assignedToId Int
+  assignedById Int
+  status       String    @default("PENDING")
+  rejectReason String?
+  dueDate      String?
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Notification {
+  id        Int      @id
+  userId    Int
+  title     String
+  message   String
+  type      String   @default("task")
+  isRead    Boolean  @default(false)
+  taskId    Int?
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model Department {
@@ -95,4 +125,10 @@ model Department {
   color     String   @default("#6366f1")
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
+}
+
+// Single-row table for the global `db.generation` counter.
+model AppMeta {
+  id         Int @id @default(1)
+  generation Int @default(0)
 }

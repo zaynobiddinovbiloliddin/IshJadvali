@@ -1,18 +1,17 @@
 import { createServer } from "node:http";
-import { mkdir, readFile, readdir, rename, stat, unlink, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
+import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import "dotenv/config";
 const { compareSync, hashSync } = bcrypt;
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const PORT = Number(process.env.PORT || 3001);
-const DATA_DIR = process.env.VERCEL ? "/tmp/ish-jadvali" : join(__dirname, "data");
-export const DB_FILE = join(DATA_DIR, "mock-db.json");
-const UPLOADS_DIR = join(__dirname, "uploads", "documents");
 const JWT_SECRET = process.env.JWT_SECRET || "ishjadvali_secret_key";
+const prisma = new PrismaClient();
 
 const initialUsers = [
   // Faqat ma'lumotlar fayli mavjud bo'lmaganda (yangi o'rnatish) ishlatiladi — boshlang'ich PIN: 20250001 / 20250002
@@ -87,7 +86,7 @@ async function migrateUsersToPin() {
 }
 
 const departments = [
-  { id: "pull", name: "Pool xizmati" },
+  { id: "pool", name: "Pool xizmati" },
   { id: "operator", name: "Operatorlar" },
   { id: "dron", name: "Dron bo'limi" },
   { id: "tjk", name: "TJK guruhi" }
@@ -207,43 +206,114 @@ const monthShort = ["Yan", "Fev", "Mar", "Apr", "May", "Iyn", "Iyl", "Avg", "Sen
 
 let db = await loadDb();
 await migrateUsersToPin();
-cleanOldBackups().catch(() => {});
-
-async function cleanOldBackups() {
-  try {
-    const files = await readdir(DATA_DIR);
-    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000; // 7 kun
-    for (const file of files) {
-      if (/^backup-\d{4}-\d{2}-\d{2}\.json$/.test(file)) {
-        const dateStr = file.slice(7, 17);
-        if (new Date(dateStr).getTime() < cutoff) {
-          await unlink(join(DATA_DIR, file)).catch(() => {});
-        }
-      }
-    }
-  } catch {}
-}
 
 async function loadDb() {
   try {
-    const raw = await readFile(DB_FILE, "utf8");
-    const parsed = JSON.parse(raw);
-    const employees = Array.isArray(parsed.employees) && parsed.employees.length ? parsed.employees : initialEmployees;
-    const users = Array.isArray(parsed.users) && parsed.users.length ? parsed.users : initialUsers;
+    const [employeeRows, userRows, contactRows, scheduleRows, attendanceRows, dailyStatusRows, auditLogRows, taskRows, notificationRows, meta] = await Promise.all([
+      prisma.employee.findMany({ orderBy: { id: "asc" } }),
+      prisma.user.findMany({ orderBy: { id: "asc" } }),
+      prisma.contact.findMany(),
+      prisma.schedule.findMany(),
+      prisma.attendance.findMany(),
+      prisma.dailyStatus.findMany(),
+      prisma.auditLog.findMany({ orderBy: { id: "asc" } }),
+      prisma.task.findMany({ orderBy: { id: "asc" } }),
+      prisma.notification.findMany({ orderBy: { id: "asc" } }),
+      prisma.appMeta.findUnique({ where: { id: 1 } })
+    ]);
+
+    const schedules = {};
+    for (const row of scheduleRows) schedules[row.weekStart] = row.data;
+
+    const employees = employeeRows.length
+      ? employeeRows.map((e) => ({
+          id: e.id,
+          name: e.name,
+          role: e.role,
+          phone: e.phone,
+          telegram: e.telegram,
+          department: e.department,
+          avatar: e.avatar,
+          address: e.address,
+          portfolio: e.portfolio,
+          documents: e.documents,
+          isActive: e.isActive,
+          createdAt: e.createdAt.toISOString(),
+          updatedAt: e.updatedAt.toISOString()
+        }))
+      : initialEmployees;
+
+    const users = userRows.length
+      ? userRows.map((u) => ({
+          id: u.id,
+          username: u.username,
+          pinCode: u.pinCode,
+          fullName: u.fullName,
+          role: u.role,
+          isActive: u.isActive,
+          ...(u.employeeId != null ? { employeeId: u.employeeId } : {}),
+          createdAt: u.createdAt.toISOString()
+        }))
+      : initialUsers;
+
     return {
-      generation: Number(parsed.generation || 0),
+      generation: Number(meta?.generation || 0),
       employees: employees.map(normalizeEmployee),
-      schedules: parsed.schedules && typeof parsed.schedules === "object" ? parsed.schedules : {},
-      attendance: Array.isArray(parsed.attendance) ? parsed.attendance.map(normalizeAttendanceRecord).filter(Boolean) : [],
-      contacts: Array.isArray(parsed.contacts) ? parsed.contacts.map(normalizeContact).filter(Boolean) : initialContacts,
+      schedules,
+      attendance: attendanceRows.map((a) => ({
+        id: a.id,
+        employeeId: a.employeeId,
+        employeeName: a.employeeName,
+        date: a.date,
+        checkIn: a.checkIn.toISOString(),
+        checkOut: a.checkOut ? a.checkOut.toISOString() : null,
+        method: a.method
+      })).map(normalizeAttendanceRecord).filter(Boolean),
+      contacts: contactRows.length ? contactRows.map(normalizeContact).filter(Boolean) : initialContacts,
       users,
-      dailyStatuses: Array.isArray(parsed.dailyStatuses) ? parsed.dailyStatuses : [],
-      auditLogs: Array.isArray(parsed.auditLogs) ? parsed.auditLogs : [],
-      tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
-      notifications: Array.isArray(parsed.notifications) ? parsed.notifications : []
+      dailyStatuses: dailyStatusRows.map((s) => ({
+        id: s.id,
+        employeeId: s.employeeId,
+        date: s.date,
+        statusCode: s.statusCode,
+        createdAt: s.createdAt.toISOString(),
+        updatedAt: s.updatedAt.toISOString()
+      })),
+      auditLogs: auditLogRows.map((l) => ({
+        id: Number(l.id),
+        action: l.action,
+        entity: l.entity,
+        entityId: l.entityId || "",
+        details: l.details || "",
+        createdAt: l.createdAt.toISOString()
+      })),
+      tasks: taskRows.map((t) => ({
+        id: t.id,
+        title: t.title,
+        description: t.description,
+        assignedToId: t.assignedToId,
+        assignedById: t.assignedById,
+        status: t.status,
+        rejectReason: t.rejectReason,
+        dueDate: t.dueDate,
+        completedAt: t.completedAt ? t.completedAt.toISOString() : null,
+        createdAt: t.createdAt.toISOString(),
+        updatedAt: t.updatedAt.toISOString()
+      })),
+      notifications: notificationRows.map((n) => ({
+        id: n.id,
+        userId: n.userId,
+        title: n.title,
+        message: n.message,
+        type: n.type,
+        isRead: n.isRead,
+        taskId: n.taskId,
+        createdAt: n.createdAt.toISOString()
+      }))
     };
-  } catch {
-    return { generation: 0, employees: initialEmployees.map(normalizeEmployee), schedules: {}, attendance: [], contacts: initialContacts, users: initialUsers, dailyStatuses: [], auditLogs: [] };
+  } catch (err) {
+    console.error("loadDb: PostgreSQL bilan ulanishda xatolik, boshlang'ich holatga qaytildi:", err.message);
+    return { generation: 0, employees: initialEmployees.map(normalizeEmployee), schedules: {}, attendance: [], contacts: initialContacts, users: initialUsers, dailyStatuses: [], auditLogs: [], tasks: [], notifications: [] };
   }
 }
 
@@ -251,7 +321,7 @@ function inferDepartment(employee) {
   const text = `${employee.name || ""} ${employee.role || ""}`.toLowerCase();
   if (text.includes("dron")) return "dron";
   if (text.includes("rej") || text.includes("tjk")) return "tjk";
-  if (Number(employee.id) <= 25) return "pull";
+  if (Number(employee.id) <= 25) return "pool";
   return "operator";
 }
 
@@ -271,26 +341,8 @@ function cleanPortfolio(portfolio) {
     .slice(0, 100);
 }
 
-function documentSlug(employee) {
-  return String(employee.name || `employee-${employee.id || Date.now()}`)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 48) || `employee-${employee.id || Date.now()}`;
-}
-
-function createEmployeeDocumentView(employee, existing = {}) {
-  return {
-    slug: documentSlug(employee),
-    wordFile: `${documentSlug(employee)}.docx`,
-    excelFile: `${documentSlug(employee)}.xlsx`,
-    generatedAt: existing.generatedAt || new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-}
-
 function normalizeEmployee(employee) {
-  const normalized = {
+  return {
     ...employee,
     phone: employee.phone || "+998 90 000 00 00",
     telegram: employee.telegram || "",
@@ -299,24 +351,130 @@ function normalizeEmployee(employee) {
     documents: cleanDocuments(employee.documents),
     portfolio: cleanPortfolio(employee.portfolio)
   };
-  return {
-    ...normalized,
-    documentView: createEmployeeDocumentView(normalized, employee.documentView)
-  };
 }
 
+// To'liq sinxronlash: joriy `db` holatini PostgreSQL'ga yozadi (eski qatorlar
+// o'chirilib, joriy massivlar qayta yoziladi). Ma'lumotlar hajmi kichik
+// bo'lgani uchun bu yondashuv oddiy va ishonchli — yaratish/yangilash/o'chirish
+// barchasi bir xil yo'l bilan, mosligiga shubha qoldirmaydi.
 async function saveDb() {
-  await mkdir(DATA_DIR, { recursive: true });
-  const data = JSON.stringify(db, null, 2);
-  const tmp = DB_FILE + ".tmp";
-  await writeFile(tmp, data);
-  await rename(tmp, DB_FILE);
-  // Kunlik backup: har kuni 1 ta backup fayl saqlanadi
-  const today = new Date().toISOString().slice(0, 10);
-  const backupFile = join(DATA_DIR, `backup-${today}.json`);
-  if (!existsSync(backupFile)) {
-    await writeFile(backupFile, data);
-  }
+  await prisma.$transaction([
+    prisma.notification.deleteMany(),
+    prisma.task.deleteMany(),
+    prisma.dailyStatus.deleteMany(),
+    prisma.attendance.deleteMany(),
+    prisma.auditLog.deleteMany(),
+    prisma.schedule.deleteMany(),
+    prisma.contact.deleteMany(),
+    prisma.employee.deleteMany(),
+    prisma.user.deleteMany(),
+
+    prisma.employee.createMany({
+      data: db.employees.map((e) => ({
+        id: e.id,
+        name: e.name,
+        role: e.role || "Operator",
+        phone: e.phone || "+998 90 000 00 00",
+        telegram: e.telegram || "",
+        department: e.department || "operator",
+        avatar: e.avatar || "",
+        address: e.address || "",
+        portfolio: e.portfolio || [],
+        documents: e.documents || {},
+        isActive: e.isActive !== false,
+        createdAt: new Date(e.createdAt || Date.now()),
+        updatedAt: new Date(e.updatedAt || e.createdAt || Date.now())
+      }))
+    }),
+    prisma.user.createMany({
+      data: db.users.map((u) => ({
+        id: u.id,
+        username: u.username,
+        pinCode: u.pinCode,
+        fullName: u.fullName,
+        role: u.role || "xodim",
+        isActive: u.isActive !== false,
+        employeeId: u.employeeId ?? null,
+        createdAt: new Date(u.createdAt || Date.now()),
+        updatedAt: new Date(u.updatedAt || u.createdAt || Date.now())
+      }))
+    }),
+    prisma.contact.createMany({
+      data: (db.contacts || []).map((c) => ({
+        id: String(c.id),
+        type: c.type === "Haydovchi" ? "Haydovchi" : "Muxbir",
+        name: c.name || "",
+        vehicle: c.vehicle || "",
+        phone: c.phone || ""
+      }))
+    }),
+    prisma.schedule.createMany({
+      data: Object.entries(db.schedules || {}).map(([weekStart, data]) => ({ weekStart, data }))
+    }),
+    prisma.attendance.createMany({
+      data: (db.attendance || []).map((a) => ({
+        id: String(a.id),
+        employeeId: Number(a.employeeId),
+        employeeName: a.employeeName || "",
+        date: a.date,
+        checkIn: new Date(a.checkIn),
+        checkOut: a.checkOut ? new Date(a.checkOut) : null,
+        method: a.method || "face"
+      }))
+    }),
+    prisma.dailyStatus.createMany({
+      data: (db.dailyStatuses || []).map((s) => ({
+        id: String(s.id),
+        employeeId: Number(s.employeeId),
+        date: s.date,
+        statusCode: s.statusCode ?? null,
+        createdAt: new Date(s.createdAt || Date.now()),
+        updatedAt: new Date(s.updatedAt || s.createdAt || Date.now())
+      }))
+    }),
+    prisma.auditLog.createMany({
+      data: (db.auditLogs || []).map((l) => ({
+        id: BigInt(l.id),
+        action: l.action,
+        entity: l.entity,
+        entityId: l.entityId != null ? String(l.entityId) : null,
+        details: l.details || null,
+        createdAt: new Date(l.createdAt || Date.now())
+      }))
+    }),
+    prisma.task.createMany({
+      data: (db.tasks || []).map((t) => ({
+        id: t.id,
+        title: t.title,
+        description: t.description ?? null,
+        assignedToId: t.assignedToId,
+        assignedById: t.assignedById,
+        status: t.status || "PENDING",
+        rejectReason: t.rejectReason ?? null,
+        dueDate: t.dueDate ?? null,
+        completedAt: t.completedAt ? new Date(t.completedAt) : null,
+        createdAt: new Date(t.createdAt || Date.now()),
+        updatedAt: new Date(t.updatedAt || t.createdAt || Date.now())
+      }))
+    }),
+    prisma.notification.createMany({
+      data: (db.notifications || []).map((n) => ({
+        id: n.id,
+        userId: n.userId,
+        title: n.title,
+        message: n.message,
+        type: n.type || "task",
+        isRead: !!n.isRead,
+        taskId: n.taskId ?? null,
+        createdAt: new Date(n.createdAt || Date.now())
+      }))
+    }),
+    prisma.appMeta.upsert({
+      where: { id: 1 },
+      update: { generation: db.generation || 0 },
+      create: { id: 1, generation: db.generation || 0 }
+    })
+  ], { timeout: 30_000 });
 }
 
 // ─── Audit log ───────────────────────────────────────────────────────────────
@@ -779,7 +937,7 @@ function cleanDocuments(documents) {
 }
 
 function cleanEmployeePayload(payload, existing = {}) {
-  const normalized = normalizeEmployee({
+  return normalizeEmployee({
     ...existing,
     id: payload.id ?? existing.id,
     name: payload.name?.trim() || existing.name,
@@ -792,10 +950,6 @@ function cleanEmployeePayload(payload, existing = {}) {
     documents: {},
     portfolio: payload.portfolio || existing.portfolio
   });
-  return {
-    ...normalized,
-    documentView: createEmployeeDocumentView(normalized, existing.documentView)
-  };
 }
 
 async function createEmployee(payload) {
@@ -1358,81 +1512,6 @@ export async function handleRequest(request, response) {
       return sendJson(response, 200, await deleteEmployee(employeeMatch[1]));
     }
 
-    // ─── Employee Documents ──────────────────────────────────────────────────
-    const empDocsMatch = url.pathname.match(/^\/api\/employees\/(\d+)\/documents$/);
-    if (empDocsMatch && request.method === "GET") {
-      const user = getAuthUser(request, response);
-      if (!user) return;
-      const empId = empDocsMatch[1];
-      const empDir = join(UPLOADS_DIR, empId);
-      if (!existsSync(empDir)) return sendJson(response, 200, { documents: [] });
-      const files = await readdir(empDir);
-      const documents = await Promise.all(files.map(async (file) => {
-        const info = await stat(join(empDir, file));
-        return {
-          name: file,
-          url: `/uploads/documents/${empId}/${file}`,
-          size: info.size,
-          uploadedAt: info.birthtime,
-          isImage: /\.(jpg|jpeg|png)$/i.test(file),
-          isPdf: /\.pdf$/i.test(file)
-        };
-      }));
-      return sendJson(response, 200, { documents });
-    }
-
-    if (empDocsMatch && request.method === "POST") {
-      const user = requireAdmin(request, response);
-      if (!user) return;
-      const empId = empDocsMatch[1];
-      const { filename, data } = await readBody(request);
-      if (!data) return sendJson(response, 400, { message: "Fayl ma'lumoti yuborilmadi" });
-      const ext = extname(filename || "").toLowerCase();
-      if (![".jpg", ".jpeg", ".png", ".pdf"].includes(ext)) {
-        return sendJson(response, 400, { message: "Faqat JPG, PNG yoki PDF fayllar" });
-      }
-      const base64Data = data.replace(/^data:[^;]+;base64,/, "");
-      const buffer = Buffer.from(base64Data, "base64");
-      if (buffer.length > 10 * 1024 * 1024) return sendJson(response, 400, { message: "Fayl hajmi 10MB dan oshmasin" });
-      const safeBase = (filename || "doc")
-        .slice(0, -(ext.length))
-        .replace(/[^a-zA-Z0-9_-]/g, "_")
-        .replace(/_{2,}/g, "_")
-        .replace(/^_|_$/g, "")
-        .slice(0, 40) || "doc";
-      const storedName = `${Date.now()}_${safeBase}${ext}`;
-      const empDir = join(UPLOADS_DIR, empId);
-      await mkdir(empDir, { recursive: true });
-      await writeFile(join(empDir, storedName), buffer);
-      pushAuditLog("UPLOAD", "EmployeeDocument", empId, `${storedName} yuklandi (${user.username})`);
-      return sendJson(response, 201, {
-        success: true,
-        document: {
-          name: storedName,
-          url: `/uploads/documents/${empId}/${storedName}`,
-          size: buffer.length,
-          isImage: /\.(jpg|jpeg|png)$/i.test(storedName),
-          isPdf: /\.pdf$/i.test(storedName)
-        }
-      });
-    }
-
-    const empDocFileMatch = url.pathname.match(/^\/api\/employees\/(\d+)\/documents\/([^/]+)$/);
-    if (empDocFileMatch && request.method === "DELETE") {
-      const user = requireAdmin(request, response);
-      if (!user) return;
-      const [, empId, encodedFilename] = empDocFileMatch;
-      const filename = decodeURIComponent(encodedFilename);
-      if (filename.includes("..") || /[/\\]/.test(filename)) {
-        return sendJson(response, 403, { message: "Ruxsat yo'q" });
-      }
-      const filePath = join(UPLOADS_DIR, empId, filename);
-      if (!existsSync(filePath)) return sendJson(response, 404, { message: "Fayl topilmadi" });
-      await unlink(filePath);
-      pushAuditLog("DELETE", "EmployeeDocument", empId, `${filename} o'chirildi (${user.username})`);
-      return sendJson(response, 200, { success: true });
-    }
-
     const contactMatch = url.pathname.match(/^\/api\/contacts\/([^/]+)$/);
     if (contactMatch && request.method === "DELETE") {
       return sendJson(response, 200, await deleteContact(decodeURIComponent(contactMatch[1])));
@@ -1591,7 +1670,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
       try {
         const { startTelegramBot } = await import("./src/telegram-bot.mjs");
-        startTelegramBot();
+        startTelegramBot(() => db);
       } catch (err) {
         console.error("Telegram bot ishga tushmadi:", err.message);
       }

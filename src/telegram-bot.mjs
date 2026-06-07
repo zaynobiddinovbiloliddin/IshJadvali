@@ -1,9 +1,7 @@
 import TelegramBot from "node-telegram-bot-api";
 import cron from "node-cron";
-import { readFile } from "node:fs/promises";
 import { writeFileSync, unlinkSync, existsSync } from "fs";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
+import { join } from "path";
 import {
   Document,
   Packer,
@@ -16,10 +14,6 @@ import {
   AlignmentType,
   ShadingType
 } from "docx";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const PROJECT_ROOT = join(__dirname, "..");
-const DB_FILE = join(PROJECT_ROOT, "data", "mock-db.json");
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
@@ -37,13 +31,14 @@ function formatUzDate(date) {
   return `${date.getDate()} ${UZ_MONTHS[date.getMonth()]} ${date.getFullYear()} yil`;
 }
 
-async function readDb() {
-  try {
-    const raw = await readFile(DB_FILE, "utf8");
-    return JSON.parse(raw);
-  } catch {
-    return { employees: [], schedules: {} };
-  }
+// Set by startTelegramBot() — returns the live in-memory `db` object that
+// server.mjs persists to Postgres, so the bot always sees current data
+// instead of a frozen-in-time JSON snapshot.
+let getDbRef = null;
+
+function readDb() {
+  const data = getDbRef?.();
+  return data || { employees: [], schedules: {} };
 }
 
 // ─── SQL backup ──────────────────────────────────────────────
@@ -59,10 +54,8 @@ async function createBackup() {
   const fileName = `backup-${dateTag}.sql`;
   const filePath = join("/tmp", fileName);
 
-  if (!existsSync(DB_FILE)) throw new Error("Ma'lumotlar bazasi fayli topilmadi");
-
-  const raw = await readFile(DB_FILE, "utf8");
-  const db = JSON.parse(raw);
+  const db = readDb();
+  const raw = JSON.stringify(db);
   const ts = now.toISOString();
 
   const lines = [
@@ -126,8 +119,8 @@ async function createBackup() {
     lines.push(`TRUNCATE TABLE "DailyStatus";`);
     for (const ds of dsList) {
       lines.push(
-        `INSERT INTO "DailyStatus" (id,"employeeId",date,code,"createdAt","updatedAt") VALUES ` +
-        `(${sqlStr(ds.id)},${ds.employeeId || 0},${sqlStr(ds.date)},${sqlStr(ds.code)},${sqlStr(ds.createdAt || ts)},${sqlStr(ds.updatedAt || ts)});`
+        `INSERT INTO "DailyStatus" (id,"employeeId",date,"statusCode","createdAt","updatedAt") VALUES ` +
+        `(${sqlStr(ds.id)},${ds.employeeId || 0},${sqlStr(ds.date)},${sqlStr(ds.statusCode)},${sqlStr(ds.createdAt || ts)},${sqlStr(ds.updatedAt || ts)});`
       );
     }
   }
@@ -196,7 +189,7 @@ function makeEquipmentRow(equipment = "HD jamlanmasi, mikrofon, chiroq, avtotran
 }
 
 async function createFilmingScheduleWord() {
-  const dbData = await readDb();
+  const dbData = readDb();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayKey = today.toISOString().slice(0, 10);
@@ -382,11 +375,13 @@ export async function sendBackupAndSchedule() {
 
 // ─── Start cron ───────────────────────────────────────────────
 
-export function startTelegramBot() {
+export function startTelegramBot(getDb) {
   if (!BOT_TOKEN || !CHAT_ID) {
     console.log("Telegram bot: TOKEN yoki CHAT_ID yo'q, o'tkazib yuborildi");
     return;
   }
+
+  getDbRef = getDb;
 
   console.log("🤖 Telegram bot ishga tushdi (06:00–22:00, har 30 daqiqada SQL backup)");
 
