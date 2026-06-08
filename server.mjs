@@ -1408,6 +1408,15 @@ export async function handleRequest(request, response) {
       if (body.regeneratePin) {
         generatedPin = generateUniquePin();
         db.users[idx].pinCode = hashSync(generatedPin, 10);
+      } else if (body.pin) {
+        const pin = String(body.pin).trim();
+        if (!/^\d{8}$/.test(pin)) {
+          return sendJson(response, 400, { message: "PIN kod 8 ta raqamdan iborat bo'lishi kerak" });
+        }
+        if (db.users.some((u) => u.id !== uid && u.pinCode && compareSync(pin, u.pinCode))) {
+          return sendJson(response, 409, { message: "Bu PIN kod boshqa foydalanuvchida band, boshqasini tanlang" });
+        }
+        db.users[idx].pinCode = hashSync(pin, 10);
       }
       if (body.fullName) db.users[idx].fullName = String(body.fullName).trim();
       if (body.role && ["superadmin", "admin", "xodim"].includes(body.role)) db.users[idx].role = body.role;

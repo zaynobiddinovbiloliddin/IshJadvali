@@ -4106,7 +4106,7 @@ function UsersPage({ currentUser, onNotify }) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editUser, setEditUser] = useState(null);
-  const [form, setForm] = useState({ username: "", fullName: "", role: "xodim" });
+  const [form, setForm] = useState({ username: "", fullName: "", role: "xodim", pin: "" });
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [pinReveal, setPinReveal] = useState(null);
@@ -4133,13 +4133,13 @@ function UsersPage({ currentUser, onNotify }) {
 
   function openCreate() {
     setEditUser(null);
-    setForm({ username: "", fullName: "", role: "xodim" });
+    setForm({ username: "", fullName: "", role: "xodim", pin: "" });
     setShowForm(true);
   }
 
   function openEdit(user) {
     setEditUser(user);
-    setForm({ username: user.username, fullName: user.fullName, role: user.role });
+    setForm({ username: user.username, fullName: user.fullName, role: user.role, pin: "" });
     setShowForm(true);
   }
 
@@ -4147,15 +4147,17 @@ function UsersPage({ currentUser, onNotify }) {
     event.preventDefault();
     if (!form.fullName.trim()) { onNotify("To'liq ism kiritilmadi", "error"); return; }
     if (!editUser && !form.username.trim()) { onNotify("Login (username) kiritilmadi", "error"); return; }
+    if (editUser && form.pin && !/^\d{8}$/.test(form.pin)) { onNotify("PIN kod 8 ta raqamdan iborat bo'lishi kerak", "error"); return; }
     setSaving(true);
     try {
       const body = { fullName: form.fullName, role: form.role };
       if (!editUser) body.username = form.username;
+      if (editUser && form.pin) body.pin = form.pin;
 
       if (editUser) {
         const updated = await api(`/api/users/${editUser.id}`, { method: "PUT", body: JSON.stringify(body) });
         setUsers((prev) => prev.map((u) => u.id === updated.id ? updated : u));
-        onNotify("Foydalanuvchi yangilandi");
+        onNotify(form.pin ? "Foydalanuvchi va PIN kod yangilandi" : "Foydalanuvchi yangilandi");
       } else {
         const created = await api("/api/users", { method: "POST", body: JSON.stringify(body) });
         const { generatedPin, ...safeUser } = created;
@@ -4175,7 +4177,7 @@ function UsersPage({ currentUser, onNotify }) {
     try {
       const updated = await api(`/api/users/${user.id}`, { method: "PUT", body: JSON.stringify({ isActive: !user.isActive }) });
       setUsers((prev) => prev.map((u) => u.id === updated.id ? updated : u));
-      onNotify(updated.isActive ? "Foydalanuvchi faollashtirildi" : "Foydalanuvchi o'chirildi", updated.isActive ? "success" : "warning");
+      onNotify(updated.isActive ? "Foydalanuvchi faollashtirildi" : "Foydalanuvchi nofaol qilindi", updated.isActive ? "success" : "warning");
     } catch (err) {
       onNotify(err.message || "Xatolik", "error");
     }
@@ -4291,6 +4293,20 @@ function UsersPage({ currentUser, onNotify }) {
                 <p className="pw-hint pin-auto-hint">
                   8 xonali PIN kod avtomatik yaratiladi va bir martagina ko'rsatiladi — uni xodimga yetkazib qo'ying.
                 </p>
+              )}
+              {editUser && (
+                <label>
+                  PIN kod
+                  <input
+                    value={form.pin}
+                    onChange={(e) => setForm({ ...form, pin: e.target.value.replace(/\D/g, "").slice(0, 8) })}
+                    placeholder="Yangi 8 xonali PIN"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    maxLength={8}
+                  />
+                  <span className="pw-hint">Bo'sh qoldirsangiz, joriy PIN o'zgarmaydi. O'zgartirish uchun yangi 8 xonali kodni kiriting.</span>
+                </label>
               )}
               <label>
                 Rol
