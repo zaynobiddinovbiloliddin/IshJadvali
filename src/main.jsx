@@ -19,6 +19,7 @@ import {
   EyeOff,
   FileSpreadsheet,
   FileText,
+  Image,
   Info,
   LogOut,
   Menu,
@@ -485,7 +486,7 @@ function calculateEfficiency(assignments = []) {
 function App() {
   const [page, setPage] = useState("weekly");
   const [previousPage, setPreviousPage] = useState("weekly");
-  const [weekStart, setWeekStart] = useState("2026-01-29");
+  const [weekStart, setWeekStart] = useState(() => new Date().toISOString().slice(0, 10));
   const [activeDay, setActiveDay] = useState("Bugun");
   const [dashboard, setDashboard] = useState(emptyDashboard);
   const [loading, setLoading] = useState(true);
@@ -508,6 +509,7 @@ function App() {
   const [navDirection, setNavDirection] = useState("next");
   const [toasts, setToasts] = useState([]);
   const [employeeCredentials, setEmployeeCredentials] = useState(null);
+  const [documentsReady, setDocumentsReady] = useState(null);
   const hasLoadedDashboard = useRef(false);
   const menuButtonRef = useRef(null);
   const notificationsButtonRef = useRef(null);
@@ -717,6 +719,9 @@ function App() {
         await api(`/api/employees/${employee.id}`, { method: "PUT", body: JSON.stringify(employee) });
       } else {
         const created = await api("/api/employees", { method: "POST", body: JSON.stringify(employee) });
+        if (created?.id) {
+          setDocumentsReady(employeeDocumentModel(created));
+        }
         if (created?.generatedLogin?.pin) {
           setEmployeeCredentials({
             fullName: employee.name,
@@ -1105,6 +1110,38 @@ function App() {
                 Nusxalash
               </button>
               <button type="button" className="btn-primary" onClick={() => setEmployeeCredentials(null)}>Yopish</button>
+            </div>
+          </div>
+        </div>
+      ), document.body)}
+      {documentsReady && createPortal((
+        <div className="modal-backdrop" role="dialog" aria-modal="true" onClick={() => setDocumentsReady(null)}>
+          <div className="schedule-modal pin-reveal-modal" style={{ maxWidth: 380 }} onClick={(e) => e.stopPropagation()}>
+            <span className="modal-handle" />
+            <div className="modal-head">
+              <strong>Xodim hujjatlari tayyor</strong>
+              <button type="button" className="modal-close-btn" onClick={() => setDocumentsReady(null)}>✕</button>
+            </div>
+            <p className="pin-reveal-name">{documentsReady.name} <span>{documentsReady.role}</span></p>
+            <p className="pin-reveal-warning">
+              Yangi xodim uchun Word, Excel va JPEG hujjatlari avtomatik shakllantirildi. Kerakli formatni tanlab yuklab oling.
+            </p>
+            <div className="document-view-actions">
+              <button type="button" onClick={() => downloadBlob(buildDocxBlob(documentsReady), `${safeFileName(documentsReady.name)}.docx`)}>
+                <FileText size={16} />
+                Word
+              </button>
+              <button type="button" onClick={() => downloadBlob(buildXlsxBlob(documentsReady), `${safeFileName(documentsReady.name)}.xlsx`)}>
+                <FileSpreadsheet size={16} />
+                Excel
+              </button>
+              <button type="button" onClick={() => buildEmployeeJpegBlob(documentsReady).then((blob) => { if (blob) downloadBlob(blob, `${safeFileName(documentsReady.name)}.jpg`); })}>
+                <Image size={16} />
+                JPEG
+              </button>
+            </div>
+            <div className="modal-actions">
+              <button type="button" className="btn-primary" onClick={() => setDocumentsReady(null)}>Yopish</button>
             </div>
           </div>
         </div>
@@ -1576,11 +1613,68 @@ function buildXlsxBlob(model) {
   ], "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 }
 
+function buildEmployeeJpegBlob(model) {
+  const width = 1080;
+  const height = 1350;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+
+  const background = ctx.createLinearGradient(0, 0, 0, height);
+  background.addColorStop(0, "#0f172a");
+  background.addColorStop(1, "#1e293b");
+  ctx.fillStyle = background;
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.fillStyle = "#f8fafc";
+  ctx.fillRect(48, 48, width - 96, height - 96);
+  ctx.fillStyle = "#2563eb";
+  ctx.fillRect(48, 48, width - 96, 12);
+
+  ctx.fillStyle = "#0f172a";
+  ctx.font = "700 46px 'Segoe UI', Arial, sans-serif";
+  ctx.fillText(model.name, 96, 168);
+
+  ctx.fillStyle = "#2563eb";
+  ctx.font = "600 28px 'Segoe UI', Arial, sans-serif";
+  ctx.fillText(`${model.role} • ${model.departmentShort || model.department}`, 96, 208);
+
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.beginPath();
+  ctx.moveTo(96, 240);
+  ctx.lineTo(width - 96, 240);
+  ctx.stroke();
+
+  let y = 300;
+  model.summary.forEach(([label, value]) => {
+    ctx.fillStyle = "#64748b";
+    ctx.font = "400 28px 'Segoe UI', Arial, sans-serif";
+    ctx.fillText(label, 96, y);
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "600 28px 'Segoe UI', Arial, sans-serif";
+    ctx.fillText(String(value), 380, y);
+    y += 56;
+  });
+
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "400 22px 'Segoe UI', Arial, sans-serif";
+  ctx.fillText(`Generatsiya qilingan: ${model.generatedAt}`, 96, height - 80);
+  ctx.fillText("Hujjat tizim tomonidan avtomatik shakllantirildi.", 96, height - 50);
+
+  return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.92));
+}
+
 function downloadEmployeeFiles(employee, assignments = []) {
   const model = employeeDocumentModel(employee, assignments);
   const fileName = safeFileName(model.name);
   downloadBlob(buildDocxBlob(model), `${fileName}.docx`);
   window.setTimeout(() => downloadBlob(buildXlsxBlob(model), `${fileName}.xlsx`), 120);
+  window.setTimeout(() => {
+    buildEmployeeJpegBlob(model).then((blob) => {
+      if (blob) downloadBlob(blob, `${fileName}.jpg`);
+    });
+  }, 240);
 }
 
 function ShootingPage({ onNotify }) {
@@ -2952,15 +3046,6 @@ function EmployeeManager({ employees, onDelete, onNotify, onSave }) {
   );
 }
 
-function readFileAsBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
 function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
   const [selectedId, setSelectedId] = useState(employees[0]?.id || "");
   const [draft, setDraft] = useState(null);
@@ -2969,10 +3054,6 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
   const [documentMode, setDocumentMode] = useState("word");
   const [saving, setSaving] = useState(false);
   const formRef = useRef(null);
-  const [documents, setDocuments] = useState([]);
-  const [docsLoading, setDocsLoading] = useState(false);
-  const [uploadLoading, setUploadLoading] = useState(false);
-  const [lightbox, setLightbox] = useState(null);
 
   useEffect(() => {
     const emp = employees.find((e) => String(e.id) === String(selectedId)) || employees[0] || null;
@@ -2990,54 +3071,6 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
     });
     if (String(emp.id) !== String(selectedId)) setSelectedId(emp.id);
   }, [employees, selectedId]);
-
-  useEffect(() => {
-    if (!selectedId) return;
-    loadDocuments(selectedId);
-  }, [selectedId]);
-
-  async function loadDocuments(empId) {
-    setDocsLoading(true);
-    try {
-      const data = await api(`/api/employees/${empId}/documents`);
-      setDocuments(data.documents || []);
-    } catch (err) {
-      onNotify(err.message, "error");
-    } finally {
-      setDocsLoading(false);
-    }
-  }
-
-  async function uploadDocuments(files) {
-    if (!files?.length) return;
-    setUploadLoading(true);
-    try {
-      for (const file of Array.from(files)) {
-        const data = await readFileAsBase64(file);
-        await api(`/api/employees/${selectedId}/documents`, {
-          method: "POST",
-          body: JSON.stringify({ filename: file.name, data })
-        });
-      }
-      onNotify(`${files.length} ta hujjat yuklandi ✓`);
-      await loadDocuments(selectedId);
-    } catch (err) {
-      onNotify(err.message, "error");
-    } finally {
-      setUploadLoading(false);
-    }
-  }
-
-  async function deleteDocument(filename) {
-    if (!window.confirm(`"${filename.replace(/^\d+_/, "")}" hujjatini o'chirasizmi?`)) return;
-    try {
-      await api(`/api/employees/${selectedId}/documents/${encodeURIComponent(filename)}`, { method: "DELETE" });
-      onNotify("Hujjat o'chirildi", "warning");
-      await loadDocuments(selectedId);
-    } catch (err) {
-      onNotify(err.message, "error");
-    }
-  }
 
   function openEdit() {
     if (!draft) return;
@@ -3156,6 +3189,15 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
               <Download size={16} />
               Yuklab olish
             </button>
+            <button type="button" onClick={() => {
+              const model = employeeDocumentModel(draft);
+              buildEmployeeJpegBlob(model).then((blob) => {
+                if (blob) downloadBlob(blob, `${safeFileName(model.name)}.jpg`);
+              });
+            }}>
+              <Image size={16} />
+              JPEG
+            </button>
           </div>
         )}
         {isAdmin(currentUser) && (
@@ -3167,71 +3209,6 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
       </section>
 
       <EmployeeDocumentView employee={draft} mode={documentMode} />
-
-      <section className="employee-documents">
-        <div className="docs-header">
-          <div>
-            <strong>Xodim hujjatlari</strong>
-            <span>{documents.length} ta fayl</span>
-          </div>
-          {isAdmin(currentUser) && (
-            <label className={`docs-upload-btn${uploadLoading ? " loading" : ""}`}>
-              <Upload size={15} />
-              {uploadLoading ? "Yuklanmoqda..." : "Fayl yuklash"}
-              <input
-                type="file"
-                multiple
-                accept=".jpg,.jpeg,.png,.pdf"
-                style={{ display: "none" }}
-                onChange={(e) => { uploadDocuments(e.target.files); e.target.value = ""; }}
-                disabled={uploadLoading}
-              />
-            </label>
-          )}
-        </div>
-
-        {docsLoading ? (
-          <div className="docs-loading">Yuklanmoqda...</div>
-        ) : documents.length === 0 ? (
-          <div className="docs-empty">
-            <span>📄</span>
-            <p>Hujjatlar yuklanmagan</p>
-            {isAdmin(currentUser) && <p className="docs-hint">JPG, PNG yoki PDF fayllarni yuklang</p>}
-          </div>
-        ) : (
-          <div className="docs-grid">
-            {documents.map((doc) => (
-              <div key={doc.name} className="doc-card">
-                {doc.isImage ? (
-                  <div className="doc-preview" onClick={() => setLightbox(doc)} style={{ cursor: "pointer" }}>
-                    <img src={doc.url} alt={doc.name} className="doc-thumbnail" loading="lazy" />
-                    <div className="doc-overlay"><Eye size={18} /></div>
-                  </div>
-                ) : (
-                  <div className="doc-preview doc-pdf">
-                    <FileText size={32} />
-                    <p>PDF</p>
-                  </div>
-                )}
-                <div className="doc-info">
-                  <span className="doc-name">{doc.name.replace(/^\d+_/, "")}</span>
-                  <span className="doc-size">{(doc.size / 1024).toFixed(0)} KB</span>
-                </div>
-                <div className="doc-actions">
-                  <a href={doc.url} download className="doc-download-btn" title="Yuklab olish">
-                    <Download size={14} />
-                  </a>
-                  {isAdmin(currentUser) && (
-                    <button className="doc-delete-btn" type="button" onClick={() => deleteDocument(doc.name)} title="O'chirish">
-                      <Trash2 size={14} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
 
       <section className="documents-summary">
         {employees.map((employee) => (
@@ -3308,22 +3285,6 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
           </form>
         </div>
       ), document.body)}
-
-      {lightbox && createPortal(
-        <div className="lightbox-backdrop" onClick={() => setLightbox(null)}>
-          <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
-            <button className="lightbox-close" type="button" onClick={() => setLightbox(null)}>✕</button>
-            <img src={lightbox.url} alt={lightbox.name.replace(/^\d+_/, "")} className="lightbox-img" />
-            <div className="lightbox-actions">
-              <a href={lightbox.url} download className="lightbox-download">
-                <Download size={16} />
-                Yuklab olish
-              </a>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
     </section>
   );
 }
