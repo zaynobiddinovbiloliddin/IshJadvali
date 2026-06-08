@@ -928,12 +928,22 @@ function createAvatar(name, id) {
 
 function cleanDocuments(documents) {
   if (!documents || typeof documents !== "object") return {};
-  return ["photo3x4", "passportUz", "passportForeign", "certificate"].reduce((result, key) => {
+  const result = ["photo3x4", "passportUz", "passportForeign", "certificate"].reduce((acc, key) => {
     if (typeof documents[key] === "string" && documents[key].startsWith("data:image/")) {
-      result[key] = documents[key];
+      acc[key] = documents[key];
     }
-    return result;
+    return acc;
   }, {});
+  if (documents.passportInfo && typeof documents.passportInfo === "object") {
+    const info = ["series", "number", "pinfl", "birthDate", "issuedBy", "issuedDate", "expiryDate"].reduce((acc, key) => {
+      if (typeof documents.passportInfo[key] === "string" && documents.passportInfo[key].trim()) {
+        acc[key] = documents.passportInfo[key].trim().slice(0, 120);
+      }
+      return acc;
+    }, {});
+    if (Object.keys(info).length) result.passportInfo = info;
+  }
+  return result;
 }
 
 function cleanEmployeePayload(payload, existing = {}) {
@@ -945,9 +955,9 @@ function cleanEmployeePayload(payload, existing = {}) {
     phone: payload.phone?.trim() || existing.phone || "+998 90 000 00 00",
     telegram: typeof payload.telegram === "string" ? payload.telegram.trim() : (existing.telegram ?? ""),
     department: normalizeDepartment(payload.department || existing.department || inferDepartment(payload)),
-    address: "",
+    address: typeof payload.address === "string" ? payload.address.trim() : (existing.address || ""),
     avatar: payload.avatar?.trim() || existing.avatar,
-    documents: {},
+    documents: payload.documents !== undefined ? cleanDocuments(payload.documents) : (existing.documents || {}),
     portfolio: payload.portfolio || existing.portfolio
   });
 }
@@ -1519,6 +1529,26 @@ export async function handleRequest(request, response) {
 
     if (employeeMatch && request.method === "DELETE") {
       return sendJson(response, 200, await deleteEmployee(employeeMatch[1]));
+    }
+
+    const employeeDocsMatch = url.pathname.match(/^\/api\/employees\/(\d+)\/documents$/);
+    if (employeeDocsMatch && request.method === "GET") {
+      if (!requireAdmin(request, response)) return;
+      const employee = db.employees.find((e) => String(e.id) === employeeDocsMatch[1]);
+      if (!employee) return sendJson(response, 404, { message: "Xodim topilmadi" });
+      return sendJson(response, 200, { address: employee.address || "", documents: employee.documents || {} });
+    }
+
+    if (employeeDocsMatch && request.method === "PUT") {
+      if (!requireAdmin(request, response)) return;
+      const idx = db.employees.findIndex((e) => String(e.id) === employeeDocsMatch[1]);
+      if (idx === -1) return sendJson(response, 404, { message: "Xodim topilmadi" });
+      const body = await readBody(request);
+      if (typeof body.address === "string") db.employees[idx].address = body.address.trim();
+      if (body.documents !== undefined) db.employees[idx].documents = cleanDocuments(body.documents);
+      await saveDb();
+      pushAuditLog("UPDATE", "Employee", db.employees[idx].id, `${db.employees[idx].name} hujjatlari yangilandi`);
+      return sendJson(response, 200, { address: db.employees[idx].address || "", documents: db.employees[idx].documents || {} });
     }
 
     const contactMatch = url.pathname.match(/^\/api\/contacts\/([^/]+)$/);

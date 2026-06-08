@@ -4522,6 +4522,97 @@ button.metric-card {
   font-weight: 900;
 }
 
+.jpeg-mode {
+  padding: 22px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--primary) 8%, transparent), transparent 38%),
+    var(--surface);
+}
+
+.jpeg-mode header {
+  padding-bottom: 14px;
+  border-bottom: 2px solid color-mix(in srgb, var(--primary) 32%, var(--border));
+}
+
+.jpeg-mode header span,
+.jpeg-mode header p {
+  display: block;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.jpeg-mode header strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 24px;
+  line-height: 1.08;
+}
+
+.employee-jpeg-preview {
+  display: grid;
+  place-items: center;
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.employee-jpeg-preview img {
+  width: 100%;
+  max-width: 360px;
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+}
+
+.employee-jpeg-preview p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.jpeg-print-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 14px;
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--primary-strong), var(--primary));
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.jpeg-print-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media print {
+  body * { visibility: hidden; }
+  .print-area, .print-area * { visibility: visible; }
+  .print-area {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: #ffffff;
+  }
+  .print-area img { max-width: 100%; max-height: 100%; box-shadow: none; }
+}
+
 .excel-mode {
   overflow: hidden;
   padding: 0;

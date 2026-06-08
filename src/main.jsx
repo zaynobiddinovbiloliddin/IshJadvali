@@ -27,6 +27,7 @@ import {
   Phone,
   PlayCircle,
   Plus,
+  Printer,
   RefreshCcw,
   Save,
   Search,
@@ -374,6 +375,29 @@ function readImageFile(file) {
     reader.onerror = () => reject(new Error("Rasmni o'qib bo'lmadi"));
     reader.readAsDataURL(file);
   });
+}
+
+function loadCanvasImage(src) {
+  return new Promise((resolve) => {
+    if (!src) { resolve(null); return; }
+    const image = new window.Image();
+    if (/^https?:\/\//.test(src)) image.crossOrigin = "anonymous";
+    image.onload = () => resolve(image);
+    image.onerror = () => resolve(null);
+    image.src = src;
+  });
+}
+
+function drawCoverImage(ctx, image, x, y, width, height) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, width, height);
+  ctx.clip();
+  const scale = Math.max(width / image.width, height / image.height);
+  const drawWidth = image.width * scale;
+  const drawHeight = image.height * scale;
+  ctx.drawImage(image, x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight);
+  ctx.restore();
 }
 
 function departmentMeta(id) {
@@ -1443,6 +1467,10 @@ function employeeDocumentModel(employee, assignments = []) {
   const portfolio = employee.portfolio || [];
   const activeAssignments = assignments.filter((assignment) => STATUS_META[assignment.statusType]?.metric === "working");
   const restAssignments = assignments.filter((assignment) => STATUS_META[assignment.statusType]?.metric === "rest");
+  const documents = employee.documents || {};
+  const passportInfo = documents.passportInfo || {};
+  const hasPassportInfo = ["series", "number", "pinfl", "birthDate", "issuedBy", "issuedDate", "expiryDate"]
+    .some((key) => String(passportInfo[key] || "").trim());
 
   return {
     id: employee.id,
@@ -1456,6 +1484,9 @@ function employeeDocumentModel(employee, assignments = []) {
     generatedAt: new Date().toLocaleString("uz-UZ", { dateStyle: "medium", timeStyle: "short" }),
     assignments,
     portfolio,
+    photo: documents.photo3x4 || "",
+    passportScan: documents.passportUz || documents.passportForeign || "",
+    address: employee.address || "",
     summary: [
       ["Xodim ID", `EMP-${String(employee.id || 0).padStart(3, "0")}`],
       ["F.I.Sh", employee.name || "Kiritilmagan"],
@@ -1463,12 +1494,21 @@ function employeeDocumentModel(employee, assignments = []) {
       ["Bo'lim", department.label],
       ["Telefon", employee.phone || "Kiritilmagan"],
       ["Telegram", employee.telegram || "Kiritilmagan"],
+      ["Manzil", employee.address || "Kiritilmagan"],
       ["Holat", "Faol"],
       ["Haftalik smenalar", `${assignments.length} ta`],
       ["Ishdagi smenalar", `${activeAssignments.length} ta`],
       ["Dam/ta'til", `${restAssignments.length} ta`],
       ["Portfolio", `${portfolio.length} ta video`]
-    ]
+    ],
+    passport: hasPassportInfo ? [
+      ["Seriya va raqam", `${passportInfo.series || ""} ${passportInfo.number || ""}`.trim() || "Kiritilmagan"],
+      ["JSHSHIR", passportInfo.pinfl || "Kiritilmagan"],
+      ["Tug'ilgan sana", passportInfo.birthDate || "Kiritilmagan"],
+      ["Bergan organ", passportInfo.issuedBy || "Kiritilmagan"],
+      ["Berilgan sana", passportInfo.issuedDate || "Kiritilmagan"],
+      ["Amal qilish muddati", passportInfo.expiryDate || "Kiritilmagan"]
+    ] : []
   };
 }
 
@@ -1612,7 +1652,7 @@ function buildXlsxBlob(model) {
   ], "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 }
 
-function buildEmployeeJpegBlob(model) {
+async function buildEmployeeJpegBlob(model) {
   const width = 1080;
   const height = 1350;
   const canvas = document.createElement("canvas");
@@ -1632,29 +1672,83 @@ function buildEmployeeJpegBlob(model) {
   ctx.fillRect(48, 48, width - 96, 12);
 
   ctx.fillStyle = "#0f172a";
-  ctx.font = "700 46px 'Segoe UI', Arial, sans-serif";
-  ctx.fillText(model.name, 96, 168);
+  ctx.font = "700 42px 'Segoe UI', Arial, sans-serif";
+  ctx.fillText(model.name, 96, 148);
 
   ctx.fillStyle = "#2563eb";
-  ctx.font = "600 28px 'Segoe UI', Arial, sans-serif";
-  ctx.fillText(`${model.role} • ${model.departmentShort || model.department}`, 96, 208);
+  ctx.font = "600 26px 'Segoe UI', Arial, sans-serif";
+  ctx.fillText(`${model.role} • ${model.departmentShort || model.department}`, 96, 186);
 
   ctx.strokeStyle = "#e2e8f0";
   ctx.beginPath();
-  ctx.moveTo(96, 240);
-  ctx.lineTo(width - 96, 240);
+  ctx.moveTo(96, 214);
+  ctx.lineTo(width - 96, 214);
   ctx.stroke();
 
-  let y = 300;
+  // 3x4 photo card
+  const photoWidth = 210;
+  const photoHeight = 280;
+  const photoX = 96;
+  const photoY = 248;
+  ctx.fillStyle = "#e2e8f0";
+  ctx.fillRect(photoX, photoY, photoWidth, photoHeight);
+  const photo = await loadCanvasImage(model.photo);
+  if (photo) {
+    drawCoverImage(ctx, photo, photoX, photoY, photoWidth, photoHeight);
+  } else {
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "500 20px 'Segoe UI', Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("3x4 rasm yo'q", photoX + photoWidth / 2, photoY + photoHeight / 2);
+    ctx.textAlign = "left";
+  }
+  ctx.strokeStyle = "#cbd5e1";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(photoX, photoY, photoWidth, photoHeight);
+
+  // Basic info beside the photo
+  const infoX = photoX + photoWidth + 40;
+  let y = photoY + 34;
   model.summary.forEach(([label, value]) => {
     ctx.fillStyle = "#64748b";
-    ctx.font = "400 28px 'Segoe UI', Arial, sans-serif";
-    ctx.fillText(label, 96, y);
+    ctx.font = "400 22px 'Segoe UI', Arial, sans-serif";
+    ctx.fillText(label, infoX, y);
     ctx.fillStyle = "#0f172a";
-    ctx.font = "600 28px 'Segoe UI', Arial, sans-serif";
-    ctx.fillText(String(value), 380, y);
-    y += 56;
+    ctx.font = "600 22px 'Segoe UI', Arial, sans-serif";
+    ctx.fillText(String(value), infoX + 210, y);
+    y += 40;
   });
+
+  // Passport details section
+  let sectionY = Math.max(photoY + photoHeight, y) + 50;
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.beginPath();
+  ctx.moveTo(96, sectionY);
+  ctx.lineTo(width - 96, sectionY);
+  ctx.stroke();
+
+  sectionY += 42;
+  ctx.fillStyle = "#0f172a";
+  ctx.font = "700 28px 'Segoe UI', Arial, sans-serif";
+  ctx.fillText("Pasport ma'lumotlari", 96, sectionY);
+
+  sectionY += 50;
+  if (model.passport.length) {
+    model.passport.forEach(([label, value]) => {
+      ctx.fillStyle = "#64748b";
+      ctx.font = "400 24px 'Segoe UI', Arial, sans-serif";
+      ctx.fillText(label, 96, sectionY);
+      ctx.fillStyle = "#0f172a";
+      ctx.font = "600 24px 'Segoe UI', Arial, sans-serif";
+      ctx.fillText(String(value), 380, sectionY);
+      sectionY += 46;
+    });
+  } else {
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "400 23px 'Segoe UI', Arial, sans-serif";
+    ctx.fillText("Pasport ma'lumotlari kiritilmagan", 96, sectionY);
+    sectionY += 46;
+  }
 
   ctx.fillStyle = "#94a3b8";
   ctx.font = "400 22px 'Segoe UI', Arial, sans-serif";
@@ -3066,13 +3160,28 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
       department: emp.department || "operator",
       address: emp.address || "",
       portfolio: emp.portfolio || [],
-      avatar: emp.avatar || ""
+      avatar: emp.avatar || "",
+      documents: {}
     });
     if (String(emp.id) !== String(selectedId)) setSelectedId(emp.id);
   }, [employees, selectedId]);
 
+  useEffect(() => {
+    if (!selectedId || !isAdmin(currentUser)) return undefined;
+    let cancelled = false;
+    api(`/api/employees/${selectedId}/documents`).then((result) => {
+      if (cancelled || !result) return;
+      setDraft((prev) => (prev && String(prev.id) === String(selectedId)
+        ? { ...prev, address: result.address || prev.address, documents: result.documents || {} }
+        : prev));
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [selectedId, currentUser]);
+
   function openEdit() {
     if (!draft) return;
+    const documents = draft.documents || {};
+    const passportInfo = documents.passportInfo || {};
     setEditDraft({
       id: draft.id,
       name: draft.name || "",
@@ -3082,9 +3191,28 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
       department: draft.department || "operator",
       address: draft.address || "",
       portfolio: (draft.portfolio || []).map((item) => ({ ...item })),
-      avatar: draft.avatar || ""
+      avatar: draft.avatar || "",
+      photo3x4: documents.photo3x4 || "",
+      passportUz: documents.passportUz || "",
+      passportSeries: passportInfo.series || "",
+      passportNumber: passportInfo.number || "",
+      passportPinfl: passportInfo.pinfl || "",
+      passportBirthDate: passportInfo.birthDate || "",
+      passportIssuedBy: passportInfo.issuedBy || "",
+      passportIssuedDate: passportInfo.issuedDate || "",
+      passportExpiryDate: passportInfo.expiryDate || ""
     });
     setEditOpen(true);
+  }
+
+  async function updateDocumentImage(field, file) {
+    if (!file) return;
+    try {
+      const image = await readImageFile(file);
+      setEditDraft((prev) => ({ ...prev, [field]: image }));
+    } catch (error) {
+      onNotify(error.message || "Faylni yuklab bo'lmadi", "error");
+    }
   }
 
   function updatePortfolio(index, field, value) {
@@ -3145,8 +3273,35 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
       portfolio: editDraft.portfolio,
       avatar: editDraft.avatar
     });
+    if (!saved) { setSaving(false); return; }
+
+    try {
+      const passportInfo = {
+        series: editDraft.passportSeries,
+        number: editDraft.passportNumber,
+        pinfl: editDraft.passportPinfl,
+        birthDate: editDraft.passportBirthDate,
+        issuedBy: editDraft.passportIssuedBy,
+        issuedDate: editDraft.passportIssuedDate,
+        expiryDate: editDraft.passportExpiryDate
+      };
+      const documents = {
+        ...(editDraft.photo3x4 ? { photo3x4: editDraft.photo3x4 } : {}),
+        ...(editDraft.passportUz ? { passportUz: editDraft.passportUz } : {}),
+        ...(Object.values(passportInfo).some((value) => String(value || "").trim()) ? { passportInfo } : {})
+      };
+      const result = await api(`/api/employees/${editDraft.id}/documents`, {
+        method: "PUT",
+        body: JSON.stringify({ address: editDraft.address, documents })
+      });
+      setDraft((prev) => (prev && String(prev.id) === String(editDraft.id)
+        ? { ...prev, address: result?.address ?? editDraft.address, documents: result?.documents || documents }
+        : prev));
+    } catch (error) {
+      onNotify(error.message || "Hujjat ma'lumotlarini saqlab bo'lmadi", "error");
+    }
+
     setSaving(false);
-    if (!saved) return;
     setEditOpen(false);
   }
 
@@ -3184,18 +3339,13 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
               <FileSpreadsheet size={16} />
               Excel ko'rish
             </button>
+            <button className={documentMode === "jpeg" ? "active" : ""} type="button" onClick={() => setDocumentMode("jpeg")}>
+              <Image size={16} />
+              JPEG ko'rish
+            </button>
             <button type="button" onClick={() => downloadEmployeeFiles(draft)}>
               <Download size={16} />
               Yuklab olish
-            </button>
-            <button type="button" onClick={() => {
-              const model = employeeDocumentModel(draft);
-              buildEmployeeJpegBlob(model).then((blob) => {
-                if (blob) downloadBlob(blob, `${safeFileName(model.name)}.jpg`);
-              });
-            }}>
-              <Image size={16} />
-              JPEG
             </button>
           </div>
         )}
@@ -3257,6 +3407,73 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
                 <input name="documents-telegram" value={editDraft.telegram || ""} onChange={(event) => setEditDraft({ ...editDraft, telegram: event.target.value })} placeholder="@username" />
               </label>
             </div>
+            <label>
+              Manzil
+              <input name="documents-address" value={editDraft.address || ""} onChange={(event) => setEditDraft({ ...editDraft, address: event.target.value })} placeholder="Yashash manzili" />
+            </label>
+            <div className="avatar-upload-field">
+              <div className="avatar-upload-preview">
+                {editDraft.photo3x4 ? <img src={editDraft.photo3x4} alt="3x4 rasm" /> : <User size={28} />}
+              </div>
+              <div>
+                <strong>3x4 rasm</strong>
+                <span>{editDraft.photo3x4 ? "Rasm yuklangan" : "Rasm yuklanmagan"}</span>
+              </div>
+              <label>
+                <Upload size={15} />
+                Yuklash
+                <input type="file" accept="image/*" onChange={(event) => updateDocumentImage("photo3x4", event.target.files?.[0])} />
+              </label>
+            </div>
+            <section className="portfolio-editor modal-portfolio passport-editor">
+              <div className="section-head">
+                <h2>Pasport ma'lumotlari</h2>
+              </div>
+              <div className="avatar-upload-field">
+                <div className="avatar-upload-preview">
+                  {editDraft.passportUz ? <img src={editDraft.passportUz} alt="Pasport nusxasi" /> : <FileText size={28} />}
+                </div>
+                <div>
+                  <strong>Pasport nusxasi</strong>
+                  <span>{editDraft.passportUz ? "Fayl yuklangan" : "Fayl yuklanmagan"}</span>
+                </div>
+                <label>
+                  <Upload size={15} />
+                  Yuklash
+                  <input type="file" accept="image/*" onChange={(event) => updateDocumentImage("passportUz", event.target.files?.[0])} />
+                </label>
+              </div>
+              <div className="modal-grid two">
+                <label>
+                  Seriya va raqam
+                  <input name="documents-passport-series" value={editDraft.passportSeries || ""} onChange={(event) => setEditDraft({ ...editDraft, passportSeries: event.target.value })} placeholder="AD 1234567" />
+                </label>
+                <label>
+                  JSHSHIR
+                  <input name="documents-passport-pinfl" value={editDraft.passportPinfl || ""} onChange={(event) => setEditDraft({ ...editDraft, passportPinfl: event.target.value })} placeholder="12345678901234" inputMode="numeric" />
+                </label>
+              </div>
+              <div className="modal-grid two">
+                <label>
+                  Tug'ilgan sana
+                  <input type="date" value={editDraft.passportBirthDate || ""} onChange={(event) => setEditDraft({ ...editDraft, passportBirthDate: event.target.value })} />
+                </label>
+                <label>
+                  Bergan organ
+                  <input name="documents-passport-issuer" value={editDraft.passportIssuedBy || ""} onChange={(event) => setEditDraft({ ...editDraft, passportIssuedBy: event.target.value })} placeholder="IIB nomi" />
+                </label>
+              </div>
+              <div className="modal-grid two">
+                <label>
+                  Berilgan sana
+                  <input type="date" value={editDraft.passportIssuedDate || ""} onChange={(event) => setEditDraft({ ...editDraft, passportIssuedDate: event.target.value })} />
+                </label>
+                <label>
+                  Amal qilish muddati
+                  <input type="date" value={editDraft.passportExpiryDate || ""} onChange={(event) => setEditDraft({ ...editDraft, passportExpiryDate: event.target.value })} />
+                </label>
+              </div>
+            </section>
             <section className="portfolio-editor modal-portfolio">
               <div className="section-head">
                 <h2>Portfolio</h2>
@@ -3290,6 +3507,43 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
 
 function EmployeeDocumentView({ assignments = [], employee, mode = "word" }) {
   const model = employeeDocumentModel(employee, assignments);
+  const [jpegUrl, setJpegUrl] = useState("");
+
+  useEffect(() => {
+    if (mode !== "jpeg") return undefined;
+    let cancelled = false;
+    let objectUrl = "";
+    setJpegUrl("");
+    buildEmployeeJpegBlob(model).then((blob) => {
+      if (cancelled || !blob) return;
+      objectUrl = URL.createObjectURL(blob);
+      setJpegUrl(objectUrl);
+    });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, employee.id, employee.avatar, employee.address, JSON.stringify(employee.documents || {})]);
+
+  if (mode === "jpeg") {
+    return (
+      <section className="employee-document jpeg-mode" aria-label={`${model.name} JPEG ko'rinishi`}>
+        <header>
+          <span>Avtomatik karta</span>
+          <strong>JPEG xodim kartasi</strong>
+          <p>{model.generatedAt} da shakllantirildi</p>
+        </header>
+        <div className="employee-jpeg-preview print-area">
+          {jpegUrl ? <img src={jpegUrl} alt={`${model.name} kartasi`} /> : <p>Karta tayyorlanmoqda...</p>}
+        </div>
+        <button type="button" className="jpeg-print-btn" onClick={() => window.print()} disabled={!jpegUrl}>
+          <Printer size={16} />
+          Chop etish
+        </button>
+      </section>
+    );
+  }
 
   if (mode === "excel") {
     return (
