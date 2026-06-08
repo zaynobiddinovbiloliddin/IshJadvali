@@ -887,7 +887,7 @@ function App() {
   if (!currentUser) {
     return (
       <>
-        <AuthPage onAuth={handleAuth} onNotify={notify} theme={theme} onThemeChange={setTheme} />
+        <AuthPage onAuth={handleAuth} onNotify={notify} />
         <ToastViewport items={toasts} />
       </>
     );
@@ -1327,28 +1327,32 @@ function DepartmentManagerModal({ departments, onClose, onSave, onDelete, onNoti
 const PIN_LENGTH = 8;
 const PIN_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"];
 
-function AuthPage({ onAuth, onNotify, theme, onThemeChange }) {
+function AuthPage({ onAuth, onNotify }) {
   const [pin, setPin] = useState("");
   const [showPin, setShowPin] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [shake, setShake] = useState(false);
 
   async function submitPin(value) {
     setLoading(true);
-    setError("");
     try {
-      const data = await api("/api/auth/login", {
+      // To'g'ridan-to'g'ri fetch — umumiy api() yordamchisi har qanday 401 javobini
+      // "sessiya tugagan" deb hisoblab sahifani qayta yuklaydi, bu esa noto'g'ri
+      // PIN xabarini ko'rsatishga to'sqinlik qiladi.
+      const response = await fetch(`${API_BASE}/api/auth/login`, {
         method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ pin: value })
       });
-      onAuth(data.user, data.token);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error("wrong-pin");
+      onNotify(`Xush kelibsiz, ${data.user.fullName}! ✅`, "success");
+      setTimeout(() => onAuth(data.user, data.token), 700);
     } catch (err) {
-      setError(err.message || "PIN kod noto'g'ri");
+      onNotify("PIN kod noto'g'ri ❌", "error");
       setShake(true);
       setPin("");
       setTimeout(() => setShake(false), 320);
-    } finally {
       setLoading(false);
     }
   }
@@ -1359,7 +1363,6 @@ function AuthPage({ onAuth, onNotify, theme, onThemeChange }) {
       setPin((prev) => prev.slice(0, -1));
       return;
     }
-    setError("");
     setPin((prev) => {
       if (prev.length >= PIN_LENGTH) return prev;
       const next = prev + key;
@@ -1383,13 +1386,14 @@ function AuthPage({ onAuth, onNotify, theme, onThemeChange }) {
 
         <div className={`pin-display${shake ? " pin-shake" : ""}`}>
           {Array.from({ length: PIN_LENGTH }).map((_, i) => (
-            <span key={i} className={`pin-dot${i < pin.length ? " filled" : ""}`}>
-              {i < pin.length ? (showPin ? pin[i] : "•") : ""}
-            </span>
+            <React.Fragment key={i}>
+              {i === 4 && <span className="pin-dash">—</span>}
+              <span className={`pin-dot${i < pin.length ? " filled" : ""}`}>
+                {i < pin.length ? (showPin ? pin[i] : "•") : ""}
+              </span>
+            </React.Fragment>
           ))}
         </div>
-
-        {error && <p className="auth-error pin-error">{error}</p>}
 
         <button type="button" className="pin-show-toggle" onClick={() => setShowPin((v) => !v)}>
           {showPin ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -1409,11 +1413,6 @@ function AuthPage({ onAuth, onNotify, theme, onThemeChange }) {
             </button>
           ))}
         </div>
-
-        <button className="theme-switch" type="button" onClick={() => onThemeChange(theme === "dark" ? "light" : "dark")}>
-          {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
-          {theme === "dark" ? "Light mode" : "Dark mode"}
-        </button>
       </section>
     </main>
   );

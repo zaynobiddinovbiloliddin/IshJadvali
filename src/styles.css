@@ -392,16 +392,6 @@ button:active {
   box-shadow: 0 0 0 3px var(--accent-light);
 }
 
-.auth-error {
-  padding: 10px 14px;
-  border: 1px solid #fca5a5;
-  border-radius: var(--radius-md);
-  color: #b91c1c;
-  background: var(--danger-light);
-  font-size: 0.825rem;
-  font-weight: 500;
-}
-
 .auth-submit {
   width: 100%;
   padding: 14px;
@@ -9328,8 +9318,9 @@ body { overflow-x: hidden; }
 
 .pin-display {
   display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 6px;
 }
 
 .pin-display.pin-shake { animation: pinShake 0.32s ease; }
@@ -9343,8 +9334,8 @@ body { overflow-x: hidden; }
 }
 
 .pin-dot {
-  width: 34px;
-  height: 42px;
+  width: 32px;
+  height: 40px;
   display: grid;
   place-items: center;
   border: 1.5px solid var(--border);
@@ -9361,7 +9352,12 @@ body { overflow-x: hidden; }
   box-shadow: 0 0 0 3px var(--accent-light);
 }
 
-.pin-error { text-align: center; }
+.pin-dash {
+  color: var(--text-secondary);
+  font-size: 1.3rem;
+  font-weight: 300;
+  line-height: 1;
+}
 
 .pin-show-toggle {
   align-self: center;
@@ -9382,37 +9378,67 @@ body { overflow-x: hidden; }
 .pin-keyboard {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  gap: 12px;
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
 }
 
 .pin-key {
-  min-height: 54px;
-  border-radius: var(--radius-md);
-  border: 1.5px solid var(--border);
-  background: var(--bg);
+  aspect-ratio: 1;
+  min-height: 56px;
+  border-radius: var(--radius-lg);
+  border: none;
+  background: var(--card-bg);
   color: var(--text-primary);
-  font-size: 1.15rem;
-  font-weight: 700;
+  font-size: 1.2rem;
+  font-weight: 600;
   cursor: pointer;
+  box-shadow: var(--shadow-sm);
   transition: all var(--transition);
 }
 
 .pin-key:hover:not(:disabled) {
-  border-color: var(--accent);
   color: var(--accent);
+  box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
 
-.pin-key:active:not(:disabled) { transform: scale(0.95); }
+.pin-key:active:not(:disabled) {
+  transform: scale(0.95);
+  background: var(--accent);
+  color: #fff;
+  box-shadow: none;
+}
 
 .pin-key:disabled { opacity: 0.5; cursor: default; }
 
 .pin-key-del { color: var(--danger); }
 
+.pin-key-del:active:not(:disabled) { background: var(--danger); color: #fff; }
+
 .pin-key-empty {
   background: transparent;
-  border: none;
+  box-shadow: none;
   cursor: default;
+}
+
+@media (max-width: 480px) {
+  .auth-panel.pin-auth-panel { padding: 28px 20px; gap: 16px; }
+  .pin-display { gap: 5px; }
+  .pin-dot { width: 28px; height: 36px; font-size: 0.95rem; }
+  .pin-dash { font-size: 1.05rem; }
+  .pin-keyboard { gap: 8px; }
+  .pin-key { min-height: 50px; font-size: 1.1rem; border-radius: var(--radius-md); }
+}
+
+@media (max-width: 360px) {
+  .auth-panel.pin-auth-panel { padding: 24px 16px; }
+  .pin-display { gap: 4px; }
+  .pin-dot { width: 25px; height: 33px; font-size: 0.85rem; }
+  .pin-dash { font-size: 0.9rem; }
+  .pin-keyboard { gap: 6px; }
+  .pin-key { min-height: 46px; font-size: 1rem; }
 }
 
 /* ── PIN reveal modal ─────────────────────────────────────── */
