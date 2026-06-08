@@ -6827,6 +6827,29 @@ button.metric-card {
   background: rgba(34, 197, 94, 0.12);
 }
 
+:root[data-theme="dark"] .week-insight,
+:root[data-theme="dark"] .profile-today-banner,
+:root[data-theme="dark"] .profile-today-banner.rest,
+:root[data-theme="dark"] .profile-today-banner.vacation,
+:root[data-theme="dark"] .profile-today-banner.sick,
+:root[data-theme="dark"] .profile-today-banner.trip,
+:root[data-theme="dark"] .profile-today-banner.tjk,
+:root[data-theme="dark"] .profile-today-banner.administration,
+:root[data-theme="dark"] .profile-today-banner.presidential {
+  color: var(--text);
+}
+
+:root[data-theme="dark"] .week-insight span,
+:root[data-theme="dark"] .week-insight p,
+:root[data-theme="dark"] .profile-today-banner span,
+:root[data-theme="dark"] .profile-today-banner p {
+  color: var(--text-muted);
+}
+
+:root[data-theme="dark"] .profile-today-banner em {
+  color: var(--bg);
+}
+
 :root[data-theme="dark"] .excel-sheet,
 :root[data-theme="dark"] .shooting-table-wrap {
   background: #ffffff;
