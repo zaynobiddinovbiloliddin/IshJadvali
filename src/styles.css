@@ -6839,6 +6839,32 @@ button.metric-card {
   color: var(--text);
 }
 
+/* Status variants keep their light-theme pastel gradients (high white-opacity
+   overlays), which wash out the light text color set above. Swap them for the
+   same translucent tint used by .status-pill in dark mode so contrast holds
+   across the whole card, not just the corner where the gradient runs dark. */
+:root[data-theme="dark"] .profile-today-banner.rest,
+:root[data-theme="dark"] .profile-today-banner.vacation,
+:root[data-theme="dark"] .profile-today-banner.sick {
+  background: rgba(239, 68, 68, 0.22);
+}
+
+:root[data-theme="dark"] .profile-today-banner.trip {
+  background: rgba(250, 204, 21, 0.22);
+}
+
+:root[data-theme="dark"] .profile-today-banner.tjk {
+  background: rgba(59, 130, 246, 0.24);
+}
+
+:root[data-theme="dark"] .profile-today-banner.administration {
+  background: rgba(124, 58, 237, 0.24);
+}
+
+:root[data-theme="dark"] .profile-today-banner.presidential {
+  background: rgba(245, 158, 11, 0.22);
+}
+
 :root[data-theme="dark"] .week-insight span,
 :root[data-theme="dark"] .week-insight p,
 :root[data-theme="dark"] .profile-today-banner span,
