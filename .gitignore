@@ -39,3 +39,4 @@ MANIFEST
 # Databases
 *.db
 *.sqlite3
+*.sql
