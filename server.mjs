@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
-import { readFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
-import { extname, join, normalize } from "node:path";
+import { readFile, writeFile } from "node:fs/promises";
+import { existsSync, mkdirSync, unlinkSync, readdirSync } from "node:fs";
+import { extname, join, normalize, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
@@ -209,7 +209,7 @@ await migrateUsersToPin();
 
 async function loadDb() {
   try {
-    const [employeeRows, userRows, contactRows, scheduleRows, attendanceRows, dailyStatusRows, auditLogRows, taskRows, notificationRows, meta] = await Promise.all([
+    const [employeeRows, userRows, contactRows, scheduleRows, attendanceRows, dailyStatusRows, auditLogRows, taskRows, notificationRows, noteRows, meta] = await Promise.all([
       prisma.employee.findMany({ orderBy: { id: "asc" } }),
       prisma.user.findMany({ orderBy: { id: "asc" } }),
       prisma.contact.findMany(),
@@ -219,6 +219,7 @@ async function loadDb() {
       prisma.auditLog.findMany({ orderBy: { id: "asc" } }),
       prisma.task.findMany({ orderBy: { id: "asc" } }),
       prisma.notification.findMany({ orderBy: { id: "asc" } }),
+      prisma.note.findMany(),
       prisma.appMeta.findUnique({ where: { id: 1 } })
     ]);
 
@@ -251,6 +252,7 @@ async function loadDb() {
           fullName: u.fullName,
           role: u.role,
           isActive: u.isActive,
+          avatar: u.avatar || "",
           ...(u.employeeId != null ? { employeeId: u.employeeId } : {}),
           createdAt: u.createdAt.toISOString()
         }))
@@ -309,11 +311,18 @@ async function loadDb() {
         isRead: n.isRead,
         taskId: n.taskId,
         createdAt: n.createdAt.toISOString()
+      })),
+      notes: noteRows.map((n) => ({
+        id: n.id,
+        userId: n.userId,
+        content: n.content || "",
+        updatedAt: n.updatedAt.toISOString(),
+        createdAt: n.createdAt.toISOString()
       }))
     };
   } catch (err) {
     console.error("loadDb: PostgreSQL bilan ulanishda xatolik, boshlang'ich holatga qaytildi:", err.message);
-    return { generation: 0, employees: initialEmployees.map(normalizeEmployee), schedules: {}, attendance: [], contacts: initialContacts, users: initialUsers, dailyStatuses: [], auditLogs: [], tasks: [], notifications: [] };
+    return { generation: 0, employees: initialEmployees.map(normalizeEmployee), schedules: {}, attendance: [], contacts: initialContacts, users: initialUsers, dailyStatuses: [], auditLogs: [], tasks: [], notifications: [], notes: [] };
   }
 }
 
@@ -359,6 +368,7 @@ function normalizeEmployee(employee) {
 // barchasi bir xil yo'l bilan, mosligiga shubha qoldirmaydi.
 async function saveDb() {
   await prisma.$transaction([
+    prisma.note.deleteMany(),
     prisma.notification.deleteMany(),
     prisma.task.deleteMany(),
     prisma.dailyStatus.deleteMany(),
@@ -394,6 +404,7 @@ async function saveDb() {
         fullName: u.fullName,
         role: u.role || "xodim",
         isActive: u.isActive !== false,
+        avatar: u.avatar || "",
         employeeId: u.employeeId ?? null,
         createdAt: new Date(u.createdAt || Date.now()),
         updatedAt: new Date(u.updatedAt || u.createdAt || Date.now())
@@ -469,12 +480,58 @@ async function saveDb() {
         createdAt: new Date(n.createdAt || Date.now())
       }))
     }),
+    prisma.note.createMany({
+      data: (db.notes || []).map((n) => ({
+        id: n.id,
+        userId: n.userId,
+        content: n.content || "",
+        updatedAt: new Date(n.updatedAt || Date.now()),
+        createdAt: new Date(n.createdAt || Date.now())
+      }))
+    }),
     prisma.appMeta.upsert({
       where: { id: 1 },
       update: { generation: db.generation || 0 },
       create: { id: 1, generation: db.generation || 0 }
     })
   ], { timeout: 30_000 });
+}
+
+// ─── Multipart parser (no external library) ──────────────────────────────────
+async function parseMultipartBody(req) {
+  const ct = String(req.headers["content-type"] || "");
+  const bndMatch = ct.match(/boundary=([^\s;]+)/);
+  if (!bndMatch) throw new Error("multipart boundary topilmadi");
+  const boundary = bndMatch[1].replace(/^["']|["']$/g, "");
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  const buf = Buffer.concat(chunks);
+  const first = Buffer.from(`--${boundary}`);
+  const delim = Buffer.from(`\r\n--${boundary}`);
+  const parts = [];
+  let pos = buf.indexOf(first);
+  if (pos === -1) return parts;
+  pos += first.length;
+  if (buf[pos] === 0x0d && buf[pos + 1] === 0x0a) pos += 2; else return parts;
+  while (pos < buf.length) {
+    const nextBnd = buf.indexOf(delim, pos);
+    const end = nextBnd === -1 ? buf.length : nextBnd;
+    const part = buf.slice(pos, end);
+    const sep = part.indexOf(Buffer.from("\r\n\r\n"));
+    if (sep !== -1) {
+      const headers = part.slice(0, sep).toString("utf8");
+      const body = part.slice(sep + 4);
+      const nameM = headers.match(/Content-Disposition:.*name="([^"]+)"/i);
+      const fileM = headers.match(/Content-Disposition:.*filename="([^"]+)"/i);
+      const ctM = headers.match(/Content-Type:\s*(.+)/i);
+      parts.push({ name: nameM?.[1] ?? null, filename: fileM?.[1] ?? null, contentType: ctM?.[1]?.trim() ?? "application/octet-stream", data: body });
+    }
+    if (nextBnd === -1) break;
+    pos = nextBnd + delim.length;
+    if (buf[pos] === 0x2d && buf[pos + 1] === 0x2d) break;
+    if (buf[pos] === 0x0d && buf[pos + 1] === 0x0a) pos += 2; else break;
+  }
+  return parts;
 }
 
 // ─── Audit log ───────────────────────────────────────────────────────────────
@@ -1431,6 +1488,7 @@ export async function handleRequest(request, response) {
       if (body.fullName) db.users[idx].fullName = String(body.fullName).trim();
       if (body.role && ["superadmin", "admin", "xodim"].includes(body.role)) db.users[idx].role = body.role;
       if (typeof body.isActive === "boolean") db.users[idx].isActive = body.isActive;
+      if (typeof body.avatar === "string") db.users[idx].avatar = body.avatar;
       await saveDb();
       const { pinCode: _pin, ...safeUser } = db.users[idx];
       return sendJson(response, 200, generatedPin ? { ...safeUser, generatedPin } : safeUser);
@@ -1474,8 +1532,13 @@ export async function handleRequest(request, response) {
       const { employeeId, date, statusCode } = body;
       if (!employeeId || !date) return sendJson(response, 400, { message: "employeeId va date kerak" });
       if (!VALID_STATUS_CODES.has(statusCode)) return sendJson(response, 400, { message: "Noto'g'ri statusCode" });
-      upsertDailyStatus(employeeId, date, statusCode);
-      await saveDb();
+      const empId = Number(employeeId);
+      upsertDailyStatus(empId, date, statusCode);
+      await prisma.dailyStatus.upsert({
+        where: { employeeId_date: { employeeId: empId, date } },
+        update: { statusCode, updatedAt: new Date() },
+        create: { id: `ds-${empId}-${date}`, employeeId: empId, date, statusCode }
+      });
       return sendJson(response, 200, { ok: true, employeeId, date, statusCode });
     }
 
@@ -1589,6 +1652,127 @@ export async function handleRequest(request, response) {
     const statusMatch = url.pathname.match(/^\/api\/schedules\/(\d{4}-\d{2}-\d{2})\/status$/);
     if (statusMatch && request.method === "PUT") {
       return sendJson(response, 200, await updatePersonStatus(statusMatch[1], await readBody(request)));
+    }
+
+    // ─── Employee file upload ────────────────────────────────────────────────
+    const uploadDocMatch = url.pathname.match(/^\/api\/employees\/(\d+)\/upload-document$/);
+    if (uploadDocMatch && request.method === "POST") {
+      const authUser = getAuthUser(request, response);
+      if (!authUser) return;
+      const empId = Number(uploadDocMatch[1]);
+      if (!["admin", "superadmin"].includes(authUser.role) && authUser.employeeId !== empId) {
+        return sendJson(response, 403, { message: "Faqat o'z hujjatlaringizni yuklay olasiz" });
+      }
+      let parts;
+      try { parts = await parseMultipartBody(request); } catch (e) { return sendJson(response, 400, { message: "Multipart xatosi: " + e.message }); }
+      const filePart = parts.find((p) => p.name === "file");
+      if (!filePart?.data?.length) return sendJson(response, 400, { message: "Fayl tanlanmagan" });
+      const origName = filePart.filename || "file";
+      const ext = extname(origName).toLowerCase();
+      if (![".jpg", ".jpeg", ".png", ".pdf"].includes(ext)) return sendJson(response, 400, { message: "Faqat JPEG, PNG va PDF fayllar ruxsat etilgan" });
+      const dir = join(__dirname, "uploads", "documents", `emp-${empId}`);
+      mkdirSync(dir, { recursive: true });
+      const safeName = `${Date.now()}-${basename(origName).replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      await writeFile(join(dir, safeName), filePart.data);
+      const fileUrl = `/uploads/documents/emp-${empId}/${safeName}`;
+      pushAuditLog("UPLOAD", "Employee", empId, `${safeName} fayl yuklandi`);
+      return sendJson(response, 201, { filename: safeName, url: fileUrl, type: [".jpg", ".jpeg", ".png"].includes(ext) ? "image" : "document", uploadedAt: new Date().toISOString() });
+    }
+
+    const listDocMatch = url.pathname.match(/^\/api\/employees\/(\d+)\/uploaded-files$/);
+    if (listDocMatch && request.method === "GET") {
+      const authUser = getAuthUser(request, response);
+      if (!authUser) return;
+      const empId = Number(listDocMatch[1]);
+      if (!["admin", "superadmin"].includes(authUser.role) && authUser.employeeId !== empId) {
+        return sendJson(response, 403, { message: "Ruxsat yo'q" });
+      }
+      const dir = join(__dirname, "uploads", "documents", `emp-${empId}`);
+      let files = [];
+      if (existsSync(dir)) {
+        try {
+          files = readdirSync(dir).map((name) => {
+            const e = extname(name).toLowerCase();
+            return { filename: name, url: `/uploads/documents/emp-${empId}/${name}`, type: [".jpg", ".jpeg", ".png"].includes(e) ? "image" : "document" };
+          });
+        } catch { files = []; }
+      }
+      return sendJson(response, 200, { files });
+    }
+
+    const deleteDocFileMatch = url.pathname.match(/^\/api\/employees\/(\d+)\/uploaded-files\/([^/]+)$/);
+    if (deleteDocFileMatch && request.method === "DELETE") {
+      if (!requireAdmin(request, response)) return;
+      const empId = Number(deleteDocFileMatch[1]);
+      const filename = decodeURIComponent(deleteDocFileMatch[2]);
+      if (filename.includes("/") || filename.includes("..")) return sendJson(response, 400, { message: "Noto'g'ri fayl nomi" });
+      const safeBase = normalize(join(__dirname, "uploads", "documents"));
+      const filePath = normalize(join(__dirname, "uploads", "documents", `emp-${empId}`, filename));
+      if (!filePath.startsWith(safeBase)) return sendJson(response, 403, { message: "Forbidden" });
+      if (!existsSync(filePath)) return sendJson(response, 404, { message: "Fayl topilmadi" });
+      unlinkSync(filePath);
+      pushAuditLog("DELETE", "Employee", empId, `${filename} fayl o'chirildi`);
+      return sendJson(response, 200, { ok: true });
+    }
+
+    // ─── Notes (Bloknot) ─────────────────────────────────────────────────────
+    if (url.pathname === "/api/notes" && request.method === "GET") {
+      const authUser = getAuthUser(request, response);
+      if (!authUser) return;
+      if (!db.notes) db.notes = [];
+      const note = db.notes.find((n) => n.userId === authUser.id);
+      return sendJson(response, 200, { content: note?.content || "" });
+    }
+
+    if (url.pathname === "/api/notes" && request.method === "PUT") {
+      const authUser = getAuthUser(request, response);
+      if (!authUser) return;
+      const body = await readBody(request);
+      const content = typeof body.content === "string" ? body.content.slice(0, 50000) : "";
+      if (!db.notes) db.notes = [];
+      const idx = db.notes.findIndex((n) => n.userId === authUser.id);
+      const now = new Date().toISOString();
+      if (idx !== -1) {
+        db.notes[idx].content = content;
+        db.notes[idx].updatedAt = now;
+      } else {
+        db.notes.push({ id: Date.now(), userId: authUser.id, content, updatedAt: now, createdAt: now });
+      }
+      await saveDb();
+      return sendJson(response, 200, { ok: true, content });
+    }
+
+    // ─── Filming file attachments ────────────────────────────────────────────
+    const filmingUploadMatch = url.pathname.match(/^\/api\/filming\/([^/]+)\/upload$/);
+    if (filmingUploadMatch && request.method === "POST") {
+      const authUser = getAuthUser(request, response);
+      if (!authUser) return;
+      const date = filmingUploadMatch[1].replace(/[^0-9\-]/g, "");
+      if (!date) return sendJson(response, 400, { message: "Noto'g'ri sana" });
+      const dir = join("uploads", "filming", date);
+      if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+      const parsed = await parseMultipartBody(request);
+      if (!parsed.file) return sendJson(response, 400, { message: "Fayl topilmadi" });
+      const ext = extname(parsed.file.filename || ".bin");
+      const safeName = `${Date.now()}_${basename(parsed.file.filename || "file").replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      await writeFile(join(dir, safeName), parsed.file.data);
+      return sendJson(response, 200, { ok: true, filename: safeName });
+    }
+
+    const filmingFilesMatch = url.pathname.match(/^\/api\/filming\/([^/]+)\/files$/);
+    if (filmingFilesMatch && request.method === "GET") {
+      const authUser = getAuthUser(request, response);
+      if (!authUser) return;
+      const date = filmingFilesMatch[1].replace(/[^0-9\-]/g, "");
+      const dir = join("uploads", "filming", date);
+      if (!existsSync(dir)) return sendJson(response, 200, { files: [] });
+      const imageExts = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp"]);
+      const files = readdirSync(dir).map((fn) => ({
+        filename: fn,
+        url: `/uploads/filming/${date}/${fn}`,
+        type: imageExts.has(extname(fn).toLowerCase()) ? "image" : "file",
+      }));
+      return sendJson(response, 200, { files });
     }
 
     // ─── Tasks ──────────────────────────────────────────────────────────────

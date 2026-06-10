@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { createRoot } from "react-dom/client";
 import {
   Bell,
+  BookOpen,
   BriefcaseBusiness,
   CalendarDays,
   Car,
@@ -24,6 +25,7 @@ import {
   LogOut,
   Menu,
   Moon,
+  Paperclip,
   Phone,
   PlayCircle,
   Plus,
@@ -310,6 +312,17 @@ async function api(path, options = {}) {
     throw new Error(error.message || "Server xatosi");
   }
 
+  return response.json();
+}
+
+async function apiFetch(path, options = {}) {
+  const token = window.localStorage.getItem("authToken");
+  const response = await fetch(`${API_BASE}${path}`, {
+    headers: { Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options.headers || {}) },
+    ...options
+  });
+  if (response.status === 401) { window.localStorage.removeItem("currentUser"); window.localStorage.removeItem("authToken"); window.location.reload(); return; }
+  if (!response.ok) { const err = await response.json().catch(() => ({ message: "Server xatosi" })); throw new Error(err.message || "Server xatosi"); }
   return response.json();
 }
 
@@ -905,6 +918,7 @@ function App() {
     if (page === "profile") return "Profil";
     if (page === "users") return "Foydalanuvchilar";
     if (page === "tasks") return "Vazifalar";
+    if (page === "bloknot") return "Bloknot";
     return "Ish jadvali";
   }, [page]);
 
@@ -927,6 +941,7 @@ function App() {
     ["tasks", "Vazifalar", BriefcaseBusiness],
     ...(isAdmin(currentUser) ? [["audit", "Audit jurnal", ShieldCheck]] : []),
     ...(isSuper(currentUser) ? [["users", "Foydalanuvchilar", UserCheck]] : []),
+    ["bloknot", "Bloknot", BookOpen],
     ["profile", "Profil", User]
   ];
 
@@ -1063,6 +1078,7 @@ function App() {
                 <VazifalarPage currentUser={currentUser} onNotify={notify} onNotificationsRefresh={loadNotifications} />
               )}
               {page === "audit" && <AuditPage />}
+              {page === "bloknot" && <BlotknotPage currentUser={currentUser} onNotify={notify} />}
               {page === "users" && isSuper(currentUser) && (
                 <UsersPage currentUser={currentUser} onNotify={notify} />
               )}
@@ -1789,6 +1805,34 @@ function ShootingPage({ onNotify }) {
   const [isSaved, setIsSaved] = useState(false);
   const [draftRow, setDraftRow] = useState(blankRow);
   const addFormRef = useRef(null);
+  const [filmingDate, setFilmingDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [filmingAttachments, setFilmingAttachments] = useState([]);
+  const [attachUploading, setAttachUploading] = useState(false);
+  const attachInputRef = useRef(null);
+
+  useEffect(() => {
+    apiFetch(`/api/filming/${filmingDate}/files`)
+      .then((d) => setFilmingAttachments(d.files || []))
+      .catch(() => setFilmingAttachments([]));
+  }, [filmingDate]);
+
+  async function uploadFilmingFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAttachUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const result = await apiFetch(`/api/filming/${filmingDate}/upload`, { method: "POST", body: fd });
+      setFilmingAttachments((prev) => [result, ...prev]);
+      onNotify("Fayl biriktirildi ✓");
+    } catch (err) {
+      onNotify(err.message || "Yuklashda xato", "error");
+    } finally {
+      setAttachUploading(false);
+      if (attachInputRef.current) attachInputRef.current.value = "";
+    }
+  }
 
   function updateRow(index, field, value) {
     setRows((currentRows) => currentRows.map((row, rowIndex) => (
@@ -1852,10 +1896,34 @@ function ShootingPage({ onNotify }) {
 
   return (
     <section className="shooting-page">
+      <div className="filming-date-attachments">
+        <label className="filming-date-label">
+          Sana:
+          <input type="date" value={filmingDate} onChange={(e) => setFilmingDate(e.target.value)} className="filming-date-input" />
+        </label>
+        <div className="filming-attachments-row">
+          {filmingAttachments.map((f) => (
+            <div key={f.filename} className="filming-attach-item">
+              {f.type === "image"
+                ? <img src={f.url} alt={f.filename} className="attachment-preview" onClick={() => window.open(f.url, "_blank")} />
+                : <div className="attach-file-icon"><Paperclip size={20} /></div>
+              }
+              <span className="attach-name">{f.filename}</span>
+              <a href={f.url} download className="btn-sm" aria-label="Yuklab olish"><Download size={14} /></a>
+            </div>
+          ))}
+          <label className="attach-btn">
+            <input ref={attachInputRef} type="file" accept="image/*,.pdf,.doc,.docx" onChange={uploadFilmingFile} style={{ display: "none" }} />
+            <Paperclip size={15} />
+            {attachUploading ? "Yuklanmoqda..." : "Fayl qo'shish"}
+          </label>
+        </div>
+      </div>
+
       <div className="shooting-actions">
         <div>
           <h2>Kunlik tasvirga olish jadvali</h2>
-          <p>29 aprel 2026 yil uchun Excel uslubidagi forma</p>
+          <p>{filmingDate} yil uchun Excel uslubidagi forma</p>
         </div>
         <div className="shooting-action-buttons">
           {!isSaved && (
@@ -1998,6 +2066,7 @@ function localDateStr(date) {
 // ─── Cell dropdown (Portal, avoids overflow-x clipping) ──────────────────────
 function CellDropdown({ currentCode, buttonRect, onSelect, onClose }) {
   const ref = useRef(null);
+  const [style, setStyle] = useState({ position: "fixed", top: buttonRect.bottom + 6, left: 0, zIndex: 9999, visibility: "hidden" });
 
   useEffect(() => {
     function onPointer(e) { if (!ref.current?.contains(e.target)) onClose(); }
@@ -2005,14 +2074,22 @@ function CellDropdown({ currentCode, buttonRect, onSelect, onClose }) {
     return () => document.removeEventListener("pointerdown", onPointer);
   }, [onClose]);
 
-  const left = Math.min(
-    Math.max(4, buttonRect.left + buttonRect.width / 2 - 80),
-    window.innerWidth - 172
-  );
-  const top = buttonRect.bottom + 6;
+  useLayoutEffect(() => {
+    if (!ref.current) return;
+    const h = ref.current.offsetHeight;
+    const left = Math.min(
+      Math.max(4, buttonRect.left + buttonRect.width / 2 - 80),
+      window.innerWidth - 172
+    );
+    const spaceBelow = window.innerHeight - buttonRect.bottom - 8;
+    const top = spaceBelow >= h
+      ? buttonRect.bottom + 6
+      : Math.max(4, buttonRect.top - h - 6);
+    setStyle({ position: "fixed", top, left, zIndex: 9999, visibility: "visible" });
+  }, [buttonRect]);
 
   return createPortal(
-    <div ref={ref} className="cell-dropdown" style={{ position: "fixed", top, left, zIndex: 9999 }}>
+    <div ref={ref} className="cell-dropdown" style={style}>
       {Object.entries(DAILY_STATUSES).map(([code, info]) => (
         <button
           key={code}
@@ -2474,6 +2551,9 @@ function StudioPage({ currentUser, departments, onLoadDepartments, dashboard, on
   const [editingId, setEditingId] = useState(null);
   const formRef = useRef(null);
   const today = dashboard.studioToday?.[0];
+  const todayNow = new Date();
+  const UZ_MONTHS_TEAM = ["Yan","Fev","Mar","Apr","May","Iyn","Iyl","Avg","Sen","Okt","Noy","Dek"];
+  const todayDateStr = `${todayNow.getDate()}-${UZ_MONTHS_TEAM[todayNow.getMonth()]}, ${todayNow.getFullYear()}`;
   const visibleEmployees = dashboard.employees.filter((employee) => {
     const query = search.trim().toLowerCase();
     const matchesDepartment = activeDepartment === "all" || employee.department === activeDepartment;
@@ -2531,11 +2611,11 @@ function StudioPage({ currentUser, departments, onLoadDepartments, dashboard, on
       <section className="team-daily-card">
         <div>
           <strong>KUNLIK JADVAL</strong>
-          <span>BUGUN: 7-May, 2026</span>
-          <span>Navbatchilik: Dron & TJK</span>
-          <span>Bosh Operator: {today?.name || "A. Valiyev"}</span>
+          <span>BUGUN: {todayDateStr}</span>
+          {today && <span>Bosh Operator: {today.name}</span>}
+          <span>{dashboard.metrics.workingToday ?? dashboard.metrics.working} ta ishda bugun</span>
         </div>
-        <button type="button">BATAFSIL</button>
+        <button type="button" onClick={() => onOpenMonthly?.()}>Oylik grafik</button>
       </section>
 
       <label className="team-search">
@@ -2735,7 +2815,11 @@ function TeamPersonModal({ assignments = [], currentUser, onClose, onDelete, onE
           <dl>
             <div><dt>Lavozimi:</dt><dd>{person.role || "Operator"}</dd></div>
             <div><dt>Bo'lim:</dt><dd>{department.label}</dd></div>
-            <div><dt>Telefon:</dt><dd>{person.phone || "+998 90 123 45 67"}</dd></div>
+            <div><dt>Telefon:</dt><dd>
+              {person.phone
+                ? <a href={`tel:${cleanPhone(person.phone)}`} className="phone-link" onClick={(e) => e.stopPropagation()}>{person.phone}</a>
+                : "+998 90 123 45 67"}
+            </dd></div>
             <div><dt>Faoliyat:</dt><dd>Faol</dd></div>
           </dl>
           <section className="team-person-kpi" aria-label="Joriy oy samaradorligi">
@@ -2848,6 +2932,7 @@ function StudioGroup({ group, open = true, onPersonOpen, onToggle, onStatusChang
       <button className={`group-head ${group.tone}`} type="button" onClick={onToggle} aria-expanded={open}>
         <strong>{group.title}</strong>
         <span>{group.meta}</span>
+        <span className="group-count">{group.people.length} ta</span>
         <ChevronDown className={open ? "open" : ""} size={20} />
       </button>
       {open && (
@@ -3146,7 +3231,48 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
   const [editOpen, setEditOpen] = useState(false);
   const [documentMode, setDocumentMode] = useState("word");
   const [saving, setSaving] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
   const formRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    const id = selectedId;
+    apiFetch(`/api/employees/${id}/uploaded-files`)
+      .then((data) => setUploadedFiles(data.files || []))
+      .catch(() => setUploadedFiles([]));
+  }, [selectedId]);
+
+  async function handleFileUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { onNotify("Fayl hajmi 10MB dan oshmasligi kerak", "error"); return; }
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const result = await apiFetch(`/api/employees/${selectedId}/upload-document`, { method: "POST", body: fd });
+      setUploadedFiles((prev) => [result, ...prev]);
+      onNotify("Fayl muvaffaqiyatli yuklandi ✓");
+    } catch (err) {
+      onNotify(err.message || "Yuklashda xato", "error");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function deleteUploadedFile(filename) {
+    if (!window.confirm(`"${filename}" faylini o'chirasizmi?`)) return;
+    try {
+      await apiFetch(`/api/employees/${selectedId}/uploaded-files/${encodeURIComponent(filename)}`, { method: "DELETE" });
+      setUploadedFiles((prev) => prev.filter((f) => f.filename !== filename));
+      onNotify("Fayl o'chirildi");
+    } catch (err) {
+      onNotify(err.message || "O'chirishda xato", "error");
+    }
+  }
 
   useEffect(() => {
     const emp = employees.find((e) => String(e.id) === String(selectedId)) || employees[0] || null;
@@ -3354,6 +3480,42 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
             <Edit3 size={17} />
             Ma'lumotlarni tahrirlash
           </button>
+        )}
+
+        <div className="document-upload-area" onClick={() => fileInputRef.current?.click()}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".jpg,.jpeg,.png,.pdf"
+            onChange={handleFileUpload}
+            style={{ display: "none" }}
+          />
+          <Paperclip size={18} />
+          <span>{uploading ? "Yuklanmoqda..." : "Fayl yuklash (JPEG, PNG, PDF)"}</span>
+        </div>
+
+        {uploadedFiles.length > 0 && (
+          <div className="uploaded-files-list">
+            <strong>Yuklangan fayllar ({uploadedFiles.length})</strong>
+            {uploadedFiles.map((doc) => (
+              <div className="doc-item" key={doc.filename}>
+                {doc.type === "image" && (
+                  <img src={doc.url} alt={doc.filename} className="doc-thumbnail" />
+                )}
+                <div className="doc-item-info">
+                  <span className="doc-item-name">{doc.filename}</span>
+                </div>
+                <a href={doc.url} download className="doc-download-btn" onClick={(e) => e.stopPropagation()} aria-label="Yuklab olish">
+                  <Download size={15} />
+                </a>
+                {isAdmin(currentUser) && (
+                  <button type="button" className="doc-delete-btn" onClick={() => deleteUploadedFile(doc.filename)} aria-label="O'chirish">
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
         )}
       </section>
 
@@ -4615,12 +4777,34 @@ function UsersPage({ currentUser, onNotify }) {
         <div className="users-list">
           {filtered.map((user) => (
             <div key={user.id} className={`user-card${user.isActive ? "" : " inactive"}`}>
-              <span
-                className="avatar avatar-sm avatar-initials"
-                style={{ backgroundColor: ROLE_COLORS[user.role] || "#6b7280", flexShrink: 0 }}
+              <label
+                className={`user-avatar-circle${isSuper(currentUser) ? " editable" : ""}`}
+                style={{ backgroundColor: user.avatar ? "transparent" : (ROLE_COLORS[user.role] || "#6b7280"), width: 40, height: 40, flexShrink: 0 }}
+                title={isSuper(currentUser) ? "Rasm yuklash" : undefined}
               >
-                {user.fullName?.charAt(0).toUpperCase()}
-              </span>
+                {user.avatar
+                  ? <img src={user.avatar} alt={user.fullName} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                  : <span style={{ color: "#fff", fontWeight: 700, fontSize: "1rem" }}>{user.fullName?.charAt(0).toUpperCase()}</span>
+                }
+                {isSuper(currentUser) && <div className="avatar-edit-overlay">📷</div>}
+                {isSuper(currentUser) && (
+                  <input
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const b64 = await readImageFile(file);
+                      try {
+                        const updated = await api(`/api/users/${user.id}`, { method: "PUT", body: JSON.stringify({ avatar: b64 }) });
+                        setUsers((prev) => prev.map((u) => u.id === updated.id ? { ...u, avatar: b64 } : u));
+                        onNotify("Rasm yangilandi ✓");
+                      } catch (err) { onNotify(err.message, "error"); }
+                    }}
+                  />
+                )}
+              </label>
               <div className="user-card-info">
                 <span className="user-card-name">{user.fullName}</span>
                 <span className="user-card-login">@{user.username}</span>
@@ -4694,6 +4878,7 @@ function MenuPanel({ onClose, onPageChange, onOpenMonthly, panelRef, currentUser
     ["tasks", "Vazifalar", BriefcaseBusiness],
     ...(isAdmin(currentUser) ? [["audit", "Audit jurnal", ShieldCheck]] : []),
     ...(isSuper(currentUser) ? [["users", "Foydalanuvchilar", UserCheck]] : []),
+    ["bloknot", "Bloknot", BookOpen],
     ["profile", "Profil", User]
   ];
 
@@ -5002,6 +5187,82 @@ function ToastViewport({ items }) {
       ))}
     </div>,
     document.body
+  );
+}
+
+function BlotknotPage({ currentUser, onNotify }) {
+  const [content, setContent] = useState("");
+  const [saveStatus, setSaveStatus] = useState("idle"); // idle | saving | saved
+  const [charCount, setCharCount] = useState(0);
+  const debounceRef = useRef(null);
+
+  useEffect(() => {
+    apiFetch("/api/notes")
+      .then((data) => {
+        setContent(data.content || "");
+        setCharCount((data.content || "").length);
+      })
+      .catch(() => {});
+  }, []);
+
+  function handleChange(e) {
+    const val = e.target.value;
+    setContent(val);
+    setCharCount(val.length);
+    setSaveStatus("saving");
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        await apiFetch("/api/notes", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: val }) });
+        setSaveStatus("saved");
+        setTimeout(() => setSaveStatus("idle"), 2000);
+      } catch {
+        onNotify?.("Saqlashda xatolik", "error");
+        setSaveStatus("idle");
+      }
+    }, 2000);
+  }
+
+  async function handleClear() {
+    if (!window.confirm("Bloknot tozalansinmi?")) return;
+    clearTimeout(debounceRef.current);
+    setContent("");
+    setCharCount(0);
+    setSaveStatus("saving");
+    try {
+      await apiFetch("/api/notes", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: "" }) });
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus("idle"), 2000);
+      onNotify?.("Bloknot tozalandi", "success");
+    } catch {
+      onNotify?.("Xatolik", "error");
+      setSaveStatus("idle");
+    }
+  }
+
+  return (
+    <section className="bloknot-page">
+      <div className="bloknot-container">
+        <div className="bloknot-toolbar">
+          <span className="char-count">{charCount} belgi</span>
+          <span className={`save-status ${saveStatus}`}>
+            {saveStatus === "saving" && "Saqlanmoqda..."}
+            {saveStatus === "saved" && "Saqlandi ✓"}
+          </span>
+          <button type="button" className="btn-sm" onClick={handleClear} title="Tozalash">
+            Tozalash
+          </button>
+        </div>
+        <textarea
+          className="bloknot-textarea"
+          value={content}
+          onChange={handleChange}
+          placeholder="Bu yerga yozing..."
+          spellCheck={false}
+        />
+        <p className="bloknot-info">Matn har 2 soniyada avtomatik saqlanadi.</p>
+      </div>
+    </section>
   );
 }
 

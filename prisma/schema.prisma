@@ -35,9 +35,7 @@ model User {
   fullName   String
   role       String   @default("xodim")
   isActive   Boolean  @default(true)
-  // Set when an account is auto-created alongside a new employee
-  // (server.mjs createEmployee). Written but never read back by the
-  // server today — kept for perfect round-trip fidelity.
+  avatar     String   @default("") @db.Text
   employeeId Int?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -131,4 +129,12 @@ model Department {
 model AppMeta {
   id         Int @id @default(1)
   generation Int @default(0)
+}
+
+model Note {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  content   String   @default("") @db.Text
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
 }
