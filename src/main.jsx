@@ -4863,7 +4863,59 @@ function UsersPage({ currentUser, onNotify }) {
           )}
         </div>
       )}
+
+      {isSuper(currentUser) && <RestoreSection onNotify={onNotify} />}
     </section>
+  );
+}
+
+function RestoreSection({ onNotify }) {
+  const [json, setJson] = useState("");
+  const [restoring, setRestoring] = useState(false);
+  const fileRef = useRef(null);
+
+  async function handleRestore() {
+    if (!json.trim()) return;
+    let parsed;
+    try { parsed = JSON.parse(json); } catch { onNotify?.("Noto'g'ri JSON format", "error"); return; }
+    const employees = Array.isArray(parsed) ? parsed : (parsed.employees || []);
+    const users = Array.isArray(parsed) ? [] : (parsed.users || []);
+    if (!employees.length && !users.length) { onNotify?.("Xodim yoki foydalanuvchi ma'lumotlari topilmadi", "error"); return; }
+    if (!window.confirm(`${employees.length} ta xodim va ${users.length} ta foydalanuvchi tiklansinmi?`)) return;
+    setRestoring(true);
+    try {
+      const res = await apiFetch("/api/admin/restore", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ employees, users }) });
+      onNotify?.(`Tiklandi: ${res.restoredEmployees} xodim, ${res.restoredUsers} foydalanuvchi`, "success");
+      setJson("");
+    } catch (err) { onNotify?.(err.message || "Tiklashda xato", "error"); }
+    finally { setRestoring(false); }
+  }
+
+  function handleFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setJson(ev.target.result);
+    reader.readAsText(file);
+    e.target.value = "";
+  }
+
+  return (
+    <div className="restore-section">
+      <h3>Ma'lumotlarni tiklash (Backup)</h3>
+      <p className="restore-hint">Telegram backupdan yuklangan JSON faylini yoki matnini joylashtiring. Qabul qiladi: xodimlar massivi <code>[]</code> yoki to'liq DB JSON.</p>
+      <div className="restore-actions">
+        <button type="button" className="btn-sm" onClick={() => fileRef.current?.click()}>
+          <Upload size={14} /> JSON fayl tanlash
+        </button>
+        <input ref={fileRef} type="file" accept=".json,.txt" onChange={handleFile} style={{ display: "none" }} />
+      </div>
+      <textarea className="restore-textarea" value={json} onChange={(e) => setJson(e.target.value)} placeholder='[{"id":1,"name":"Xodim ismi",...}]' rows={5} spellCheck={false} />
+      <button type="button" className="restore-btn" onClick={handleRestore} disabled={restoring || !json.trim()}>
+        {restoring ? <RefreshCcw size={15} className="spin" /> : <Save size={15} />}
+        {restoring ? "Tiklanmoqda..." : "Tiklash"}
+      </button>
+    </div>
   );
 }
 
@@ -5191,76 +5243,131 @@ function ToastViewport({ items }) {
 }
 
 function BlotknotPage({ currentUser, onNotify }) {
-  const [content, setContent] = useState("");
-  const [saveStatus, setSaveStatus] = useState("idle"); // idle | saving | saved
-  const [charCount, setCharCount] = useState(0);
-  const debounceRef = useRef(null);
+  const [entries, setEntries] = useState([]);
+  const [text, setText] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const feedRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     apiFetch("/api/notes")
-      .then((data) => {
-        setContent(data.content || "");
-        setCharCount((data.content || "").length);
-      })
+      .then((data) => setEntries(data.entries || []))
       .catch(() => {});
   }, []);
 
-  function handleChange(e) {
-    const val = e.target.value;
-    setContent(val);
-    setCharCount(val.length);
-    setSaveStatus("saving");
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      try {
-        await apiFetch("/api/notes", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: val }) });
-        setSaveStatus("saved");
-        setTimeout(() => setSaveStatus("idle"), 2000);
-      } catch {
-        onNotify?.("Saqlashda xatolik", "error");
-        setSaveStatus("idle");
-      }
-    }, 2000);
+  useEffect(() => {
+    if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
+  }, [entries]);
+
+  async function persistEntries(newEntries) {
+    setSaving(true);
+    try {
+      await apiFetch("/api/notes", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entries: newEntries }) });
+    } catch { onNotify?.("Saqlashda xatolik", "error"); }
+    finally { setSaving(false); }
   }
 
-  async function handleClear() {
-    if (!window.confirm("Bloknot tozalansinmi?")) return;
-    clearTimeout(debounceRef.current);
-    setContent("");
-    setCharCount(0);
-    setSaveStatus("saving");
+  async function handleSend() {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const entry = { id: Date.now(), type: "text", content: trimmed, createdAt: new Date().toISOString() };
+    const next = [...entries, entry];
+    setEntries(next);
+    setText("");
+    await persistEntries(next);
+  }
+
+  async function handleFileChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
     try {
-      await apiFetch("/api/notes", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: "" }) });
-      setSaveStatus("saved");
-      setTimeout(() => setSaveStatus("idle"), 2000);
-      onNotify?.("Bloknot tozalandi", "success");
-    } catch {
-      onNotify?.("Xatolik", "error");
-      setSaveStatus("idle");
+      const fd = new FormData();
+      fd.append("file", file);
+      const result = await apiFetch("/api/bloknot/upload", { method: "POST", body: fd });
+      const entry = { id: Date.now(), type: result.type, url: result.url, filename: result.filename, createdAt: new Date().toISOString() };
+      const next = [...entries, entry];
+      setEntries(next);
+      await persistEntries(next);
+    } catch (err) { onNotify?.(err.message || "Yuklashda xato", "error"); }
+    finally { setUploading(false); e.target.value = ""; }
+  }
+
+  async function deleteEntry(id) {
+    const entry = entries.find((e) => e.id === id);
+    if (entry?.url) {
+      const filename = entry.url.split("/").pop();
+      await apiFetch(`/api/bloknot/files/${filename}`, { method: "DELETE" }).catch(() => {});
     }
+    const next = entries.filter((e) => e.id !== id);
+    setEntries(next);
+    await persistEntries(next);
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
   }
 
   return (
     <section className="bloknot-page">
-      <div className="bloknot-container">
-        <div className="bloknot-toolbar">
-          <span className="char-count">{charCount} belgi</span>
-          <span className={`save-status ${saveStatus}`}>
-            {saveStatus === "saving" && "Saqlanmoqda..."}
-            {saveStatus === "saved" && "Saqlandi ✓"}
-          </span>
-          <button type="button" className="btn-sm" onClick={handleClear} title="Tozalash">
-            Tozalash
-          </button>
-        </div>
+      <div className="bloknot-feed" ref={feedRef}>
+        {entries.length === 0 && (
+          <div className="bloknot-empty">
+            <BookOpen size={36} />
+            <p>Hali hech narsa yo'q. Xabar yozing yoki fayl yuklang.</p>
+          </div>
+        )}
+        {entries.map((entry) => (
+          <div key={entry.id} className="bloknot-entry">
+            {entry.type === "text" && (
+              <div className="bloknot-bubble text">
+                <p>{entry.content}</p>
+                <span className="bloknot-time">{new Date(entry.createdAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })}</span>
+              </div>
+            )}
+            {entry.type === "image" && (
+              <div className="bloknot-bubble media">
+                <img src={entry.url} alt={entry.filename} className="bloknot-img" onClick={() => window.open(entry.url, "_blank")} />
+                <span className="bloknot-time">{new Date(entry.createdAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })}</span>
+              </div>
+            )}
+            {entry.type === "video" && (
+              <div className="bloknot-bubble media">
+                <video src={entry.url} controls className="bloknot-video" />
+                <span className="bloknot-time">{new Date(entry.createdAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })}</span>
+              </div>
+            )}
+            {entry.type === "file" && (
+              <div className="bloknot-bubble file">
+                <Paperclip size={16} />
+                <a href={entry.url} download className="bloknot-file-link">{entry.filename}</a>
+                <span className="bloknot-time">{new Date(entry.createdAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })}</span>
+              </div>
+            )}
+            <button type="button" className="bloknot-del" onClick={() => deleteEntry(entry.id)} title="O'chirish">
+              <Trash2 size={13} />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <div className="bloknot-input-bar">
+        <button type="button" className="bloknot-attach" onClick={() => fileInputRef.current?.click()} disabled={uploading} title="Fayl yuklash">
+          {uploading ? <RefreshCcw size={20} className="spin" /> : <Paperclip size={20} />}
+        </button>
+        <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx,.xlsx,.zip" onChange={handleFileChange} style={{ display: "none" }} />
         <textarea
-          className="bloknot-textarea"
-          value={content}
-          onChange={handleChange}
-          placeholder="Bu yerga yozing..."
-          spellCheck={false}
+          className="bloknot-input"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Xabar yozing..."
+          rows={1}
         />
-        <p className="bloknot-info">Matn har 2 soniyada avtomatik saqlanadi.</p>
+        <button type="button" className={`bloknot-send${text.trim() ? " active" : ""}`} onClick={handleSend} disabled={!text.trim() || saving}>
+          <Send size={20} />
+        </button>
       </div>
     </section>
   );

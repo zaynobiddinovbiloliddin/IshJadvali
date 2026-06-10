@@ -1347,7 +1347,7 @@ function sendJson(response, status, payload) {
   response.writeHead(status, {
     "Content-Type": "application/json",
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
   });
   response.end(JSON.stringify(payload));
@@ -1721,14 +1721,22 @@ export async function handleRequest(request, response) {
       if (!authUser) return;
       if (!db.notes) db.notes = [];
       const note = db.notes.find((n) => n.userId === authUser.id);
-      return sendJson(response, 200, { content: note?.content || "" });
+      const raw = note?.content || "";
+      let entries = [];
+      try { if (raw.startsWith("[")) entries = JSON.parse(raw); } catch {}
+      return sendJson(response, 200, { content: raw, entries });
     }
 
     if (url.pathname === "/api/notes" && request.method === "PUT") {
       const authUser = getAuthUser(request, response);
       if (!authUser) return;
       const body = await readBody(request);
-      const content = typeof body.content === "string" ? body.content.slice(0, 50000) : "";
+      let content;
+      if (Array.isArray(body.entries)) {
+        content = JSON.stringify(body.entries).slice(0, 200000);
+      } else {
+        content = typeof body.content === "string" ? body.content.slice(0, 50000) : "";
+      }
       if (!db.notes) db.notes = [];
       const idx = db.notes.findIndex((n) => n.userId === authUser.id);
       const now = new Date().toISOString();
@@ -1740,6 +1748,58 @@ export async function handleRequest(request, response) {
       }
       await saveDb();
       return sendJson(response, 200, { ok: true, content });
+    }
+
+    // ─── Bloknot file upload ─────────────────────────────────────────────────
+    if (url.pathname === "/api/bloknot/upload" && request.method === "POST") {
+      const authUser = getAuthUser(request, response);
+      if (!authUser) return;
+      const dir = join("uploads", "bloknot", `user-${authUser.id}`);
+      if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+      const parsed = await parseMultipartBody(request);
+      if (!parsed.file) return sendJson(response, 400, { message: "Fayl topilmadi" });
+      const safeName = `${Date.now()}_${basename(parsed.file.filename || "file").replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      await writeFile(join(dir, safeName), parsed.file.data);
+      const imageExts = new Set([".jpg",".jpeg",".png",".gif",".webp"]);
+      const videoExts = new Set([".mp4",".webm",".mov",".avi",".mkv"]);
+      const ext = extname(safeName).toLowerCase();
+      const type = imageExts.has(ext) ? "image" : videoExts.has(ext) ? "video" : "file";
+      return sendJson(response, 200, { ok: true, filename: safeName, url: `/uploads/bloknot/user-${authUser.id}/${safeName}`, type });
+    }
+
+    if (url.pathname.startsWith("/api/bloknot/files/") && request.method === "DELETE") {
+      const authUser = getAuthUser(request, response);
+      if (!authUser) return;
+      const filename = basename(url.pathname.replace("/api/bloknot/files/", ""));
+      const filePath = join("uploads", "bloknot", `user-${authUser.id}`, filename);
+      if (existsSync(filePath)) unlinkSync(filePath);
+      return sendJson(response, 200, { ok: true });
+    }
+
+    // ─── Admin restore ───────────────────────────────────────────────────────
+    if (url.pathname === "/api/admin/restore" && request.method === "POST") {
+      const user = getAuthUser(request, response);
+      if (!user || user.role !== "superadmin") return sendJson(response, 403, { message: "Faqat superadmin" });
+      const body = await readBody(request);
+      const employees = Array.isArray(body.employees) ? body.employees : [];
+      const users = Array.isArray(body.users) ? body.users : [];
+      if (!employees.length && !users.length) return sendJson(response, 400, { message: "employees yoki users kerak" });
+
+      if (employees.length) {
+        db.employees = employees.map(normalizeEmployee);
+        await prisma.$transaction([
+          prisma.employee.deleteMany(),
+          prisma.employee.createMany({ data: db.employees.map((e) => ({ id: e.id, name: e.name, role: e.role, phone: e.phone, telegram: e.telegram || "", department: e.department, avatar: e.avatar || "", address: e.address || "", portfolio: e.portfolio || [], documents: e.documents || {}, isActive: e.isActive !== false })) }),
+        ]);
+      }
+      if (users.length) {
+        db.users = users;
+        await prisma.$transaction([
+          prisma.user.deleteMany(),
+          prisma.user.createMany({ data: db.users.map((u) => ({ id: u.id, username: u.username, pinCode: u.pinCode, fullName: u.fullName, role: u.role || "xodim", isActive: u.isActive !== false, avatar: u.avatar || "", employeeId: u.employeeId || null })) }),
+        ]);
+      }
+      return sendJson(response, 200, { ok: true, restoredEmployees: db.employees.length, restoredUsers: db.users.length });
     }
 
     // ─── Filming file attachments ────────────────────────────────────────────
