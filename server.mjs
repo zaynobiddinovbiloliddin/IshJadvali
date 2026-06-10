@@ -1781,9 +1781,26 @@ export async function handleRequest(request, response) {
       const user = getAuthUser(request, response);
       if (!user || user.role !== "superadmin") return sendJson(response, 403, { message: "Faqat superadmin" });
       const body = await readBody(request);
+
+      // Accept raw SQL string (from Telegram .sql backup)
+      if (typeof body.sql === "string" && body.sql.trim()) {
+        const sql = body.sql.trim();
+        // Split on semicolons, execute each statement
+        const statements = sql.split(/;\s*\n/).map((s) => s.trim()).filter((s) => s && !s.startsWith("--") && s !== "BEGIN" && s !== "COMMIT");
+        let executed = 0;
+        for (const stmt of statements) {
+          if (!stmt) continue;
+          try { await prisma.$executeRawUnsafe(stmt + ";"); executed++; } catch (e) { console.warn("SQL stmt xato:", e.message.slice(0, 80)); }
+        }
+        // Reload in-memory db from Postgres
+        db = await loadDb();
+        return sendJson(response, 200, { ok: true, executed, employees: db.employees.length });
+      }
+
+      // Accept JSON employees/users arrays
       const employees = Array.isArray(body.employees) ? body.employees : [];
       const users = Array.isArray(body.users) ? body.users : [];
-      if (!employees.length && !users.length) return sendJson(response, 400, { message: "employees yoki users kerak" });
+      if (!employees.length && !users.length) return sendJson(response, 400, { message: "sql, employees yoki users kerak" });
 
       if (employees.length) {
         db.employees = employees.map(normalizeEmployee);

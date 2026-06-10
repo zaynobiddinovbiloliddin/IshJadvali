@@ -4870,23 +4870,19 @@ function UsersPage({ currentUser, onNotify }) {
 }
 
 function RestoreSection({ onNotify }) {
-  const [json, setJson] = useState("");
+  const [sqlText, setSqlText] = useState("");
+  const [filename, setFilename] = useState("");
   const [restoring, setRestoring] = useState(false);
   const fileRef = useRef(null);
 
   async function handleRestore() {
-    if (!json.trim()) return;
-    let parsed;
-    try { parsed = JSON.parse(json); } catch { onNotify?.("Noto'g'ri JSON format", "error"); return; }
-    const employees = Array.isArray(parsed) ? parsed : (parsed.employees || []);
-    const users = Array.isArray(parsed) ? [] : (parsed.users || []);
-    if (!employees.length && !users.length) { onNotify?.("Xodim yoki foydalanuvchi ma'lumotlari topilmadi", "error"); return; }
-    if (!window.confirm(`${employees.length} ta xodim va ${users.length} ta foydalanuvchi tiklansinmi?`)) return;
+    if (!sqlText.trim()) return;
+    if (!window.confirm(`"${filename || "backup"}" faylidan ma'lumotlar tiklansinmi?`)) return;
     setRestoring(true);
     try {
-      const res = await apiFetch("/api/admin/restore", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ employees, users }) });
-      onNotify?.(`Tiklandi: ${res.restoredEmployees} xodim, ${res.restoredUsers} foydalanuvchi`, "success");
-      setJson("");
+      const res = await apiFetch("/api/admin/restore", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sql: sqlText }) });
+      onNotify?.(`Tiklandi: ${res.employees} ta xodim (${res.executed} SQL bajarildi)`, "success");
+      setSqlText(""); setFilename("");
     } catch (err) { onNotify?.(err.message || "Tiklashda xato", "error"); }
     finally { setRestoring(false); }
   }
@@ -4894,24 +4890,28 @@ function RestoreSection({ onNotify }) {
   function handleFile(e) {
     const file = e.target.files?.[0];
     if (!file) return;
+    setFilename(file.name);
     const reader = new FileReader();
-    reader.onload = (ev) => setJson(ev.target.result);
+    reader.onload = (ev) => setSqlText(ev.target.result);
     reader.readAsText(file);
     e.target.value = "";
   }
 
   return (
     <div className="restore-section">
-      <h3>Ma'lumotlarni tiklash (Backup)</h3>
-      <p className="restore-hint">Telegram backupdan yuklangan JSON faylini yoki matnini joylashtiring. Qabul qiladi: xodimlar massivi <code>[]</code> yoki to'liq DB JSON.</p>
+      <h3>Ma'lumotlarni tiklash (SQL Backup)</h3>
+      <p className="restore-hint">Telegramdan yuklangan <code>.sql</code> backup faylini tanlang yoki ichidagi matnni joylashtiring.</p>
       <div className="restore-actions">
         <button type="button" className="btn-sm" onClick={() => fileRef.current?.click()}>
-          <Upload size={14} /> JSON fayl tanlash
+          <Upload size={14} /> .sql fayl tanlash
         </button>
-        <input ref={fileRef} type="file" accept=".json,.txt" onChange={handleFile} style={{ display: "none" }} />
+        <input ref={fileRef} type="file" accept=".sql,.txt" onChange={handleFile} style={{ display: "none" }} />
+        {filename && <span className="restore-filename">{filename}</span>}
       </div>
-      <textarea className="restore-textarea" value={json} onChange={(e) => setJson(e.target.value)} placeholder='[{"id":1,"name":"Xodim ismi",...}]' rows={5} spellCheck={false} />
-      <button type="button" className="restore-btn" onClick={handleRestore} disabled={restoring || !json.trim()}>
+      {sqlText && (
+        <p className="restore-preview">{sqlText.split("\n").slice(0,4).join("\n")}</p>
+      )}
+      <button type="button" className="restore-btn" onClick={handleRestore} disabled={restoring || !sqlText.trim()}>
         {restoring ? <RefreshCcw size={15} className="spin" /> : <Save size={15} />}
         {restoring ? "Tiklanmoqda..." : "Tiklash"}
       </button>

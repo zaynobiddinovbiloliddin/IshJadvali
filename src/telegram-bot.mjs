@@ -362,17 +362,7 @@ export async function sendBackupAndSchedule() {
       parse_mode: "Markdown"
     });
 
-    // JSON backup — restore qilish uchun qulay format
-    const db = readDb();
-    const jsonPath = join("/tmp", `backup-${new Date().toISOString().slice(0,19).replace(/[T:]/g,"-")}.json`);
-    writeFileSync(jsonPath, JSON.stringify({ employees: db.employees, users: db.users, contacts: db.contacts }, null, 2));
-    await bot.sendDocument(CHAT_ID, jsonPath, {
-      caption: `📦 *JSON Backup* — ${now}\nAdmin paneldan tiklanadi: Foydalanuvchilar → Ma'lumotlarni tiklash`,
-      parse_mode: "Markdown"
-    });
-    if (existsSync(jsonPath)) unlinkSync(jsonPath);
-
-    console.log(`✅ Telegram SQL+JSON backup yuborildi — ${now}`);
+    console.log(`✅ Telegram SQL backup yuborildi — ${now}`);
   } catch (err) {
     console.error("❌ Telegram xato:", err.message);
     try {
