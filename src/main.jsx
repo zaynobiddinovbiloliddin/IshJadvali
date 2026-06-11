@@ -321,9 +321,10 @@ async function api(path, options = {}) {
 
 async function apiFetch(path, options = {}) {
   const token = window.localStorage.getItem("authToken");
+  const { headers: extraHeaders, ...restOptions } = options;
   const response = await fetch(`${API_BASE}${path}`, {
-    headers: { Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options.headers || {}) },
-    ...options
+    headers: { Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(extraHeaders || {}) },
+    ...restOptions
   });
   if (response.status === 401) { window.localStorage.removeItem("currentUser"); window.localStorage.removeItem("authToken"); window.location.reload(); return; }
   if (!response.ok) { const err = await response.json().catch(() => ({ message: "Server xatosi" })); throw new Error(err.message || "Server xatosi"); }
@@ -1825,9 +1826,11 @@ function ShootingPage({ onNotify }) {
     if (!file) return;
     setAttachUploading(true);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const result = await apiFetch(`/api/filming/${filmingDate}/upload`, { method: "POST", body: fd });
+      const result = await apiFetch(`/api/filming/${filmingDate}/upload`, {
+        method: "POST",
+        headers: { "Content-Type": file.type || "application/octet-stream", "X-Filename": encodeURIComponent(file.name) },
+        body: file
+      });
       setFilmingAttachments((prev) => [result, ...prev]);
       onNotify("Fayl biriktirildi ✓");
     } catch (err) {
@@ -2089,87 +2092,19 @@ function localDateStr(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-// ─── Cell dropdown (Portal, avoids overflow-x clipping) ──────────────────────
-function CellDropdown({ currentCode, buttonRect, onSelect, onClose }) {
-  const ref = useRef(null);
-  const [style, setStyle] = useState({ position: "fixed", top: buttonRect.bottom + 6, left: 0, zIndex: 9999, visibility: "hidden" });
-
-  useEffect(() => {
-    function onPointer(e) { if (!ref.current?.contains(e.target)) onClose(); }
-    document.addEventListener("pointerdown", onPointer);
-    return () => document.removeEventListener("pointerdown", onPointer);
-  }, [onClose]);
-
-  useLayoutEffect(() => {
-    if (!ref.current) return;
-    const h = ref.current.offsetHeight;
-    const left = Math.min(
-      Math.max(4, buttonRect.left + buttonRect.width / 2 - 80),
-      window.innerWidth - 172
-    );
-    const spaceBelow = window.innerHeight - buttonRect.bottom - 8;
-    const top = spaceBelow >= h
-      ? buttonRect.bottom + 6
-      : Math.max(4, buttonRect.top - h - 6);
-    setStyle({ position: "fixed", top, left, zIndex: 9999, visibility: "visible" });
-  }, [buttonRect]);
-
-  return (
-    <div ref={ref} className="cell-dropdown" style={style}>
-      {Object.entries(DAILY_STATUSES).map(([code, info]) => (
-        <button
-          key={code}
-          type="button"
-          className={`cell-dropdown-item${currentCode === code ? " active" : ""}`}
-          onClick={(e) => { e.stopPropagation(); onSelect(code); onClose(); }}
-        >
-          <span className="cell-dropdown-dot" style={{ background: info.bg, color: info.fg }}>{info.label}</span>
-          {info.name || "Bo'sh"}
-          {currentCode === code && <span className="cell-dropdown-check">✓</span>}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 const StatusCell = React.memo(function StatusCell({ emp, day, code, adminMode, onSelect }) {
-  const [open, setOpen] = useState(false);
-  const [rect, setRect] = useState(null);
-  const btnRef = useRef(null);
   const info = DAILY_STATUSES[code] || DAILY_STATUSES.empty;
-
-  const close = useCallback(() => setOpen(false), []);
-  const handleSelect = useCallback((newCode) => onSelect(emp, day, newCode), [emp, day, onSelect]);
-
-  function handleClick(e) {
-    e.stopPropagation();
-    if (!adminMode) return;
-    setRect(btnRef.current.getBoundingClientRect());
-    setOpen((v) => !v);
-  }
-
   return (
-    <div style={{ position: "relative" }}>
-      <button
-        ref={btnRef}
-        type="button"
-        className="mc"
-        style={{ background: info.bg, color: info.fg }}
-        onClick={handleClick}
-        disabled={!adminMode}
-        title={adminMode ? `${emp.name}: ${info.name} — bosing` : info.name}
-      >
-        {info.label}
-      </button>
-      {open && rect && (
-        <CellDropdown
-          currentCode={code}
-          buttonRect={rect}
-          onSelect={handleSelect}
-          onClose={close}
-        />
-      )}
-    </div>
+    <button
+      type="button"
+      className="mc"
+      style={{ background: info.bg, color: info.fg }}
+      onClick={(e) => { e.stopPropagation(); if (adminMode) onSelect(emp, day); }}
+      disabled={!adminMode}
+      title={adminMode ? `${emp.name}: ${info.name} — bosing` : info.name}
+    >
+      {info.label}
+    </button>
   );
 });
 
@@ -2180,11 +2115,12 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
   const [statuses, setStatuses]   = useState({});
   const [loading, setLoading]     = useState(true);
   const [selectedCell, setSelectedCell] = useState(null);
+  const [pickerEmp, setPickerEmp] = useState(null);
+  const [pickerDay, setPickerDay] = useState(null);
 
   const employees = dashboard.employees;
   const daysInMonth = new Date(year, month, 0).getDate();
   const days = useMemo(() => Array.from({ length: daysInMonth }, (_, i) => i + 1), [year, month, daysInMonth]);
-  const pad2 = useCallback((n) => String(n).padStart(2, "0"), []);
   const monthPrefix = `${year}-${String(month).padStart(2, "0")}`;
   const statusesRef = useRef(statuses);
   useEffect(() => { statusesRef.current = statuses; }, [statuses]);
@@ -2202,15 +2138,27 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
     return statuses[empId]?.[`${monthPrefix}-${String(day).padStart(2, "0")}`] || "empty";
   }, [statuses, monthPrefix]);
 
-  const handleCellSelect = useCallback(async (emp, day, newCode) => {
+  const closePicker = useCallback(() => { setPickerEmp(null); setPickerDay(null); }, []);
+
+  const handleCellSelect = useCallback((emp, day) => {
     if (!isAdmin(currentUser)) return;
+    setPickerEmp(emp);
+    setPickerDay(day);
+    const dateStr = `${monthPrefix}-${String(day).padStart(2, "0")}`;
+    const code = statusesRef.current[emp.id]?.[dateStr] || "empty";
+    setSelectedCell({ empName: emp.name, day, code, info: DAILY_STATUSES[code] || DAILY_STATUSES.empty });
+  }, [currentUser, monthPrefix]);
+
+  const handleStatusPick = useCallback(async (newCode) => {
+    if (!pickerEmp || pickerDay == null) return;
+    const emp = pickerEmp;
+    const day = pickerDay;
+    closePicker();
     const dateStr = `${monthPrefix}-${String(day).padStart(2, "0")}`;
     const oldCode = statusesRef.current[emp.id]?.[dateStr] || "empty";
     const info = DAILY_STATUSES[newCode] || DAILY_STATUSES.empty;
-
     setStatuses((prev) => ({ ...prev, [emp.id]: { ...(prev[emp.id] || {}), [dateStr]: newCode } }));
     setSelectedCell({ empName: emp.name, day, code: newCode, info });
-
     try {
       await api("/api/daily-status", { method: "POST", body: JSON.stringify({ employeeId: emp.id, date: dateStr, statusCode: newCode }) });
       onNotify?.(`${emp.name}: ${info.name} ✓`);
@@ -2219,7 +2167,7 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
       setSelectedCell(null);
       onNotify?.("Saqlashda xato: " + err.message, "error");
     }
-  }, [currentUser, monthPrefix, onNotify]);
+  }, [pickerEmp, pickerDay, monthPrefix, onNotify, closePicker]);
 
   const rowTotals = useMemo(() => {
     const result = {};
@@ -2404,21 +2352,58 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
     </div>
   );
 
-  if (!fullscreen) return <section className="monthly-page">{monthlyBody}</section>;
+  const pickerPanel = pickerEmp && pickerDay != null ? (
+    <div
+      style={{ position: "fixed", inset: 0, zIndex: 10000, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "flex-end" }}
+      onClick={closePicker}
+    >
+      <div
+        style={{ width: "100%", background: "#fff", borderRadius: "16px 16px 0 0", padding: "16px 16px 40px" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <strong style={{ fontSize: 15 }}>{pickerEmp.name} — {pickerDay}-{MONTH_NAMES[month - 1]}</strong>
+          <button type="button" onClick={closePicker} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>✕</button>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {Object.entries(DAILY_STATUSES).map(([code, info]) => (
+            <button
+              key={code}
+              type="button"
+              style={{ background: info.bg, color: info.fg, border: "none", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", minWidth: 80 }}
+              onClick={() => handleStatusPick(code)}
+            >
+              {code === "empty" ? "— Bo'sh" : `${code} — ${info.name}`}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  if (!fullscreen) return (
+    <>
+      <section className="monthly-page">{monthlyBody}</section>
+      {pickerPanel}
+    </>
+  );
 
   return createPortal((
-    <div className="monthly-fullscreen-backdrop" role="dialog" aria-modal="true" aria-label="Oylik grafik" onClick={onClose}>
-      <section className="monthly-fullscreen" onClick={(event) => event.stopPropagation()}>
-        <header className="monthly-fullscreen-head">
-          <button type="button" onClick={onClose} aria-label="Orqaga"><ChevronLeft size={20} />Orqaga</button>
-          <div><strong>Oylik grafik</strong><span>{MONTH_NAMES[month - 1]} {year}</span></div>
-          <i />
-        </header>
-        <div className="monthly-fullscreen-body">
-          <section className="monthly-page">{monthlyBody}</section>
-        </div>
-      </section>
-    </div>
+    <>
+      <div className="monthly-fullscreen-backdrop" role="dialog" aria-modal="true" aria-label="Oylik grafik" onClick={onClose}>
+        <section className="monthly-fullscreen" onClick={(event) => event.stopPropagation()}>
+          <header className="monthly-fullscreen-head">
+            <button type="button" onClick={onClose} aria-label="Orqaga"><ChevronLeft size={20} />Orqaga</button>
+            <div><strong>Oylik grafik</strong><span>{MONTH_NAMES[month - 1]} {year}</span></div>
+            <i />
+          </header>
+          <div className="monthly-fullscreen-body">
+            <section className="monthly-page">{monthlyBody}</section>
+          </div>
+        </section>
+      </div>
+      {pickerPanel}
+    </>
   ), document.body);
 }
 
@@ -3535,17 +3520,20 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
               Yuklab olish
             </button>
             <button type="button" onClick={async () => {
-              const text = `${draft.name}\n${draft.role} · ${draft.department}\nTel: ${draft.phone || "—"}\nID: EMP-${String(draft.id).padStart(3, "0")}`;
-              if (navigator.share) {
-                try { await navigator.share({ title: draft.name, text }); } catch { /* cancelled */ }
-              } else {
-                let copied = false;
-                try { await navigator.clipboard.writeText(text); copied = true; } catch { /* fallback */ }
-                if (!copied) {
-                  const el = Object.assign(document.createElement("textarea"), { value: text, style: "position:fixed;opacity:0" });
-                  document.body.appendChild(el); el.select(); document.execCommand("copy"); document.body.removeChild(el);
+              try {
+                const model = employeeDocumentModel(draft);
+                const blob = await buildEmployeeJpegBlob(model);
+                if (!blob) throw new Error("JPEG yaratilmadi");
+                const fileName = `${safeFileName(draft.name)}.jpg`;
+                const file = new File([blob], fileName, { type: "image/jpeg" });
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                  await navigator.share({ files: [file], title: draft.name });
+                } else {
+                  downloadBlob(blob, fileName);
+                  onNotify("Xodim kartochkasi yuklandi ✓");
                 }
-                onNotify("Matn nusxa olindi ✓");
+              } catch (err) {
+                if (err?.name !== "AbortError") onNotify("Ulashishda xato: " + (err?.message || ""), "error");
               }
             }}>
               <Send size={16} />
@@ -5361,9 +5349,11 @@ function BlotknotPage({ currentUser, onNotify }) {
     if (!file) return;
     setUploading(true);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const result = await apiFetch("/api/bloknot/upload", { method: "POST", body: fd });
+      const result = await apiFetch("/api/bloknot/upload", {
+        method: "POST",
+        headers: { "Content-Type": file.type || "application/octet-stream", "X-Filename": encodeURIComponent(file.name) },
+        body: file
+      });
       const entry = { id: Date.now(), type: result.type, url: result.url, filename: result.filename, createdAt: new Date().toISOString() };
       const next = [...entries, entry];
       setEntries(next);

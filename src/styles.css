@@ -1581,6 +1581,18 @@ button.metric-card {
   background: #fef3c7;
 }
 
+.status-pill.otpiska,
+.status-select.otpiska {
+  color: #374151 !important;
+  background: #e5e7eb;
+}
+
+.status-pill.unpaid,
+.status-select.unpaid {
+  color: #374151 !important;
+  background: #e5e7eb;
+}
+
 .create-button {
   width: 100%;
   min-height: 50px;

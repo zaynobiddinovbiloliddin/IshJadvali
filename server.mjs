@@ -1758,13 +1758,15 @@ export async function handleRequest(request, response) {
     if (url.pathname === "/api/bloknot/upload" && request.method === "POST") {
       const authUser = getAuthUser(request, response);
       if (!authUser) return;
+      const origName = decodeURIComponent(request.headers["x-filename"] || "upload.bin");
+      const chunks = [];
+      for await (const chunk of request) chunks.push(chunk);
+      const fileData = Buffer.concat(chunks);
+      if (!fileData.length) return sendJson(response, 400, { message: "Fayl topilmadi" });
       const dir = join("uploads", "bloknot", `user-${authUser.id}`);
       if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-      const parts = await parseMultipartBody(request);
-      const filePart = parts.find((p) => p.name === "file");
-      if (!filePart?.data?.length) return sendJson(response, 400, { message: "Fayl topilmadi" });
-      const safeName = `${Date.now()}_${basename(filePart.filename || "file").replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-      await writeFile(join(dir, safeName), filePart.data);
+      const safeName = `${Date.now()}_${basename(origName).replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      await writeFile(join(dir, safeName), fileData);
       const imageExts = new Set([".jpg",".jpeg",".png",".gif",".webp"]);
       const videoExts = new Set([".mp4",".webm",".mov",".avi",".mkv"]);
       const ext = extname(safeName).toLowerCase();
@@ -1831,15 +1833,19 @@ export async function handleRequest(request, response) {
       if (!authUser) return;
       const date = filmingUploadMatch[1].replace(/[^0-9\-]/g, "");
       if (!date) return sendJson(response, 400, { message: "Noto'g'ri sana" });
+      const origName = decodeURIComponent(request.headers["x-filename"] || "upload.bin");
+      const chunks = [];
+      for await (const chunk of request) chunks.push(chunk);
+      const fileData = Buffer.concat(chunks);
+      if (!fileData.length) return sendJson(response, 400, { message: "Fayl topilmadi" });
       const dir = join("uploads", "filming", date);
       if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-      const filmParts = await parseMultipartBody(request);
-      const filmFile = filmParts.find((p) => p.name === "file");
-      if (!filmFile?.data?.length) return sendJson(response, 400, { message: "Fayl topilmadi" });
-      const ext = extname(filmFile.filename || ".bin");
-      const safeName = `${Date.now()}_${basename(filmFile.filename || "file").replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-      await writeFile(join(dir, safeName), filmFile.data);
-      return sendJson(response, 200, { ok: true, filename: safeName });
+      const safeName = `${Date.now()}_${basename(origName).replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      await writeFile(join(dir, safeName), fileData);
+      const imageExts = new Set([".jpg",".jpeg",".png",".gif",".webp"]);
+      const ext = extname(safeName).toLowerCase();
+      const type = imageExts.has(ext) ? "image" : "file";
+      return sendJson(response, 200, { ok: true, filename: safeName, url: `/uploads/filming/${date}/${safeName}`, type });
     }
 
     const filmingFilesMatch = url.pathname.match(/^\/api\/filming\/([^/]+)\/files$/);
