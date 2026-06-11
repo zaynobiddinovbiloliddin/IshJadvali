@@ -1077,7 +1077,7 @@ function App() {
               )}
               {page === "monthly" && <MonthlyErrorBoundary onClose={closeMonthly}><MonthlyPage dashboard={dashboard} weekStart={weekStart} fullscreen onClose={closeMonthly} currentUser={currentUser} onNotify={notify} /></MonthlyErrorBoundary>}
               {page === "documents" && <DocumentsPage employees={dashboard.employees} onNotify={notify} onSaveEmployee={saveEmployee} currentUser={currentUser} />}
-              {page === "shooting" && <ShootingPage onNotify={notify} />}
+              {page === "shooting" && <ShootingPage onNotify={notify} currentUser={currentUser} />}
               {page === "reports" && <ReportsPage dashboard={dashboard} />}
               {page === "tasks" && (
                 <VazifalarPage currentUser={currentUser} onNotify={notify} onNotificationsRefresh={loadNotifications} />
@@ -1791,7 +1791,8 @@ function downloadEmployeeFiles(employee, assignments = []) {
   }, 240);
 }
 
-function ShootingPage({ onNotify }) {
+function ShootingPage({ onNotify, currentUser }) {
+  const adminMode = ["admin", "superadmin"].includes(currentUser?.role);
   const blankRow = {
     camera: "",
     time: "",
@@ -1811,41 +1812,47 @@ function ShootingPage({ onNotify }) {
   const [draftRow, setDraftRow] = useState(blankRow);
   const addFormRef = useRef(null);
   const [filmingDate, setFilmingDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [filmingAttachments, setFilmingAttachments] = useState([]);
-  const [attachUploading, setAttachUploading] = useState(false);
-  const attachInputRef = useRef(null);
+  const [uploadedImage, setUploadedImage] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const uploadInputRef = useRef(null);
 
   useEffect(() => {
-    apiFetch(`/api/filming/${filmingDate}/files`)
-      .then((d) => setFilmingAttachments(d.files || []))
-      .catch(() => setFilmingAttachments([]));
+    apiFetch(`/api/filming/${filmingDate}/image`)
+      .then((d) => setUploadedImage(d.imageUrl ? d : null))
+      .catch(() => setUploadedImage(null));
   }, [filmingDate]);
 
-  async function uploadFilmingFile(e) {
+  async function handleFileUpload(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setAttachUploading(true);
+    if (!["image/jpeg", "image/jpg", "image/png"].includes(file.type)) {
+      onNotify("Faqat JPEG yoki PNG fayl yuklang", "error");
+      e.target.value = "";
+      return;
+    }
+    setUploading(true);
     try {
       const result = await apiFetch(`/api/filming/${filmingDate}/upload`, {
         method: "POST",
-        headers: { "Content-Type": file.type || "application/octet-stream", "X-Filename": encodeURIComponent(file.name) },
+        headers: { "Content-Type": file.type, "X-Filename": encodeURIComponent(file.name) },
         body: file
       });
-      setFilmingAttachments((prev) => [result, ...prev]);
-      onNotify("Fayl biriktirildi ✓");
+      setUploadedImage(result);
+      onNotify("Jadval rasmi yuklandi ✓");
     } catch (err) {
       onNotify(err.message || "Yuklashda xato", "error");
     } finally {
-      setAttachUploading(false);
-      if (attachInputRef.current) attachInputRef.current.value = "";
+      setUploading(false);
+      if (uploadInputRef.current) uploadInputRef.current.value = "";
     }
   }
 
-  async function deleteFilmingFile(filename) {
+  async function handleDeleteImage() {
+    if (!window.confirm("Rasmni o'chirish?")) return;
     try {
-      await apiFetch(`/api/filming/${filmingDate}/files/${encodeURIComponent(filename)}`, { method: "DELETE" });
-      setFilmingAttachments((prev) => prev.filter((f) => f.filename !== filename));
-      onNotify("Fayl o'chirildi ✓");
+      await apiFetch(`/api/filming/${filmingDate}/image`, { method: "DELETE" });
+      setUploadedImage(null);
+      onNotify("Rasm o'chirildi");
     } catch (err) {
       onNotify(err.message || "O'chirishda xato", "error");
     }
@@ -1913,53 +1920,86 @@ function ShootingPage({ onNotify }) {
 
   return (
     <section className="shooting-page">
-      <div className="filming-date-attachments">
-        <div className="filming-attach-toolbar">
-          <label className="filming-date-label">
-            Sana:
-            <input type="date" value={filmingDate} onChange={(e) => setFilmingDate(e.target.value)} className="filming-date-input" />
-          </label>
-          <label className="attach-btn">
-            <input ref={attachInputRef} type="file" accept="image/*,.pdf,.doc,.docx" onChange={uploadFilmingFile} style={{ display: "none" }} />
-            <Paperclip size={15} />
-            {attachUploading ? "Yuklanmoqda..." : "Fayl qo'shish"}
-          </label>
+      {/* ── Header bar ── */}
+      <div className="filming-header">
+        <div className="filming-header-left">
+          <div className="filming-date-picker">
+            <label className="filming-date-label" htmlFor="filming-date-input">Sana:</label>
+            <input id="filming-date-input" type="date" value={filmingDate} onChange={(e) => setFilmingDate(e.target.value)} className="filming-date-input" />
+          </div>
         </div>
-      </div>
-
-      <div className="shooting-actions">
-        <div>
-          <h2>Kunlik tasvirga olish jadvali</h2>
-          <p>{filmingDate} yil uchun Excel uslubidagi forma</p>
-        </div>
-        <div className="shooting-action-buttons">
-          {!isSaved && (
-            <button type="button" onClick={() => setAddOpen(true)}>
-              <Plus size={17} />
-              Yangi jadval
+        <div className="filming-header-right">
+          {adminMode && (
+            <label className={`filming-upload-btn${uploading ? " uploading" : ""}`}>
+              <input ref={uploadInputRef} type="file" accept="image/jpeg,image/jpg,image/png" onChange={handleFileUpload} style={{ display: "none" }} disabled={uploading} />
+              <Paperclip size={15} />
+              {uploading ? "Yuklanmoqda..." : uploadedImage ? "Rasmni almashtirish" : "Jadval rasmi yuklash"}
+            </label>
+          )}
+          {adminMode && !isSaved && (
+            <button type="button" className="shooting-action-btn" onClick={() => setAddOpen(true)}>
+              <Plus size={15} />
+              Yangi qator
             </button>
           )}
           {isSaved ? (
-            <button type="button" className="edit-unlock-btn" onClick={() => setIsSaved(false)}>
-              <Edit3 size={17} />
-              Tahrirlash
+            <button type="button" className="shooting-action-btn edit-unlock-btn" onClick={() => setIsSaved(false)}>
+              <Edit3 size={15} />Tahrirlash
             </button>
           ) : (
-            <button type="button" onClick={() => { onNotify("Jadval saqlandi ✓"); setIsSaved(true); }}>
-              <Save size={17} />
-              Saqlash
+            <button type="button" className="shooting-action-btn" onClick={() => { onNotify("Jadval saqlandi ✓"); setIsSaved(true); }}>
+              <Save size={15} />Saqlash
             </button>
           )}
-          <button type="button" onClick={downloadExcel}>
-            <FileSpreadsheet size={17} />
-            Excel
+          <button type="button" className="shooting-action-btn" onClick={downloadExcel}>
+            <FileSpreadsheet size={15} />Excel
           </button>
-          <button type="button" onClick={() => window.print()}>
-            <FileText size={17} />
-            Print
+          <button type="button" className="shooting-action-btn" onClick={() => window.print()}>
+            <FileText size={15} />Print
           </button>
         </div>
       </div>
+
+      {/* ── Uploaded schedule image (full width) ── */}
+      {uploadedImage && (
+        <div className="filming-image-container">
+          <div className="filming-image-header">
+            <span className="filming-image-label">📅 {filmingDate} — Kunlik jadval rasmi</span>
+            <div className="filming-image-meta">
+              <span>Yuklagan: {uploadedImage.uploadedBy}</span>
+              <span>{new Date(uploadedImage.uploadedAt).toLocaleString("uz-UZ")}</span>
+              {adminMode && (
+                <button type="button" className="filming-image-delete-btn" onClick={handleDeleteImage}>
+                  <Trash2 size={13} /> O'chirish
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="filming-image-wrapper">
+            <img src={uploadedImage.imageUrl} alt={`Jadval ${filmingDate}`} className="filming-schedule-image" onClick={() => window.open(uploadedImage.imageUrl, "_blank")} />
+          </div>
+          <div className="filming-image-actions">
+            <a href={uploadedImage.imageUrl} download={`jadval-${filmingDate}.jpg`} className="filming-download-link">
+              <Download size={14} /> Yuklab olish
+            </a>
+            <span className="filming-image-hint">Kattalashtirish uchun rasmga bosing</span>
+          </div>
+        </div>
+      )}
+
+      {!uploadedImage && adminMode && (
+        <div className="filming-no-image">
+          <div className="filming-no-image-icon">📄</div>
+          <p>Bu kun uchun jadval rasmi yuklanmagan</p>
+          <p className="filming-no-image-hint">Word jadvalini JPEG sifatida saqlang va yuqoridagi tugma orqali yuklang</p>
+        </div>
+      )}
+      {!uploadedImage && !adminMode && (
+        <div className="filming-no-image">
+          <div className="filming-no-image-icon">📄</div>
+          <p>Bu kun uchun jadval rasmi hali yuklanmagan</p>
+        </div>
+      )}
 
       <article className="excel-sheet">
         <header className="excel-header">
@@ -1971,27 +2011,6 @@ function ShootingPage({ onNotify }) {
         </header>
 
         <div className="excel-notice">Muhim eslatma! Tasvirga olish ishlari yakunlanishi bilan, material tayyorlashga kirishish shart.</div>
-
-        {filmingAttachments.length > 0 && (
-          <div className="filming-gallery">
-            {filmingAttachments.map((f) => (
-              <div key={f.filename} className="filming-gallery-item">
-                {f.type === "image" ? (
-                  <img src={f.url} alt={f.filename} className="filming-gallery-img" onClick={() => window.open(f.url, "_blank")} />
-                ) : (
-                  <div className="filming-gallery-file">
-                    <Paperclip size={32} />
-                    <span>{f.filename}</span>
-                  </div>
-                )}
-                <div className="filming-gallery-actions">
-                  <a href={f.url} download className="filming-gallery-btn" aria-label="Yuklab olish"><Download size={15} /></a>
-                  <button type="button" className="filming-gallery-btn filming-gallery-del" onClick={() => deleteFilmingFile(f.filename)} aria-label="O'chirish"><Trash2 size={15} /></button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
 
         <div className="shooting-table-wrap">
           <table className="shooting-table">

@@ -9745,26 +9745,27 @@ body { overflow-x: hidden; }
 }
 
 /* ─── Filming attachments ───────────────────────────────────────────────────── */
-.filming-date-attachments {
-  padding: 10px 16px;
+/* ─── Filming page header ───────────────────────────────────────────────────── */
+.filming-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
+  padding: 10px 16px;
   margin-bottom: 12px;
 }
-.filming-attach-toolbar {
+.filming-header-left, .filming-header-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
   flex-wrap: wrap;
 }
-.filming-date-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
+.filming-date-picker { display: flex; align-items: center; gap: 8px; }
+.filming-date-label { font-weight: 600; font-size: 0.9rem; }
 .filming-date-input {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -9773,66 +9774,128 @@ body { overflow-x: hidden; }
   background: var(--bg);
   color: var(--text-primary);
 }
-.filming-gallery {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
-}
-.filming-gallery-item {
-  position: relative;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  border: 1px solid var(--border);
-  background: #f8f9fa;
-}
-.filming-gallery-img {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-  display: block;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-.filming-gallery-img:hover { transform: scale(1.015); }
-.filming-gallery-file {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: var(--accent-light);
-  color: var(--accent);
-  font-size: 0.8rem;
-  text-align: center;
-  padding: 12px;
-}
-.filming-gallery-actions {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  display: flex;
-  gap: 6px;
-}
-.filming-gallery-btn {
+.filming-upload-btn {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: none;
-  background: rgba(0,0,0,0.55);
+  gap: 6px;
+  padding: 7px 14px;
+  border: 2px dashed var(--accent);
+  border-radius: 10px;
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+  background: rgba(99,102,241,0.05);
+}
+.filming-upload-btn:hover { background: rgba(99,102,241,0.12); border-style: solid; }
+.filming-upload-btn.uploading { opacity: 0.65; cursor: not-allowed; }
+.shooting-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: var(--accent);
   color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
   cursor: pointer;
   transition: background 0.15s;
-  backdrop-filter: blur(4px);
 }
-.filming-gallery-btn:hover { background: rgba(0,0,0,0.78); }
-.filming-gallery-del:hover { background: rgba(239,68,68,0.85); }
+.shooting-action-btn:hover { background: var(--accent-hover); }
+.shooting-action-btn.edit-unlock-btn { background: var(--text-secondary); }
+.shooting-action-btn.edit-unlock-btn:hover { background: var(--text-primary); }
+
+/* ─── Uploaded schedule image ───────────────────────────────────────────────── */
+.filming-image-container {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.filming-image-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.filming-image-label { font-weight: 600; font-size: 0.9rem; color: var(--text-primary); }
+.filming-image-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+.filming-image-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(239,68,68,0.1);
+  color: #ef4444;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  transition: background 0.15s;
+}
+.filming-image-delete-btn:hover { background: rgba(239,68,68,0.22); }
+.filming-image-wrapper { width: 100%; background: #fff; }
+.filming-schedule-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  cursor: zoom-in;
+  transition: opacity 0.18s;
+}
+.filming-schedule-image:hover { opacity: 0.96; }
+.filming-image-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  border-top: 1px solid var(--border);
+}
+.filming-download-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+.filming-download-link:hover { text-decoration: underline; }
+.filming-image-hint { font-size: 0.75rem; color: var(--text-secondary); }
+
+/* ─── No image placeholder ──────────────────────────────────────────────────── */
+.filming-no-image {
+  background: var(--card-bg);
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-lg);
+  padding: 36px 24px;
+  text-align: center;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+.filming-no-image-icon { font-size: 2.5rem; margin-bottom: 10px; }
+.filming-no-image p { margin: 4px 0; font-size: 0.9rem; }
+.filming-no-image-hint { font-size: 0.78rem; opacity: 0.7; margin-top: 6px !important; }
+
+@media (max-width: 640px) {
+  .filming-header { flex-direction: column; align-items: flex-start; }
+  .filming-header-right { width: 100%; }
+  .filming-upload-btn { width: 100%; justify-content: center; }
+  .filming-image-meta { flex-direction: column; align-items: flex-start; gap: 4px; }
+}
 .attach-btn {
   display: inline-flex;
   align-items: center;

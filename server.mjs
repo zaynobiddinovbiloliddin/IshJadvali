@@ -1845,25 +1845,66 @@ export async function handleRequest(request, response) {
     }
 
     // ─── Filming file attachments ────────────────────────────────────────────
+    // ─── Filming: single image per date (upload) ────────────────────────────
     const filmingUploadMatch = url.pathname.match(/^\/api\/filming\/([^/]+)\/upload$/);
     if (filmingUploadMatch && request.method === "POST") {
       const authUser = getAuthUser(request, response);
       if (!authUser) return;
+      if (!["admin", "superadmin"].includes(authUser.role)) return sendJson(response, 403, { message: "Faqat admin yuklashi mumkin" });
       const date = filmingUploadMatch[1].replace(/[^0-9\-]/g, "");
       if (!date) return sendJson(response, 400, { message: "Noto'g'ri sana" });
-      const origName = decodeURIComponent(request.headers["x-filename"] || "upload.bin");
+      const origName = decodeURIComponent(request.headers["x-filename"] || "upload.jpg");
+      const ext = extname(origName).toLowerCase();
+      if (![".jpg", ".jpeg", ".png"].includes(ext)) return sendJson(response, 400, { message: "Faqat JPEG yoki PNG fayl" });
       const chunks = [];
       for await (const chunk of request) chunks.push(chunk);
       const fileData = Buffer.concat(chunks);
       if (!fileData.length) return sendJson(response, 400, { message: "Fayl topilmadi" });
-      const dir = join("uploads", "filming", date);
+      const dir = join("uploads", "filming");
       if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-      const safeName = `${Date.now()}_${basename(origName).replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-      await writeFile(join(dir, safeName), fileData);
-      const imageExts = new Set([".jpg",".jpeg",".png",".gif",".webp"]);
-      const ext = extname(safeName).toLowerCase();
-      const type = imageExts.has(ext) ? "image" : "file";
-      return sendJson(response, 200, { ok: true, filename: safeName, url: `/uploads/filming/${date}/${safeName}`, type });
+      const filename = `${date}${ext}`;
+      await writeFile(join(dir, filename), fileData);
+      const imageUrl = `/uploads/filming/${filename}`;
+      const uploadedAt = new Date().toISOString();
+      const uploadedBy = authUser.fullName || authUser.username;
+      const metaKey = `filming-image-${date}`;
+      db.schedules[metaKey] = { imageUrl, uploadedAt, uploadedBy };
+      try {
+        await prisma.schedule.upsert({
+          where: { weekStart: metaKey },
+          update: { data: { imageUrl, uploadedAt, uploadedBy } },
+          create: { weekStart: metaKey, data: { imageUrl, uploadedAt, uploadedBy } }
+        });
+      } catch (e) { console.error("filming image upsert:", e.message); }
+      return sendJson(response, 200, { success: true, imageUrl, uploadedAt, uploadedBy });
+    }
+
+    // ─── Filming: get image for date ─────────────────────────────────────────
+    const filmingImageGetMatch = url.pathname.match(/^\/api\/filming\/([^/]+)\/image$/);
+    if (filmingImageGetMatch && request.method === "GET") {
+      const authUser = getAuthUser(request, response);
+      if (!authUser) return;
+      const date = filmingImageGetMatch[1].replace(/[^0-9\-]/g, "");
+      const meta = db.schedules[`filming-image-${date}`];
+      if (!meta || !meta.imageUrl) return sendJson(response, 200, { success: true, imageUrl: null });
+      return sendJson(response, 200, { success: true, ...meta });
+    }
+
+    // ─── Filming: delete image for date ──────────────────────────────────────
+    if (filmingImageGetMatch && request.method === "DELETE") {
+      const authUser = getAuthUser(request, response);
+      if (!authUser) return;
+      if (!["admin", "superadmin"].includes(authUser.role)) return sendJson(response, 403, { message: "Faqat admin o'chira oladi" });
+      const date = filmingImageGetMatch[1].replace(/[^0-9\-]/g, "");
+      const metaKey = `filming-image-${date}`;
+      const meta = db.schedules[metaKey];
+      if (meta?.imageUrl) {
+        const filePath = join("uploads", "filming", basename(meta.imageUrl));
+        if (existsSync(filePath)) unlinkSync(filePath);
+      }
+      delete db.schedules[metaKey];
+      try { await prisma.schedule.deleteMany({ where: { weekStart: metaKey } }); } catch (e) { console.error("filming image delete:", e.message); }
+      return sendJson(response, 200, { success: true });
     }
 
     const filmingFilesMatch = url.pathname.match(/^\/api\/filming\/([^/]+)\/files$/);
