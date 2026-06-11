@@ -59,7 +59,9 @@ const STATUS_OPTIONS = [
   { id: "vacation", code: "M", label: "Mehnat ta'tili", metric: "rest" },
   { id: "administration", code: "A", label: "Administratsiya", metric: "working" },
   { id: "presidential", code: "P", label: "Prezidentskiy", metric: "working" },
-  { id: "otpiska", code: "O", label: "Otpiska", metric: "rest" }
+  { id: "otpiska", code: "O", label: "O'quv ta'tili", metric: "rest" },
+  { id: "sick", code: "B", label: "Kasal (больничный)", metric: "rest" },
+  { id: "unpaid", code: "U", label: "Pulsiz ta'til", metric: "rest" }
 ];
 const STATUS_META = Object.fromEntries(STATUS_OPTIONS.map((status) => [status.id, status]));
 const OPERATOR_NAMES = [
@@ -79,11 +81,13 @@ const MONTHLY_STATUS_OPTIONS = {
   tjk: { label: "T", shift: "TJK guruhi", hours: 9 },
   studio: { label: "S", shift: "Studiyada", hours: 9 },
   vacation: { label: "M", shift: "Ta'tilda", hours: 0 },
-  otpiska: { label: "O", shift: "Otpiska", hours: 0 },
+  otpiska: { label: "O", shift: "O'quv ta'tili", hours: 0 },
   administration: { label: "A", shift: "Administratsiya", hours: 9 },
-  presidential: { label: "P", shift: "Prezidentskiy", hours: 9 }
+  presidential: { label: "P", shift: "Prezidentskiy", hours: 9 },
+  sick: { label: "B", shift: "Kasal", hours: 0 },
+  unpaid: { label: "U", shift: "Pulsiz ta'til", hours: 0 }
 };
-const MONTHLY_STATUS_SEQUENCE = ["work", "rest", "trip", "tjk", "studio", "vacation", "otpiska", "administration", "presidential"];
+const MONTHLY_STATUS_SEQUENCE = ["work", "rest", "trip", "tjk", "studio", "vacation", "otpiska", "sick", "unpaid", "administration", "presidential"];
 const DEPARTMENTS = [
   { id: "pool", label: "Pool xizmati", shortLabel: "Pool" },
   { id: "operator", label: "Oddiy operatorlar", shortLabel: "Operator" },
@@ -2052,10 +2056,12 @@ const DAILY_STATUSES = {
   T:     { label: "T", bg: "#eab308", fg: "#fff",    name: "TJK guruhi" },
   K:     { label: "K", bg: "#f97316", fg: "#fff",    name: "Komandirovka" },
   D:     { label: "D", bg: "#ef4444", fg: "#fff",    name: "Dam olish" },
-  M:     { label: "M", bg: "#a855f7", fg: "#fff",    name: "Ta'til" },
-  O:     { label: "O", bg: "#6b7280", fg: "#fff",    name: "Otpiska" },
+  M:     { label: "M", bg: "#a855f7", fg: "#fff",    name: "Mehnat ta'tili" },
+  O:     { label: "O", bg: "#6b7280", fg: "#fff",    name: "O'quv ta'tili" },
   A:     { label: "A", bg: "#06b6d4", fg: "#fff",    name: "Administratsiya" },
-  P:     { label: "P", bg: "#ec4899", fg: "#fff",    name: "Prezidentskiy" }
+  P:     { label: "P", bg: "#ec4899", fg: "#fff",    name: "Prezidentskiy" },
+  B:     { label: "B", bg: "#dc2626", fg: "#fff",    name: "Kasal (больничный)" },
+  U:     { label: "U", bg: "#9ca3af", fg: "#fff",    name: "Pulsiz ta'til" }
 };
 const WORKING_DAILY = ["I", "S", "T", "K", "A", "P"];
 
@@ -2191,7 +2197,7 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
   }
 
   const totals = useMemo(() => {
-    const r = { I: 0, S: 0, T: 0, K: 0, D: 0, M: 0, O: 0, A: 0, P: 0, working: 0, rest: 0, hours: 0 };
+    const r = { I: 0, S: 0, T: 0, K: 0, D: 0, M: 0, O: 0, A: 0, P: 0, B: 0, U: 0, working: 0, rest: 0, hours: 0 };
     for (const emp of employees) {
       const empSt = statuses[emp.id] || {};
       for (let d = 1; d <= daysInMonth; d++) {
@@ -2199,7 +2205,7 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
         if (code !== "empty") {
           if (r[code] !== undefined) r[code]++;
           if (WORKING_DAILY.includes(code)) { r.working++; r.hours += 9; }
-          if (["D", "M", "O"].includes(code)) r.rest++;
+          if (["D", "M", "O", "B", "U"].includes(code)) r.rest++;
         }
       }
     }
@@ -2212,7 +2218,7 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
     for (let d = 1; d <= daysInMonth; d++) {
       const code = empSt[`${monthPrefix}-${pad2(d)}`] || "empty";
       if (WORKING_DAILY.includes(code)) { r.working++; r.hours += 9; }
-      if (["D", "M", "O"].includes(code)) r.rest++;
+      if (["D", "M", "O", "B", "U"].includes(code)) r.rest++;
     }
     return r;
   }
@@ -2261,8 +2267,8 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
       </div>
 
       <div className="monthly-summary">
-        {[["I","Ishda"],["S","Studiya"],["T","TJK"],["K","Safar"],["D","Dam"],["M","Ta'til"]].map(([code, label]) => (
-          <span key={code}><b style={{ color: DAILY_STATUSES[code].bg }}>{totals[code]}</b> {label}</span>
+        {[["I","Ishda"],["S","Studiya"],["T","TJK"],["K","Safar"],["D","Dam"],["M","Ta'til"],["O","O'quv"],["B","Kasal"],["U","Pulsiz"]].map(([code, label]) => (
+          <span key={code}><b style={{ color: DAILY_STATUSES[code].bg }}>{totals[code] || 0}</b> {label}</span>
         ))}
         <span><b>{totals.hours}</b> soat</span>
       </div>
@@ -2375,7 +2381,7 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
     <div className="monthly-fullscreen-backdrop" role="dialog" aria-modal="true" aria-label="Oylik grafik" onClick={onClose}>
       <section className="monthly-fullscreen" onClick={(event) => event.stopPropagation()}>
         <header className="monthly-fullscreen-head">
-          <button type="button" onClick={onClose} aria-label="Chiqish"><ChevronLeft size={20} />Chiqish</button>
+          <button type="button" onClick={onClose} aria-label="Orqaga"><ChevronLeft size={20} />Orqaga</button>
           <div><strong>Oylik grafik</strong><span>{MONTH_NAMES[month - 1]} {year}</span></div>
           <i />
         </header>
@@ -2392,7 +2398,24 @@ function WeeklyPage({ activeDay, currentUser, dashboard, onCreate, onDeleteSched
   const [openGroups, setOpenGroups] = useState(() => new Set());
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [promoIndex, setPromoIndex] = useState(0);
+  const [todayDailyCount, setTodayDailyCount] = useState(null);
   const todayName = todayDayName();
+
+  useEffect(() => {
+    const today = localDateStr(new Date());
+    const [y, m] = today.split("-").map(Number);
+    api(`/api/daily-status?year=${y}&month=${m}`)
+      .then((data) => {
+        const statuses = data.statuses || {};
+        const counts = {};
+        for (const empStatuses of Object.values(statuses)) {
+          const code = empStatuses[today];
+          if (code && code !== "empty") counts[code] = (counts[code] || 0) + 1;
+        }
+        setTodayDailyCount(counts);
+      })
+      .catch(() => {});
+  }, []);
   const filteredGroups = useMemo(() => {
     if (activeDay === "Barcha kunlar") return dashboard.groups;
     const selectedDay = activeDay === "Bugun" ? todayName : activeDay;
@@ -2472,6 +2495,15 @@ function WeeklyPage({ activeDay, currentUser, dashboard, onCreate, onDeleteSched
           <span>{activeDay === "Bugun" ? "Bugungi smena" : activeDay}</span>
           <strong>{dayMetrics.working} ishda</strong>
           <p>{statusSummary}</p>
+          {activeDay === "Bugun" && todayDailyCount && Object.keys(todayDailyCount).length > 0 && (
+            <p className="week-daily-stat">
+              {Object.entries(todayDailyCount).map(([code, cnt]) => (
+                <span key={code} style={{ color: DAILY_STATUSES[code]?.bg || "#6b7280" }}>
+                  <b>{cnt}</b> {DAILY_STATUSES[code]?.name || code}
+                </span>
+              )).reduce((acc, el, i) => i === 0 ? [el] : [...acc, " • ", el], [])}
+            </p>
+          )}
         </div>
         <button className="week-insight-action" type="button" onClick={() => onOpenMonthly("weekly")} aria-label="Oylik grafikni ko'rish">
           <CalendarDays size={22} />
@@ -2988,8 +3020,8 @@ function PersonDetailScreen({ assignments, onClose, person }) {
       <section className="person-sheet" onClick={(event) => event.stopPropagation()}>
         <header className="person-sheet-top">
           <button className="person-sheet-exit" type="button" onClick={onClose}>
-            <LogOut size={18} />
-            Chiqish
+            <ChevronLeft size={18} />
+            Orqaga
           </button>
           <span>{STATUS_META[person.statusType]?.code || "S"} - {STATUS_META[person.statusType]?.label || person.status}</span>
           <button className="person-sheet-close" type="button" onClick={onClose} aria-label="Chiqish">×</button>
@@ -3472,6 +3504,18 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
             <button type="button" onClick={() => downloadEmployeeFiles(draft)}>
               <Download size={16} />
               Yuklab olish
+            </button>
+            <button type="button" onClick={async () => {
+              const text = `${draft.name}\n${draft.role} · ${draft.department}\nTel: ${draft.phone || "—"}\nID: EMP-${String(draft.id).padStart(3, "0")}`;
+              if (navigator.share) {
+                try { await navigator.share({ title: draft.name, text }); } catch { /* cancelled */ }
+              } else {
+                await navigator.clipboard.writeText(text).catch(() => {});
+                onNotify("Nusxa olindi ✓");
+              }
+            }}>
+              <Send size={16} />
+              Ulashish
             </button>
           </div>
         )}

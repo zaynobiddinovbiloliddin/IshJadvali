@@ -603,7 +603,7 @@ function requireAdmin(request, response) {
 }
 
 // ─── Daily Status helpers ─────────────────────────────────────────────────────
-const VALID_STATUS_CODES = new Set(["I", "S", "T", "K", "D", "M", "O", "A", "P", "empty"]);
+const VALID_STATUS_CODES = new Set(["I", "S", "T", "K", "D", "M", "O", "A", "P", "B", "U", "empty"]);
 const WORKING_DAILY_CODES = ["I", "S", "T", "A", "P"];
 
 function upsertDailyStatus(employeeId, date, statusCode) {
@@ -1756,10 +1756,11 @@ export async function handleRequest(request, response) {
       if (!authUser) return;
       const dir = join("uploads", "bloknot", `user-${authUser.id}`);
       if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-      const parsed = await parseMultipartBody(request);
-      if (!parsed.file) return sendJson(response, 400, { message: "Fayl topilmadi" });
-      const safeName = `${Date.now()}_${basename(parsed.file.filename || "file").replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-      await writeFile(join(dir, safeName), parsed.file.data);
+      const parts = await parseMultipartBody(request);
+      const filePart = parts.find((p) => p.name === "file");
+      if (!filePart?.data?.length) return sendJson(response, 400, { message: "Fayl topilmadi" });
+      const safeName = `${Date.now()}_${basename(filePart.filename || "file").replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      await writeFile(join(dir, safeName), filePart.data);
       const imageExts = new Set([".jpg",".jpeg",".png",".gif",".webp"]);
       const videoExts = new Set([".mp4",".webm",".mov",".avi",".mkv"]);
       const ext = extname(safeName).toLowerCase();
@@ -1828,11 +1829,12 @@ export async function handleRequest(request, response) {
       if (!date) return sendJson(response, 400, { message: "Noto'g'ri sana" });
       const dir = join("uploads", "filming", date);
       if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-      const parsed = await parseMultipartBody(request);
-      if (!parsed.file) return sendJson(response, 400, { message: "Fayl topilmadi" });
-      const ext = extname(parsed.file.filename || ".bin");
-      const safeName = `${Date.now()}_${basename(parsed.file.filename || "file").replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-      await writeFile(join(dir, safeName), parsed.file.data);
+      const filmParts = await parseMultipartBody(request);
+      const filmFile = filmParts.find((p) => p.name === "file");
+      if (!filmFile?.data?.length) return sendJson(response, 400, { message: "Fayl topilmadi" });
+      const ext = extname(filmFile.filename || ".bin");
+      const safeName = `${Date.now()}_${basename(filmFile.filename || "file").replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      await writeFile(join(dir, safeName), filmFile.data);
       return sendJson(response, 200, { ok: true, filename: safeName });
     }
 

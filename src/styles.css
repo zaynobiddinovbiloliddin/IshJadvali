@@ -3547,7 +3547,9 @@ button.metric-card {
 
 .monthly-fullscreen-body {
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 14px;
+  overscroll-behavior: contain;
 }
 
 .monthly-fullscreen-body .monthly-page {
