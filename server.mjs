@@ -1387,12 +1387,16 @@ async function serveStatic(request, response) {
 
 function parseRequestUrl(request) {
   const raw = request.url || "/";
-  // Leading-zero IP (e.g. 095.111.247.157) is invalid in Node URL — use localhost as base
   const host = (request.headers.host || "localhost").replace(/\b0+(\d)/g, "$1");
   try {
     return new URL(raw, `http://${host}`);
   } catch {
-    return new URL(raw.split("?")[0] || "/", "http://localhost");
+    try {
+      const safe = "/" + raw.replace(/^\/+/, "").split("?")[0];
+      return new URL(safe, "http://localhost");
+    } catch {
+      return new URL("/", "http://localhost");
+    }
   }
 }
 

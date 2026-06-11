@@ -1074,7 +1074,7 @@ function App() {
                   onOpenMonthly={openMonthly}
                 />
               )}
-              {page === "monthly" && <MonthlyPage dashboard={dashboard} weekStart={weekStart} fullscreen onClose={closeMonthly} currentUser={currentUser} onNotify={notify} />}
+              {page === "monthly" && <MonthlyErrorBoundary onClose={closeMonthly}><MonthlyPage dashboard={dashboard} weekStart={weekStart} fullscreen onClose={closeMonthly} currentUser={currentUser} onNotify={notify} /></MonthlyErrorBoundary>}
               {page === "documents" && <DocumentsPage employees={dashboard.employees} onNotify={notify} onSaveEmployee={saveEmployee} currentUser={currentUser} />}
               {page === "shooting" && <ShootingPage onNotify={notify} />}
               {page === "reports" && <ReportsPage dashboard={dashboard} />}
@@ -2047,6 +2047,26 @@ function ShootingPage({ onNotify }) {
       ), document.body)}
     </section>
   );
+}
+
+class MonthlyErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 24, color: "#ef4444", background: "#fff", position: "fixed", inset: 0, zIndex: 999, display: "flex", flexDirection: "column", gap: 12, alignItems: "center", justifyContent: "center" }}>
+          <strong>Xatolik yuz berdi</strong>
+          <p style={{ fontSize: "0.85rem", color: "#6b7280" }}>{this.state.error.message}</p>
+          <button onClick={() => { this.setState({ error: null }); this.props.onClose?.(); }}
+            style={{ padding: "8px 20px", background: "#6366f1", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer" }}>
+            Orqaga
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 const DAILY_STATUSES = {
