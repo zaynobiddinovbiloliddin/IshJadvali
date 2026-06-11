@@ -9744,13 +9744,19 @@ body { overflow-x: hidden; }
   margin-left: 4px;
 }
 
-/* ─── Filming attachments (FIX 6) ──────────────────────────────────────────── */
+/* ─── Filming attachments ───────────────────────────────────────────────────── */
 .filming-date-attachments {
   padding: 14px 16px;
-  background: var(--bg-card);
+  background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   margin-bottom: 16px;
+}
+.filming-attach-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 .filming-date-label {
   display: flex;
@@ -9758,63 +9764,79 @@ body { overflow-x: hidden; }
   gap: 8px;
   font-weight: 600;
   font-size: 0.9rem;
-  margin-bottom: 12px;
 }
 .filming-date-input {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 4px 8px;
   font-size: 0.85rem;
-  background: var(--bg-secondary);
+  background: var(--bg);
   color: var(--text-primary);
 }
-.filming-attachments-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: flex-end;
+.filming-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
 }
-.filming-attach-item {
+.filming-gallery-item {
+  position: relative;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+.filming-gallery-img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.filming-gallery-img:hover { transform: scale(1.015); }
+.filming-gallery-file {
+  width: 100%;
+  aspect-ratio: 16 / 9;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  width: 80px;
+  justify-content: center;
+  gap: 8px;
+  background: var(--accent-light);
+  color: var(--accent);
+  font-size: 0.8rem;
+  text-align: center;
+  padding: 12px;
 }
-.attachment-preview {
-  width: 80px;
-  height: 60px;
-  object-fit: cover;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-.attachment-preview:hover { opacity: 0.85; }
-.attach-file-icon {
-  width: 80px;
-  height: 60px;
+.filming-gallery-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
   display: flex;
+  gap: 6px;
+}
+.filming-gallery-btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--accent-light);
-  border-radius: var(--radius-sm);
-  color: var(--accent);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s;
+  backdrop-filter: blur(4px);
 }
-.attach-name {
-  font-size: 0.68rem;
-  color: var(--text-secondary);
-  text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 80px;
-}
+.filming-gallery-btn:hover { background: rgba(0,0,0,0.78); }
+.filming-gallery-del:hover { background: rgba(239,68,68,0.85); }
 .attach-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 7px 16px;
   border: 1.5px dashed var(--accent);
   border-radius: var(--radius-sm);
   color: var(--accent);
@@ -9822,8 +9844,7 @@ body { overflow-x: hidden; }
   font-weight: 500;
   cursor: pointer;
   transition: background 0.15s;
-  align-self: flex-end;
-  height: 60px;
+  height: 36px;
 }
 .attach-btn:hover { background: var(--accent-light); }
 .btn-sm {

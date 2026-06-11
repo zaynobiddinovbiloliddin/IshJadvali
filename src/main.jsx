@@ -1914,28 +1914,37 @@ function ShootingPage({ onNotify }) {
   return (
     <section className="shooting-page">
       <div className="filming-date-attachments">
-        <label className="filming-date-label">
-          Sana:
-          <input type="date" value={filmingDate} onChange={(e) => setFilmingDate(e.target.value)} className="filming-date-input" />
-        </label>
-        <div className="filming-attachments-row">
-          {filmingAttachments.map((f) => (
-            <div key={f.filename} className="filming-attach-item">
-              {f.type === "image"
-                ? <img src={f.url} alt={f.filename} className="attachment-preview" onClick={() => window.open(f.url, "_blank")} />
-                : <div className="attach-file-icon"><Paperclip size={20} /></div>
-              }
-              <span className="attach-name">{f.filename}</span>
-              <a href={f.url} download className="btn-sm" aria-label="Yuklab olish"><Download size={14} /></a>
-              <button type="button" className="btn-sm attach-del-btn" onClick={() => deleteFilmingFile(f.filename)} aria-label="O'chirish"><Trash2 size={14} /></button>
-            </div>
-          ))}
+        <div className="filming-attach-toolbar">
+          <label className="filming-date-label">
+            Sana:
+            <input type="date" value={filmingDate} onChange={(e) => setFilmingDate(e.target.value)} className="filming-date-input" />
+          </label>
           <label className="attach-btn">
             <input ref={attachInputRef} type="file" accept="image/*,.pdf,.doc,.docx" onChange={uploadFilmingFile} style={{ display: "none" }} />
             <Paperclip size={15} />
             {attachUploading ? "Yuklanmoqda..." : "Fayl qo'shish"}
           </label>
         </div>
+        {filmingAttachments.length > 0 && (
+          <div className="filming-gallery">
+            {filmingAttachments.map((f) => (
+              <div key={f.filename} className="filming-gallery-item">
+                {f.type === "image" ? (
+                  <img src={f.url} alt={f.filename} className="filming-gallery-img" onClick={() => window.open(f.url, "_blank")} />
+                ) : (
+                  <div className="filming-gallery-file">
+                    <Paperclip size={32} />
+                    <span>{f.filename}</span>
+                  </div>
+                )}
+                <div className="filming-gallery-actions">
+                  <a href={f.url} download className="filming-gallery-btn" aria-label="Yuklab olish"><Download size={15} /></a>
+                  <button type="button" className="filming-gallery-btn filming-gallery-del" onClick={() => deleteFilmingFile(f.filename)} aria-label="O'chirish"><Trash2 size={15} /></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="shooting-actions">
