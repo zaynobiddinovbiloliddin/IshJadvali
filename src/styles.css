@@ -3037,6 +3037,9 @@ button.metric-card {
   display: grid;
   gap: 10px;
   width: min(100%, 430px);
+  max-height: calc(100dvh - 70px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 8px 10px 10px;
   border: 1px solid rgba(148, 163, 184, 0.26);
   border-radius: 10px 10px 6px 6px;
@@ -10146,3 +10149,42 @@ body { overflow-x: hidden; }
   text-overflow: ellipsis;
 }
 
+/* ─── Share panel (Ulashish dropdown) ──────────────────────────────────────── */
+.share-btn-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.share-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 500;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  min-width: 170px;
+  overflow: hidden;
+  animation: modalIn 0.15s ease both;
+}
+.share-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s;
+  text-align: left;
+}
+.share-option:hover { background: var(--accent-light); color: var(--accent); }
+.share-option.tg:hover { background: rgba(37,178,221,0.12); color: #25b2dd; }
+.share-option.wa:hover { background: rgba(37,211,102,0.12); color: #25d366; }
+.share-option.em:hover { background: rgba(234,67,53,0.12); color: #ea4335; }
+.share-option.fb:hover { background: rgba(24,119,242,0.12); color: #1877f2; }
+.share-option + .share-option { border-top: 1px solid var(--border); }
