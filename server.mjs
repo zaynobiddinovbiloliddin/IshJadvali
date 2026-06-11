@@ -192,7 +192,7 @@ const initialEmployees = [
 
 const studios = [
   { name: "3 Studiya", tone: "purple", time: "9:00 - 22:00" },
-  { name: "35 TJK", tone: "purple", time: "9:00 - 18:00" },
+  { name: "TJK guruhi", tone: "purple", time: "9:00 - 18:00" },
   { name: "3 Tongi dastur", tone: "blue", time: "9:00 - 18:00" }
 ];
 const initialContacts = [

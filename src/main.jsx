@@ -2113,13 +2113,14 @@ function CellDropdown({ currentCode, buttonRect, onSelect, onClose }) {
   );
 }
 
-function StatusCell({ emp, day, code, adminMode, onSelect }) {
+const StatusCell = React.memo(function StatusCell({ emp, day, code, adminMode, onSelect }) {
   const [open, setOpen] = useState(false);
   const [rect, setRect] = useState(null);
   const btnRef = useRef(null);
   const info = DAILY_STATUSES[code] || DAILY_STATUSES.empty;
 
   const close = useCallback(() => setOpen(false), []);
+  const handleSelect = useCallback((newCode) => onSelect(emp, day, newCode), [emp, day, onSelect]);
 
   function handleClick() {
     if (!adminMode) return;
@@ -2144,13 +2145,13 @@ function StatusCell({ emp, day, code, adminMode, onSelect }) {
         <CellDropdown
           currentCode={code}
           buttonRect={rect}
-          onSelect={(newCode) => onSelect(emp, day, newCode)}
+          onSelect={handleSelect}
           onClose={close}
         />
       )}
     </>
   );
-}
+});
 
 function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, currentUser, onNotify }) {
   const now = new Date();
@@ -2163,45 +2164,64 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
   const employees = dashboard.employees;
   const daysInMonth = new Date(year, month, 0).getDate();
   const days = useMemo(() => Array.from({ length: daysInMonth }, (_, i) => i + 1), [year, month, daysInMonth]);
-  const pad2 = (n) => String(n).padStart(2, "0");
-  const monthPrefix = `${year}-${pad2(month)}`;
+  const pad2 = useCallback((n) => String(n).padStart(2, "0"), []);
+  const monthPrefix = `${year}-${String(month).padStart(2, "0")}`;
+  const statusesRef = useRef(statuses);
+  useEffect(() => { statusesRef.current = statuses; }, [statuses]);
 
   useEffect(() => {
     setLoading(true);
+    setStatuses({});
     api(`/api/daily-status?year=${year}&month=${month}`)
       .then((data) => setStatuses(data.statuses || {}))
       .catch(() => { setStatuses({}); onNotify?.("Statuslarni yuklashda xato", "error"); })
       .finally(() => setLoading(false));
   }, [year, month]);
 
-  function getCode(empId, day) {
-    return statuses[empId]?.[`${monthPrefix}-${pad2(day)}`] || "empty";
-  }
+  const getCode = useCallback((empId, day) => {
+    return statuses[empId]?.[`${monthPrefix}-${String(day).padStart(2, "0")}`] || "empty";
+  }, [statuses, monthPrefix]);
 
-  async function handleCellSelect(emp, day, newCode) {
+  const handleCellSelect = useCallback(async (emp, day, newCode) => {
     if (!isAdmin(currentUser)) return;
-    const dateStr = `${monthPrefix}-${pad2(day)}`;
-    const oldCode = getCode(emp.id, day);
+    const dateStr = `${monthPrefix}-${String(day).padStart(2, "0")}`;
+    const oldCode = statusesRef.current[emp.id]?.[dateStr] || "empty";
+    const info = DAILY_STATUSES[newCode] || DAILY_STATUSES.empty;
 
     setStatuses((prev) => ({ ...prev, [emp.id]: { ...(prev[emp.id] || {}), [dateStr]: newCode } }));
-    setSelectedCell({ empName: emp.name, day, code: newCode, info: DAILY_STATUSES[newCode] });
+    setSelectedCell({ empName: emp.name, day, code: newCode, info });
 
     try {
       await api("/api/daily-status", { method: "POST", body: JSON.stringify({ employeeId: emp.id, date: dateStr, statusCode: newCode }) });
-      onNotify?.(`${emp.name}: ${DAILY_STATUSES[newCode]?.name || "Bo'sh"} ✓`);
+      onNotify?.(`${emp.name}: ${info.name} ✓`);
     } catch (err) {
       setStatuses((prev) => ({ ...prev, [emp.id]: { ...(prev[emp.id] || {}), [dateStr]: oldCode } }));
       setSelectedCell(null);
       onNotify?.("Saqlashda xato: " + err.message, "error");
     }
-  }
+  }, [currentUser, monthPrefix, onNotify]);
+
+  const rowTotals = useMemo(() => {
+    const result = {};
+    for (const emp of employees) {
+      const empSt = statuses[emp.id] || {};
+      let working = 0, rest = 0, hours = 0;
+      for (let d = 1; d <= daysInMonth; d++) {
+        const code = empSt[`${monthPrefix}-${String(d).padStart(2, "0")}`] || "empty";
+        if (WORKING_DAILY.includes(code)) { working++; hours += 9; }
+        if (["D", "M", "O", "B", "U"].includes(code)) rest++;
+      }
+      result[emp.id] = { working, rest, hours };
+    }
+    return result;
+  }, [statuses, employees, daysInMonth, monthPrefix]);
 
   const totals = useMemo(() => {
     const r = { I: 0, S: 0, T: 0, K: 0, D: 0, M: 0, O: 0, A: 0, P: 0, B: 0, U: 0, working: 0, rest: 0, hours: 0 };
     for (const emp of employees) {
       const empSt = statuses[emp.id] || {};
       for (let d = 1; d <= daysInMonth; d++) {
-        const code = empSt[`${monthPrefix}-${pad2(d)}`] || "empty";
+        const code = empSt[`${monthPrefix}-${String(d).padStart(2, "0")}`] || "empty";
         if (code !== "empty") {
           if (r[code] !== undefined) r[code]++;
           if (WORKING_DAILY.includes(code)) { r.working++; r.hours += 9; }
@@ -2211,17 +2231,6 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
     }
     return r;
   }, [statuses, employees, year, month, daysInMonth, monthPrefix]);
-
-  function getRowTotals(empId) {
-    const empSt = statuses[empId] || {};
-    const r = { working: 0, rest: 0, hours: 0 };
-    for (let d = 1; d <= daysInMonth; d++) {
-      const code = empSt[`${monthPrefix}-${pad2(d)}`] || "empty";
-      if (WORKING_DAILY.includes(code)) { r.working++; r.hours += 9; }
-      if (["D", "M", "O", "B", "U"].includes(code)) r.rest++;
-    }
-    return r;
-  }
 
   function prevMonth() { if (month === 1) { setMonth(12); setYear((y) => y - 1); } else setMonth((m) => m - 1); }
   function nextMonth() { if (month === 12) { setMonth(1); setYear((y) => y + 1); } else setMonth((m) => m + 1); }
@@ -2321,7 +2330,7 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
             </thead>
             <tbody>
               {employees.map((emp, idx) => {
-                const rt = getRowTotals(emp.id);
+                const rt = rowTotals[emp.id] || { working: 0, rest: 0, hours: 0 };
                 return (
                   <tr key={emp.id} className="mtr">
                     <td className="mtd-num">{idx + 1}</td>
@@ -2353,11 +2362,11 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
         </div>
       )}
 
-      {selectedCell && (
+      {selectedCell && selectedCell.info && (
         <div className="monthly-cell-info">
           <strong>{selectedCell.empName}</strong>
           <span>{selectedCell.day}-{MONTH_NAMES[month - 1]}:</span>
-          <span className="mci-badge" style={{ background: selectedCell.info.bg, color: selectedCell.info.fg }}>
+          <span className="mci-badge" style={{ background: selectedCell.info.bg || "#6b7280", color: selectedCell.info.fg || "#fff" }}>
             {selectedCell.code} — {selectedCell.info.name}
           </span>
           {WORKING_DAILY.includes(selectedCell.code) && <span className="mci-word">✓ Word jadvalga tushadi</span>}
@@ -2958,7 +2967,7 @@ function AttendancePanel({ attendance = {}, employees, onScan }) {
   );
 }
 
-function StudioGroup({ group, open = true, onPersonOpen, onToggle, onStatusChange }) {
+const StudioGroup = React.memo(function StudioGroup({ group, open = true, onPersonOpen, onToggle, onStatusChange }) {
   return (
     <article className="group-card">
       <button className={`group-head ${group.tone}`} type="button" onClick={onToggle} aria-expanded={open}>
@@ -2976,9 +2985,9 @@ function StudioGroup({ group, open = true, onPersonOpen, onToggle, onStatusChang
       )}
     </article>
   );
-}
+});
 
-function StaffRow({ groupId, person, onPersonOpen, onStatusChange }) {
+const StaffRow = React.memo(function StaffRow({ groupId, person, onPersonOpen, onStatusChange }) {
   const department = departmentMeta(person.department);
   const phone = cleanPhone(person.phone);
   const telegram = telegramHref(person.telegram);
@@ -3005,7 +3014,7 @@ function StaffRow({ groupId, person, onPersonOpen, onStatusChange }) {
       )}
     </article>
   );
-}
+});
 
 function PersonDetailScreen({ assignments, onClose, person }) {
   const department = departmentMeta(person.department);
