@@ -2094,22 +2094,21 @@ function CellDropdown({ currentCode, buttonRect, onSelect, onClose }) {
     setStyle({ position: "fixed", top, left, zIndex: 9999, visibility: "visible" });
   }, [buttonRect]);
 
-  return createPortal(
+  return (
     <div ref={ref} className="cell-dropdown" style={style}>
       {Object.entries(DAILY_STATUSES).map(([code, info]) => (
         <button
           key={code}
           type="button"
           className={`cell-dropdown-item${currentCode === code ? " active" : ""}`}
-          onClick={() => { onSelect(code); onClose(); }}
+          onClick={(e) => { e.stopPropagation(); onSelect(code); onClose(); }}
         >
           <span className="cell-dropdown-dot" style={{ background: info.bg, color: info.fg }}>{info.label}</span>
           {info.name || "Bo'sh"}
           {currentCode === code && <span className="cell-dropdown-check">✓</span>}
         </button>
       ))}
-    </div>,
-    document.body
+    </div>
   );
 }
 
@@ -2122,14 +2121,15 @@ const StatusCell = React.memo(function StatusCell({ emp, day, code, adminMode, o
   const close = useCallback(() => setOpen(false), []);
   const handleSelect = useCallback((newCode) => onSelect(emp, day, newCode), [emp, day, onSelect]);
 
-  function handleClick() {
+  function handleClick(e) {
+    e.stopPropagation();
     if (!adminMode) return;
     setRect(btnRef.current.getBoundingClientRect());
     setOpen((v) => !v);
   }
 
   return (
-    <>
+    <div style={{ position: "relative" }}>
       <button
         ref={btnRef}
         type="button"
@@ -2149,7 +2149,7 @@ const StatusCell = React.memo(function StatusCell({ emp, day, code, adminMode, o
           onClose={close}
         />
       )}
-    </>
+    </div>
   );
 });
 
@@ -2378,7 +2378,7 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
         <div className="time-panel-icon"><Clock3 size={18} /></div>
         <div>
           <strong>Vaqt belgilari</strong>
-          <p>{selectedCell ? `${selectedCell.empName}: ${selectedCell.day}-kun — ${selectedCell.info.name}` : isAdmin(currentUser) ? "Katak ustiga bosing — status tanlash uchun" : "Jadval ko'rish rejimi"}</p>
+          <p>{selectedCell ? `${selectedCell.empName}: ${selectedCell.day}-kun — ${selectedCell.info?.name || ""}` : isAdmin(currentUser) ? "Katak ustiga bosing — status tanlash uchun" : "Jadval ko'rish rejimi"}</p>
         </div>
       </div>
     </div>
@@ -3519,8 +3519,13 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
               if (navigator.share) {
                 try { await navigator.share({ title: draft.name, text }); } catch { /* cancelled */ }
               } else {
-                await navigator.clipboard.writeText(text).catch(() => {});
-                onNotify("Nusxa olindi ✓");
+                let copied = false;
+                try { await navigator.clipboard.writeText(text); copied = true; } catch { /* fallback */ }
+                if (!copied) {
+                  const el = Object.assign(document.createElement("textarea"), { value: text, style: "position:fixed;opacity:0" });
+                  document.body.appendChild(el); el.select(); document.execCommand("copy"); document.body.removeChild(el);
+                }
+                onNotify("Matn nusxa olindi ✓");
               }
             }}>
               <Send size={16} />
