@@ -9746,11 +9746,11 @@ body { overflow-x: hidden; }
 
 /* ─── Filming attachments ───────────────────────────────────────────────────── */
 .filming-date-attachments {
-  padding: 14px 16px;
+  padding: 10px 16px;
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 .filming-attach-toolbar {
   display: flex;
@@ -9776,15 +9776,16 @@ body { overflow-x: hidden; }
 .filming-gallery {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 14px;
-  margin-top: 14px;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
 }
 .filming-gallery-item {
   position: relative;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   overflow: hidden;
   border: 1px solid var(--border);
-  background: var(--bg);
+  background: #f8f9fa;
 }
 .filming-gallery-img {
   width: 100%;

@@ -1925,26 +1925,6 @@ function ShootingPage({ onNotify }) {
             {attachUploading ? "Yuklanmoqda..." : "Fayl qo'shish"}
           </label>
         </div>
-        {filmingAttachments.length > 0 && (
-          <div className="filming-gallery">
-            {filmingAttachments.map((f) => (
-              <div key={f.filename} className="filming-gallery-item">
-                {f.type === "image" ? (
-                  <img src={f.url} alt={f.filename} className="filming-gallery-img" onClick={() => window.open(f.url, "_blank")} />
-                ) : (
-                  <div className="filming-gallery-file">
-                    <Paperclip size={32} />
-                    <span>{f.filename}</span>
-                  </div>
-                )}
-                <div className="filming-gallery-actions">
-                  <a href={f.url} download className="filming-gallery-btn" aria-label="Yuklab olish"><Download size={15} /></a>
-                  <button type="button" className="filming-gallery-btn filming-gallery-del" onClick={() => deleteFilmingFile(f.filename)} aria-label="O'chirish"><Trash2 size={15} /></button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       <div className="shooting-actions">
@@ -1991,6 +1971,27 @@ function ShootingPage({ onNotify }) {
         </header>
 
         <div className="excel-notice">Muhim eslatma! Tasvirga olish ishlari yakunlanishi bilan, material tayyorlashga kirishish shart.</div>
+
+        {filmingAttachments.length > 0 && (
+          <div className="filming-gallery">
+            {filmingAttachments.map((f) => (
+              <div key={f.filename} className="filming-gallery-item">
+                {f.type === "image" ? (
+                  <img src={f.url} alt={f.filename} className="filming-gallery-img" onClick={() => window.open(f.url, "_blank")} />
+                ) : (
+                  <div className="filming-gallery-file">
+                    <Paperclip size={32} />
+                    <span>{f.filename}</span>
+                  </div>
+                )}
+                <div className="filming-gallery-actions">
+                  <a href={f.url} download className="filming-gallery-btn" aria-label="Yuklab olish"><Download size={15} /></a>
+                  <button type="button" className="filming-gallery-btn filming-gallery-del" onClick={() => deleteFilmingFile(f.filename)} aria-label="O'chirish"><Trash2 size={15} /></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="shooting-table-wrap">
           <table className="shooting-table">
