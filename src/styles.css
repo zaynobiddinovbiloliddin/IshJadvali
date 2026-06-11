@@ -9848,15 +9848,23 @@ body { overflow-x: hidden; }
   transition: background 0.15s;
 }
 .filming-image-delete-btn:hover { background: rgba(239,68,68,0.22); }
-.filming-image-wrapper { width: 100%; background: #fff; }
+.filming-image-wrapper {
+  width: 100%;
+  background: #ffffff;
+  line-height: 0;
+}
 .filming-schedule-image {
   width: 100%;
   height: auto;
   display: block;
   cursor: zoom-in;
-  transition: opacity 0.18s;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  -ms-interpolation-mode: nearest-neighbor;
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
-.filming-schedule-image:hover { opacity: 0.96; }
+.filming-schedule-image:hover { filter: brightness(1.02); }
 .filming-image-actions {
   display: flex;
   align-items: center;
