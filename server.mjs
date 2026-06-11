@@ -1862,6 +1862,11 @@ export async function handleRequest(request, response) {
       if (!fileData.length) return sendJson(response, 400, { message: "Fayl topilmadi" });
       const dir = join("uploads", "filming");
       if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+      // Delete any existing file for this date (any extension) to avoid stale caches
+      for (const oldExt of [".jpg", ".jpeg", ".png"]) {
+        const oldPath = join(dir, `${date}${oldExt}`);
+        if (existsSync(oldPath)) unlinkSync(oldPath);
+      }
       const filename = `${date}${ext}`;
       await writeFile(join(dir, filename), fileData);
       const imageUrl = `/uploads/filming/${filename}`;

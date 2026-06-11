@@ -1976,7 +1976,7 @@ function ShootingPage({ onNotify, currentUser }) {
             </div>
           </div>
           <div className="filming-image-wrapper">
-            <img src={uploadedImage.imageUrl} alt={`Jadval ${filmingDate}`} className="filming-schedule-image" onClick={() => window.open(uploadedImage.imageUrl, "_blank")} />
+            <img src={`${uploadedImage.imageUrl}?t=${encodeURIComponent(uploadedImage.uploadedAt)}`} alt={`Jadval ${filmingDate}`} className="filming-schedule-image" onClick={() => window.open(uploadedImage.imageUrl, "_blank")} />
           </div>
           <div className="filming-image-actions">
             <a href={uploadedImage.imageUrl} download={`jadval-${filmingDate}.jpg`} className="filming-download-link">
