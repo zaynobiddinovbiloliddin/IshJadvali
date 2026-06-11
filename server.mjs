@@ -3,6 +3,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { existsSync, mkdirSync, unlinkSync, readdirSync } from "node:fs";
 import { extname, join, normalize, basename } from "node:path";
 import { fileURLToPath } from "node:url";
+import { gzipSync } from "node:zlib";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import "dotenv/config";
@@ -1377,7 +1378,15 @@ async function serveStatic(request, response) {
 
   try {
     const file = await readFile(target);
-    response.writeHead(200, { "Content-Type": type });
+    const ext = extname(target);
+    const compressible = [".js", ".css", ".html", ".svg", ".json"].includes(ext);
+    const acceptsGzip = (request.headers["accept-encoding"] || "").includes("gzip");
+    if (compressible && acceptsGzip) {
+      const gz = gzipSync(file);
+      response.writeHead(200, { "Content-Type": type, "Content-Encoding": "gzip", "Vary": "Accept-Encoding", "Cache-Control": "public, max-age=3600" });
+      return response.end(gz);
+    }
+    response.writeHead(200, { "Content-Type": type, "Cache-Control": "public, max-age=3600" });
     response.end(file);
   } catch {
     response.writeHead(404);
@@ -1748,9 +1757,18 @@ export async function handleRequest(request, response) {
         db.notes[idx].content = content;
         db.notes[idx].updatedAt = now;
       } else {
-        db.notes.push({ id: Date.now(), userId: authUser.id, content, updatedAt: now, createdAt: now });
+        db.notes.push({ userId: authUser.id, content, updatedAt: now, createdAt: now });
       }
-      await saveDb();
+      // Use targeted upsert — avoids Date.now() Int32 overflow in saveDb()
+      try {
+        await prisma.note.upsert({
+          where: { userId: authUser.id },
+          update: { content, updatedAt: new Date() },
+          create: { userId: authUser.id, content }
+        });
+      } catch (e) {
+        console.error("Note upsert:", e.message);
+      }
       return sendJson(response, 200, { ok: true, content });
     }
 
@@ -1862,6 +1880,17 @@ export async function handleRequest(request, response) {
         type: imageExts.has(extname(fn).toLowerCase()) ? "image" : "file",
       }));
       return sendJson(response, 200, { files });
+    }
+
+    const filmingFileDeleteMatch = url.pathname.match(/^\/api\/filming\/([^/]+)\/files\/([^/]+)$/);
+    if (filmingFileDeleteMatch && request.method === "DELETE") {
+      const authUser = getAuthUser(request, response);
+      if (!authUser) return;
+      const date = filmingFileDeleteMatch[1].replace(/[^0-9\-]/g, "");
+      const filename = basename(decodeURIComponent(filmingFileDeleteMatch[2]));
+      const filePath = join("uploads", "filming", date, filename);
+      if (existsSync(filePath)) unlinkSync(filePath);
+      return sendJson(response, 200, { ok: true });
     }
 
     // ─── Tasks ──────────────────────────────────────────────────────────────

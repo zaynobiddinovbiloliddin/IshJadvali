@@ -1841,6 +1841,16 @@ function ShootingPage({ onNotify }) {
     }
   }
 
+  async function deleteFilmingFile(filename) {
+    try {
+      await apiFetch(`/api/filming/${filmingDate}/files/${encodeURIComponent(filename)}`, { method: "DELETE" });
+      setFilmingAttachments((prev) => prev.filter((f) => f.filename !== filename));
+      onNotify("Fayl o'chirildi ✓");
+    } catch (err) {
+      onNotify(err.message || "O'chirishda xato", "error");
+    }
+  }
+
   function updateRow(index, field, value) {
     setRows((currentRows) => currentRows.map((row, rowIndex) => (
       rowIndex === index ? { ...row, [field]: value } : row
@@ -1917,6 +1927,7 @@ function ShootingPage({ onNotify }) {
               }
               <span className="attach-name">{f.filename}</span>
               <a href={f.url} download className="btn-sm" aria-label="Yuklab olish"><Download size={14} /></a>
+              <button type="button" className="btn-sm attach-del-btn" onClick={() => deleteFilmingFile(f.filename)} aria-label="O'chirish"><Trash2 size={14} /></button>
             </div>
           ))}
           <label className="attach-btn">
