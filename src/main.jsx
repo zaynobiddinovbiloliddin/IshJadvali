@@ -657,12 +657,13 @@ function App() {
       username: user.username,
       role: user.role,
       email: `${user.username}@uz24.local`,
-      avatar: ""
+      avatar: "",
+      ...(user.employeeId != null ? { employeeId: user.employeeId } : {})
     };
     window.localStorage.setItem("currentUser", JSON.stringify(userData));
     window.localStorage.setItem("authToken", token);
     setCurrentUser(userData);
-    notify(`Xush kelibsiz, ${user.fullName}!`);
+    // Toast faqat shu yerda — AuthPage dagi onNotify() o'chirilgan
   }
 
   function updateCurrentUser(nextUser) {
@@ -1391,8 +1392,10 @@ function AuthPage({ onAuth, onNotify }) {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error("wrong-pin");
-      onNotify(`Xush kelibsiz, ${data.user.fullName}! ✅`, "success");
-      setTimeout(() => onAuth(data.user, data.token), 700);
+      setTimeout(() => {
+        onAuth(data.user, data.token);
+        onNotify(`Xush kelibsiz, ${data.user.fullName}! ✅`, "success");
+      }, 700);
     } catch (err) {
       onNotify("PIN kod noto'g'ri ❌", "error");
       setShake(true);
@@ -3311,7 +3314,14 @@ function EmployeeManager({ employees, onDelete, onNotify, onSave }) {
 }
 
 function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
-  const [selectedId, setSelectedId] = useState(employees[0]?.id || "");
+  const isOwnEmployee = !isAdmin(currentUser) && currentUser?.employeeId != null;
+  const ownEmpId = isOwnEmployee ? String(currentUser.employeeId) : null;
+  const visibleEmployees = isOwnEmployee
+    ? employees.filter((e) => String(e.id) === ownEmpId)
+    : employees;
+  const [selectedId, setSelectedId] = useState(() =>
+    isOwnEmployee ? (ownEmpId || employees[0]?.id || "") : (employees[0]?.id || "")
+  );
   const [draft, setDraft] = useState(null);
   const [editDraft, setEditDraft] = useState(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -3402,7 +3412,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
   }
 
   useEffect(() => {
-    const emp = employees.find((e) => String(e.id) === String(selectedId)) || employees[0] || null;
+    const emp = visibleEmployees.find((e) => String(e.id) === String(selectedId)) || visibleEmployees[0] || null;
     if (!emp) { setDraft(null); return; }
     setDraft({
       id: emp.id,
@@ -3417,10 +3427,11 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
       documents: {}
     });
     if (String(emp.id) !== String(selectedId)) setSelectedId(emp.id);
-  }, [employees, selectedId]);
+  }, [visibleEmployees, selectedId]);
 
   useEffect(() => {
-    if (!selectedId || !isAdmin(currentUser)) return undefined;
+    if (!selectedId) return undefined;
+    if (!isAdmin(currentUser) && !isOwnEmployee) return undefined;
     let cancelled = false;
     api(`/api/employees/${selectedId}/documents`).then((result) => {
       if (cancelled || !result) return;
@@ -3567,14 +3578,16 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
           <h2>Hujjatlar</h2>
           <span>{(draft.portfolio || []).length} video</span>
         </div>
-        <label className="document-select">
-          Xodim
-          <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
-            {employees.map((employee) => (
-              <option key={employee.id} value={employee.id}>{employee.name}</option>
-            ))}
-          </select>
-        </label>
+        {isAdmin(currentUser) && (
+          <label className="document-select">
+            Xodim
+            <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
+              {visibleEmployees.map((employee) => (
+                <option key={employee.id} value={employee.id}>{employee.name}</option>
+              ))}
+            </select>
+          </label>
+        )}
         <div className="document-profile">
           <Avatar person={draft} />
           <div>
@@ -3582,7 +3595,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
             <span>{draft.role}</span>
           </div>
         </div>
-        {isAdmin(currentUser) && (
+        {(isAdmin(currentUser) || isOwnEmployee) && (
           <div className="document-view-actions">
             <button className={documentMode === "word" ? "active" : ""} type="button" onClick={() => setDocumentMode("word")}>
               <FileText size={16} />
@@ -3600,44 +3613,47 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
               <Download size={16} />
               Yuklab olish
             </button>
-            <div className="share-btn-wrap">
-              <button type="button" onClick={() => setShareOpen((v) => !v)}>
-                <Send size={16} />
-                Ulashish
-              </button>
-              {shareOpen && draft && (() => {
-                const dept = departmentMeta(draft.department).label;
-                const shareText = `${draft.name}\nLavozim: ${draft.role || "Operator"}\nBo'lim: ${dept}\nTelefon: ${draft.phone || "—"}${draft.telegram ? `\nTelegram: ${draft.telegram}` : ""}`;
-                const enc = encodeURIComponent(shareText);
-                async function withJpeg(cb) {
-                  try {
-                    const blob = await buildEmployeeJpegBlob(employeeDocumentModel(draft));
-                    if (blob) downloadBlob(blob, `${safeFileName(draft.name)}.jpg`);
-                  } catch {}
-                  cb();
+            <button
+              type="button"
+              disabled={shareOpen}
+              onClick={async () => {
+                if (!draft) return;
+                setShareOpen(true);
+                try {
+                  const model = employeeDocumentModel(draft);
+                  const fname = safeFileName(draft.name);
+                  let blob, filename, mimeType;
+                  if (documentMode === "jpeg") {
+                    blob = await buildEmployeeJpegBlob(model);
+                    filename = `${fname}.jpg`;
+                    mimeType = "image/jpeg";
+                  } else if (documentMode === "excel") {
+                    blob = buildXlsxBlob(model);
+                    filename = `${fname}.xlsx`;
+                    mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+                  } else {
+                    blob = buildDocxBlob(model);
+                    filename = `${fname}.docx`;
+                    mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+                  }
+                  if (!blob) throw new Error("Fayl yaratib bo'lmadi");
+                  const file = new File([blob], filename, { type: mimeType });
+                  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file], title: draft.name });
+                  } else {
+                    downloadBlob(blob, filename);
+                    onNotify("Fayl yuklab olindi (ulashish qurilmada qo'llab-quvvatlanmaydi)");
+                  }
+                } catch (err) {
+                  if (err?.name !== "AbortError") onNotify(err.message || "Ulashishda xato", "error");
+                } finally {
+                  setShareOpen(false);
                 }
-                return (
-                  <div className="share-panel" onClick={(e) => e.stopPropagation()}>
-                    <button type="button" className="share-option tg tg-direct" onClick={() => { setShareOpen(false); setTgShareOpen(true); }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z"/></svg>
-                      Telegramga yuborish
-                    </button>
-                    <button type="button" className="share-option wa" onClick={() => { setShareOpen(false); withJpeg(() => window.open(`https://wa.me/?text=${enc}`, "_blank")); }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                      WhatsApp
-                    </button>
-                    <button type="button" className="share-option em" onClick={() => { setShareOpen(false); window.open(`mailto:?subject=${encodeURIComponent(draft.name)}&body=${enc}`); }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
-                      Email
-                    </button>
-                    <button type="button" className="share-option fb" onClick={() => { setShareOpen(false); withJpeg(() => window.open(`https://www.facebook.com/sharer/sharer.php?quote=${enc}&u=https%3A%2F%2F95.111.247.157`, "_blank")); }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                      Facebook
-                    </button>
-                  </div>
-                );
-              })()}
-            </div>
+              }}
+            >
+              <Send size={16} />
+              {shareOpen ? "Tayyorlanmoqda..." : "Ulashish"}
+            </button>
           </div>
         )}
         {isAdmin(currentUser) && (
@@ -3829,92 +3845,6 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
         </div>
       ), document.body)}
 
-      {tgShareOpen && draft && createPortal((
-        <div className="modal-overlay" onClick={() => !tgSending && setTgShareOpen(false)}>
-          <div className="modal-card tg-share-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="#2563eb"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z"/></svg>
-              <h3>Telegramga yuborish</h3>
-              <button type="button" className="modal-close" onClick={() => !tgSending && setTgShareOpen(false)}>✕</button>
-            </div>
-            <div className="tg-share-employee">
-              <Avatar person={draft} />
-              <div>
-                <strong>{draft.name}</strong>
-                <span>{draft.role}</span>
-              </div>
-            </div>
-            <div className="tg-share-field">
-              <label>Chat tanlang</label>
-              <div className="tg-quick-chats">
-                <button
-                  type="button"
-                  className={`tg-quick-chat-btn${tgChatId === "-1003978082075" ? " active" : ""}`}
-                  onClick={() => setTgChatId("-1003978082075")}
-                  disabled={tgSending}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z"/></svg>
-                  Asosiy kanal
-                </button>
-                <button
-                  type="button"
-                  className={`tg-quick-chat-btn${tgChatId !== "-1003978082075" ? " active" : ""}`}
-                  onClick={() => { setTgChatId(""); setTimeout(() => document.getElementById("tg-custom-chat-input")?.focus(), 50); }}
-                  disabled={tgSending}
-                >
-                  ✏️ Boshqa chat
-                </button>
-              </div>
-              {tgChatId !== "-1003978082075" && (
-                <input
-                  id="tg-custom-chat-input"
-                  type="text"
-                  placeholder="Chat ID yoki @username"
-                  value={tgChatId}
-                  onChange={(e) => setTgChatId(e.target.value)}
-                  disabled={tgSending}
-                  style={{ marginTop: ".5rem" }}
-                />
-              )}
-              <p className="tg-share-hint">
-                {tgChatId === "-1003978082075"
-                  ? "✅ Asosiy kanal (-1003978082075)"
-                  : "Guruh chat ID olish: guruhga @userinfobot qo'shing"}
-              </p>
-            </div>
-            <div className="tg-share-field">
-              <label>Fayl turi</label>
-              <div className="tg-file-type-btns">
-                {[
-                  { id: "jpeg", label: "📷 JPEG rasm" },
-                  { id: "word", label: "📝 Word (.docx)" },
-                  { id: "excel", label: "📊 Excel (.xlsx)" }
-                ].map(({ id, label }) => (
-                  <button
-                    key={id}
-                    type="button"
-                    className={`tg-type-btn${tgFileType === id ? " active" : ""}`}
-                    onClick={() => setTgFileType(id)}
-                    disabled={tgSending}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="tg-share-actions">
-              <button type="button" className="btn-cancel" onClick={() => !tgSending && setTgShareOpen(false)} disabled={tgSending}>
-                Bekor qilish
-              </button>
-              <button type="button" className="btn-send-tg" onClick={sendToTelegram} disabled={tgSending || !tgChatId.trim()}>
-                {tgSending
-                  ? <><RefreshCcw size={16} className="spin" /> Yuborilmoqda...</>
-                  : <><Send size={16} /> Yuborish</>}
-              </button>
-            </div>
-          </div>
-        </div>
-      ), document.body)}
     </section>
   );
 }
