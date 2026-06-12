@@ -10184,7 +10184,54 @@ body { overflow-x: hidden; }
 }
 .share-option:hover { background: var(--accent-light); color: var(--accent); }
 .share-option.tg:hover { background: rgba(37,178,221,0.12); color: #25b2dd; }
+.share-option.tg.tg-direct { color: #2563eb; font-weight: 600; }
+.share-option.tg.tg-direct:hover { background: rgba(37,99,235,0.1); color: #1d4ed8; }
 .share-option.wa:hover { background: rgba(37,211,102,0.12); color: #25d366; }
 .share-option.em:hover { background: rgba(234,67,53,0.12); color: #ea4335; }
 .share-option.fb:hover { background: rgba(24,119,242,0.12); color: #1877f2; }
 .share-option + .share-option { border-top: 1px solid var(--border); }
+
+/* Telegram share modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(6px);
+  padding: 1rem;
+  animation: fadeIn 0.2s ease;
+}
+.modal-card {
+  background: var(--bg);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+  animation: slideUp 0.2s ease;
+}
+.tg-share-modal { max-width: 420px; width: calc(100% - 2rem); padding: 1.5rem; }
+.tg-share-modal .modal-header { display: flex; align-items: center; gap: .6rem; margin-bottom: 1.1rem; }
+.tg-share-modal .modal-header h3 { flex: 1; font-size: 1rem; font-weight: 600; margin: 0; }
+.tg-share-modal .modal-close { background: none; border: none; font-size: 1.1rem; cursor: pointer; color: var(--text-muted); padding: .2rem .4rem; border-radius: 4px; }
+.tg-share-modal .modal-close:hover { background: var(--bg-hover); }
+.tg-share-employee { display: flex; align-items: center; gap: .75rem; padding: .75rem; background: var(--bg-secondary); border-radius: 10px; margin-bottom: 1.1rem; }
+.tg-share-employee strong { display: block; font-size: .9rem; }
+.tg-share-employee span { font-size: .8rem; color: var(--text-muted); }
+.tg-share-field { margin-bottom: 1rem; }
+.tg-share-field label { display: block; font-size: .82rem; font-weight: 500; color: var(--text-muted); margin-bottom: .4rem; }
+.tg-share-field input { width: 100%; padding: .55rem .75rem; border: 1.5px solid var(--border); border-radius: 8px; font-size: .9rem; background: var(--bg-input, var(--bg)); color: var(--text); box-sizing: border-box; }
+.tg-share-field input:focus { outline: none; border-color: #2563eb; }
+.tg-share-hint { font-size: .75rem; color: var(--text-muted); margin: .35rem 0 0; }
+.tg-file-type-btns { display: flex; gap: .5rem; flex-wrap: wrap; }
+.tg-type-btn { padding: .4rem .85rem; border: 1.5px solid var(--border); border-radius: 8px; background: none; color: var(--text); font-size: .83rem; cursor: pointer; transition: all .15s; }
+.tg-type-btn:hover { border-color: #2563eb; color: #2563eb; }
+.tg-type-btn.active { background: #2563eb; border-color: #2563eb; color: #fff; font-weight: 600; }
+.tg-type-btn:disabled { opacity: .5; cursor: not-allowed; }
+.tg-share-actions { display: flex; gap: .75rem; justify-content: flex-end; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.btn-cancel { padding: .5rem 1.1rem; border: 1.5px solid var(--border); border-radius: 8px; background: none; color: var(--text-muted); cursor: pointer; font-size: .88rem; }
+.btn-cancel:hover { background: var(--bg-hover); }
+.btn-send-tg { display: flex; align-items: center; gap: .4rem; padding: .5rem 1.3rem; background: #2563eb; border: none; border-radius: 8px; color: #fff; font-size: .88rem; font-weight: 600; cursor: pointer; transition: background .15s; }
+.btn-send-tg:hover:not(:disabled) { background: #1d4ed8; }
+.btn-send-tg:disabled { opacity: .6; cursor: not-allowed; }

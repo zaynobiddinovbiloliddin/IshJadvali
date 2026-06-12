@@ -1939,6 +1939,81 @@ export async function handleRequest(request, response) {
       return sendJson(response, 200, { ok: true });
     }
 
+    // ─── Telegram direct share ───────────────────────────────────────────────
+    if (url.pathname === "/api/share-to-telegram" && request.method === "POST") {
+      const user = getAuthUser(request, response, true);
+      if (!user) return;
+
+      // multipart/form-data: fields: chatId, caption, fileType; file: binary
+      const contentType = request.headers["content-type"] || "";
+      if (!contentType.includes("multipart/form-data")) {
+        return sendJson(response, 400, { message: "multipart/form-data kerak" });
+      }
+
+      const boundary = contentType.split("boundary=")[1]?.trim();
+      if (!boundary) return sendJson(response, 400, { message: "boundary topilmadi" });
+
+      const chunks = [];
+      for await (const chunk of request) chunks.push(chunk);
+      const rawBody = Buffer.concat(chunks);
+
+      // Parse multipart fields
+      const sep = Buffer.from(`--${boundary}`);
+      const parts = [];
+      let start = rawBody.indexOf(sep) + sep.length + 2;
+      while (start < rawBody.length) {
+        const end = rawBody.indexOf(sep, start);
+        if (end === -1) break;
+        const part = rawBody.slice(start, end - 2);
+        const headerEnd = part.indexOf(Buffer.from("\r\n\r\n"));
+        if (headerEnd === -1) { start = end + sep.length + 2; continue; }
+        const headerStr = part.slice(0, headerEnd).toString();
+        const body = part.slice(headerEnd + 4);
+        parts.push({ header: headerStr, body });
+        start = end + sep.length + 2;
+      }
+
+      const fields = {};
+      let fileBuffer = null, fileName = "fayl", fileMime = "application/octet-stream";
+      for (const part of parts) {
+        const nameMatch = part.header.match(/name="([^"]+)"/);
+        const fileMatch = part.header.match(/filename="([^"]+)"/);
+        if (!nameMatch) continue;
+        if (fileMatch) {
+          fileBuffer = part.body;
+          fileName = decodeURIComponent(fileMatch[1]);
+          const ctMatch = part.header.match(/Content-Type:\s*(\S+)/i);
+          if (ctMatch) fileMime = ctMatch[1];
+        } else {
+          fields[nameMatch[1]] = part.body.toString().trim();
+        }
+      }
+
+      const targetChatId = fields.chatId || process.env.TELEGRAM_CHAT_ID;
+      const caption = fields.caption || "";
+
+      if (!fileBuffer) return sendJson(response, 400, { message: "Fayl topilmadi" });
+      if (!targetChatId) return sendJson(response, 400, { message: "Chat ID kiritilmagan" });
+      if (!process.env.TELEGRAM_BOT_TOKEN) return sendJson(response, 503, { message: "Bot token sozlanmagan" });
+
+      try {
+        const { default: TelegramBot } = await import("node-telegram-bot-api");
+        const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
+        await bot.sendDocument(
+          targetChatId,
+          fileBuffer,
+          { caption: caption.slice(0, 1024) },
+          { filename: fileName, contentType: fileMime }
+        );
+        addAuditLog("TELEGRAM_SHARE", "Employee", fields.employeeId || "", `${user.fullName} → chat:${targetChatId} | ${fileName}`);
+        return sendJson(response, 200, { ok: true, message: "Telegram ga yuborildi ✓" });
+      } catch (err) {
+        console.error("Telegram share error:", err.message);
+        const tgMsg = err.response?.body ? JSON.parse(err.response.body)?.description : err.message;
+        return sendJson(response, 502, { message: `Telegram xato: ${tgMsg || err.message}` });
+      }
+    }
+
     // ─── Tasks ──────────────────────────────────────────────────────────────
     if (url.pathname === "/api/tasks" && request.method === "GET") {
       const user = getAuthUser(request, response);
