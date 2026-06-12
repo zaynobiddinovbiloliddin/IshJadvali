@@ -1815,14 +1815,14 @@ function ShootingPage({ onNotify, currentUser }) {
   const [draftRow, setDraftRow] = useState(blankRow);
   const addFormRef = useRef(null);
   const [filmingDate, setFilmingDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [uploadedImage, setUploadedImage] = useState(null);
+  const [uploadedImages, setUploadedImages] = useState([]);
   const [uploading, setUploading] = useState(false);
   const uploadInputRef = useRef(null);
 
   useEffect(() => {
     apiFetch(`/api/filming/${filmingDate}/image`)
-      .then((d) => setUploadedImage(d.imageUrl ? d : null))
-      .catch(() => setUploadedImage(null));
+      .then((d) => setUploadedImages(d.images || []))
+      .catch(() => setUploadedImages([]));
   }, [filmingDate]);
 
   async function handleFileUpload(e) {
@@ -1840,7 +1840,7 @@ function ShootingPage({ onNotify, currentUser }) {
         headers: { "Content-Type": file.type, "X-Filename": encodeURIComponent(file.name) },
         body: file
       });
-      setUploadedImage(result);
+      setUploadedImages(result.images || []);
       onNotify("Jadval rasmi yuklandi ✓");
     } catch (err) {
       onNotify(err.message || "Yuklashda xato", "error");
@@ -1850,11 +1850,11 @@ function ShootingPage({ onNotify, currentUser }) {
     }
   }
 
-  async function handleDeleteImage() {
-    if (!window.confirm("Rasmni o'chirish?")) return;
+  async function handleDeleteImage(img) {
+    if (!window.confirm("Bu rasmni o'chirish?")) return;
     try {
-      await apiFetch(`/api/filming/${filmingDate}/image`, { method: "DELETE" });
-      setUploadedImage(null);
+      await apiFetch(`/api/filming/${filmingDate}/image?filename=${encodeURIComponent(img.filename || img.imageUrl.split("/").pop())}`, { method: "DELETE" });
+      setUploadedImages((prev) => prev.filter((i) => i !== img));
       onNotify("Rasm o'chirildi");
     } catch (err) {
       onNotify(err.message || "O'chirishda xato", "error");
@@ -1936,7 +1936,7 @@ function ShootingPage({ onNotify, currentUser }) {
             <label className={`filming-upload-btn${uploading ? " uploading" : ""}`}>
               <input ref={uploadInputRef} type="file" accept="image/jpeg,image/jpg,image/png" onChange={handleFileUpload} style={{ display: "none" }} disabled={uploading} />
               <Paperclip size={15} />
-              {uploading ? "Yuklanmoqda..." : uploadedImage ? "Rasmni almashtirish" : "Jadval rasmi yuklash"}
+              {uploading ? "Yuklanmoqda..." : "Yangi rasm yuklash"}
             </label>
           )}
           {adminMode && !isSaved && (
@@ -1963,45 +1963,44 @@ function ShootingPage({ onNotify, currentUser }) {
         </div>
       </div>
 
-      {/* ── Uploaded schedule image (full width) ── */}
-      {uploadedImage && (
-        <div className="filming-image-container">
+      {/* ── Uploaded schedule images (multi, newest first) ── */}
+      {uploadedImages.length > 0 ? uploadedImages.map((img, idx) => (
+        <div className="filming-image-container" key={img.uploadedAt || idx}>
           <div className="filming-image-header">
-            <span className="filming-image-label">📅 {filmingDate} — Kunlik jadval rasmi</span>
+            <span className="filming-image-label">📅 {filmingDate} — {idx === 0 ? "Yangi rasm" : `${idx + 1}-rasm`}</span>
             <div className="filming-image-meta">
-              <span>Yuklagan: {uploadedImage.uploadedBy}</span>
-              <span>{new Date(uploadedImage.uploadedAt).toLocaleString("uz-UZ")}</span>
+              <span>Yuklagan: {img.uploadedBy}</span>
+              <span>{new Date(img.uploadedAt).toLocaleString("uz-UZ")}</span>
               {adminMode && (
-                <button type="button" className="filming-image-delete-btn" onClick={handleDeleteImage}>
+                <button type="button" className="filming-image-delete-btn" onClick={() => handleDeleteImage(img)}>
                   <Trash2 size={13} /> O'chirish
                 </button>
               )}
             </div>
           </div>
           <div className="filming-image-wrapper">
-            <img src={`${uploadedImage.imageUrl}?t=${encodeURIComponent(uploadedImage.uploadedAt)}`} alt={`Jadval ${filmingDate}`} className="filming-schedule-image" onClick={() => window.open(uploadedImage.imageUrl, "_blank")} />
+            <img src={`${img.imageUrl}?t=${encodeURIComponent(img.uploadedAt)}`} alt={`Jadval ${filmingDate} ${idx + 1}`} className="filming-schedule-image" onClick={() => window.open(img.imageUrl, "_blank")} />
           </div>
           <div className="filming-image-actions">
-            <a href={uploadedImage.imageUrl} download={`jadval-${filmingDate}.jpg`} className="filming-download-link">
+            <a href={img.imageUrl} download={`jadval-${filmingDate}-${idx + 1}.jpg`} className="filming-download-link">
               <Download size={14} /> Yuklab olish
             </a>
             <span className="filming-image-hint">Kattalashtirish uchun rasmga bosing</span>
           </div>
         </div>
-      )}
-
-      {!uploadedImage && adminMode && (
-        <div className="filming-no-image">
-          <div className="filming-no-image-icon">📄</div>
-          <p>Bu kun uchun jadval rasmi yuklanmagan</p>
-          <p className="filming-no-image-hint">Word jadvalini JPEG sifatida saqlang va yuqoridagi tugma orqali yuklang</p>
-        </div>
-      )}
-      {!uploadedImage && !adminMode && (
-        <div className="filming-no-image">
-          <div className="filming-no-image-icon">📄</div>
-          <p>Bu kun uchun jadval rasmi hali yuklanmagan</p>
-        </div>
+      )) : (
+        adminMode ? (
+          <div className="filming-no-image">
+            <div className="filming-no-image-icon">📄</div>
+            <p>Bu kun uchun jadval rasmi yuklanmagan</p>
+            <p className="filming-no-image-hint">Word jadvalini JPEG sifatida saqlang va yuqoridagi tugma orqali yuklang</p>
+          </div>
+        ) : (
+          <div className="filming-no-image">
+            <div className="filming-no-image-icon">📄</div>
+            <p>Bu kun uchun jadval rasmi hali yuklanmagan</p>
+          </div>
+        )
       )}
 
       <article className="excel-sheet">
@@ -2246,6 +2245,101 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
   function prevMonth() { if (month === 1) { setMonth(12); setYear((y) => y - 1); } else setMonth((m) => m - 1); }
   function nextMonth() { if (month === 12) { setMonth(1); setYear((y) => y + 1); } else setMonth((m) => m + 1); }
 
+  function exportMonthlyJpeg() {
+    const FONT = "13px Arial, sans-serif";
+    const BOLD_FONT = "bold 13px Arial, sans-serif";
+    const ROW_H = 26;
+    const HEAD_H = 36;
+    const TITLE_H = 38;
+    const COL_NUM = 28;
+    const COL_NAME = 148;
+    const COL_DAY = 24;
+    const COL_TOT = 38;
+    const BADGE = 18;
+    const totalW = COL_NUM + COL_NAME + daysInMonth * COL_DAY + 3 * COL_TOT;
+    const totalH = TITLE_H + HEAD_H + employees.length * ROW_H + 4;
+    const canvas = document.createElement("canvas");
+    canvas.width = totalW; canvas.height = totalH;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, totalW, totalH);
+    // Title bar
+    ctx.fillStyle = "#1e40af"; ctx.fillRect(0, 0, totalW, TITLE_H);
+    ctx.fillStyle = "#fff"; ctx.font = "bold 16px Arial, sans-serif";
+    ctx.fillText(`${MONTH_NAMES[month - 1]} ${year} — Oylik ish grafigi  (${employees.length} xodim)`, 12, 25);
+    const sy = TITLE_H;
+    // Header row
+    ctx.fillStyle = "#f1f5f9"; ctx.fillRect(0, sy, totalW, HEAD_H);
+    ctx.strokeStyle = "#cbd5e1";
+    function drawCell(x, y, w, h, text, bg, fg, bold, align) {
+      if (bg) { ctx.fillStyle = bg; ctx.fillRect(x, y, w, h); }
+      ctx.strokeStyle = "#cbd5e1"; ctx.lineWidth = 0.5;
+      ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+      ctx.fillStyle = fg || "#1e293b";
+      ctx.font = bold ? BOLD_FONT : FONT;
+      const tw = ctx.measureText(text).width;
+      const tx = align === "center" ? x + (w - tw) / 2 : x + 4;
+      ctx.fillText(text, Math.max(tx, x + 2), y + h / 2 + 5);
+    }
+    drawCell(0, sy, COL_NUM, HEAD_H, "#", "#f1f5f9", "#64748b", true, "center");
+    drawCell(COL_NUM, sy, COL_NAME, HEAD_H, "Xodim", "#f1f5f9", "#334155", true, "left");
+    let dx = COL_NUM + COL_NAME;
+    days.forEach((d) => {
+      const dt = new Date(year, month - 1, d);
+      const wd = dt.getDay();
+      const isWknd = wd === 0 || wd === 6;
+      const isToday = dt.toDateString() === new Date().toDateString();
+      const bg = isToday ? "#dbeafe" : isWknd ? "#fef2f2" : "#f1f5f9";
+      const fg = isToday ? "#1d4ed8" : isWknd ? "#dc2626" : "#334155";
+      drawCell(dx, sy, COL_DAY, HEAD_H, String(d), bg, fg, true, "center");
+      dx += COL_DAY;
+    });
+    drawCell(dx, sy, COL_TOT, HEAD_H, "Ish", "#f1f5f9", "#16a34a", true, "center"); dx += COL_TOT;
+    drawCell(dx, sy, COL_TOT, HEAD_H, "Dam", "#f1f5f9", "#ef4444", true, "center"); dx += COL_TOT;
+    drawCell(dx, sy, COL_TOT, HEAD_H, "Soat", "#f1f5f9", "#6b7280", true, "center");
+    // Employee rows
+    employees.forEach((emp, idx) => {
+      const ry = sy + HEAD_H + idx * ROW_H;
+      const rowBg = idx % 2 === 0 ? "#fff" : "#f8fafc";
+      const rt = rowTotals[emp.id] || { working: 0, rest: 0, hours: 0 };
+      ctx.fillStyle = rowBg; ctx.fillRect(0, ry, totalW, ROW_H);
+      drawCell(0, ry, COL_NUM, ROW_H, String(idx + 1), rowBg, "#64748b", false, "center");
+      // Name — truncate if needed
+      ctx.fillStyle = rowBg; ctx.fillRect(COL_NUM, ry, COL_NAME, ROW_H);
+      ctx.strokeStyle = "#cbd5e1"; ctx.lineWidth = 0.5; ctx.strokeRect(COL_NUM + 0.5, ry + 0.5, COL_NAME - 1, ROW_H - 1);
+      ctx.fillStyle = "#1e293b"; ctx.font = FONT;
+      ctx.save(); ctx.rect(COL_NUM + 3, ry, COL_NAME - 6, ROW_H); ctx.clip();
+      ctx.fillText(emp.name, COL_NUM + 4, ry + ROW_H / 2 + 5); ctx.restore();
+      let cx = COL_NUM + COL_NAME;
+      days.forEach((d) => {
+        const dt = new Date(year, month - 1, d);
+        const wd = dt.getDay();
+        const isWknd = wd === 0 || wd === 6;
+        const code = getCode(emp.id, d);
+        const info = DAILY_STATUSES[code] || DAILY_STATUSES.empty;
+        const cellBg = isWknd ? "#fef9f9" : rowBg;
+        ctx.fillStyle = cellBg; ctx.fillRect(cx, ry, COL_DAY, ROW_H);
+        ctx.strokeStyle = "#cbd5e1"; ctx.lineWidth = 0.5; ctx.strokeRect(cx + 0.5, ry + 0.5, COL_DAY - 1, ROW_H - 1);
+        if (code !== "empty") {
+          const bx = cx + (COL_DAY - BADGE) / 2;
+          const by = ry + (ROW_H - BADGE) / 2;
+          ctx.fillStyle = info.bg; ctx.beginPath(); ctx.roundRect(bx, by, BADGE, BADGE, 4); ctx.fill();
+          ctx.fillStyle = info.fg; ctx.font = "bold 11px Arial, sans-serif";
+          const tw = ctx.measureText(code).width;
+          ctx.fillText(code, bx + (BADGE - tw) / 2, by + BADGE / 2 + 4);
+        }
+        cx += COL_DAY;
+      });
+      drawCell(cx, ry, COL_TOT, ROW_H, String(rt.working), rowBg, "#16a34a", true, "center"); cx += COL_TOT;
+      drawCell(cx, ry, COL_TOT, ROW_H, String(rt.rest), rowBg, "#ef4444", true, "center"); cx += COL_TOT;
+      drawCell(cx, ry, COL_TOT, ROW_H, String(rt.hours), rowBg, "#64748b", true, "center");
+    });
+    const link = document.createElement("a");
+    link.href = canvas.toDataURL("image/jpeg", 0.95);
+    link.download = `oylik-grafik-${year}-${String(month).padStart(2, "0")}.jpg`;
+    link.click();
+    onNotify?.("Oylik grafik JPEG sifatida yuklandi ✓");
+  }
+
   async function exportWordForDate(targetDate) {
     try {
       const data = await api(`/api/daily-status/working?date=${targetDate}`);
@@ -2284,6 +2378,11 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
           <p>{employees.length} xodim uchun oylik ish grafigi</p>
         </div>
         <button type="button" onClick={nextMonth}>Keyingi →</button>
+      </div>
+      <div className="monthly-jpeg-row">
+        <button type="button" className="monthly-jpeg-btn" onClick={exportMonthlyJpeg} disabled={loading}>
+          <Download size={15} /> Barcha xodimlar grafikini JPEG yuklab olish
+        </button>
       </div>
 
       <div className="monthly-summary">
@@ -3328,14 +3427,27 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
   const [documentMode, setDocumentMode] = useState("word");
   const [saving, setSaving] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
-  const [uploading, setUploading] = useState(false);
+  const [uploadingCat, setUploadingCat] = useState(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [tgShareOpen, setTgShareOpen] = useState(false);
   const [tgChatId, setTgChatId] = useState("-1003978082075");
   const [tgFileType, setTgFileType] = useState("jpeg");
   const [tgSending, setTgSending] = useState(false);
   const formRef = useRef(null);
-  const fileInputRef = useRef(null);
+  const catInputRefs = useRef({});
+
+  const DOC_CATEGORIES = [
+    { id: "passport-front", label: "Pasport — old tomoni", emoji: "🛂" },
+    { id: "passport-back", label: "Pasport — orqa tomoni", emoji: "🛂" },
+    { id: "photo3x4", label: "3×4 rasm", emoji: "📷" },
+    { id: "intpassport-front", label: "Xorijiy pasport — old tomoni", emoji: "✈️" },
+    { id: "intpassport-back", label: "Xorijiy pasport — orqa tomoni", emoji: "✈️" },
+    { id: "other", label: "Boshqa hujjatlar", emoji: "📄" },
+  ];
+
+  function getFilesByCategory(cat) {
+    return uploadedFiles.filter((f) => f.category === cat || (!f.category && cat === "other"));
+  }
 
   async function sendToTelegram() {
     if (!draft) return;
@@ -3381,23 +3493,77 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
       .catch(() => setUploadedFiles([]));
   }, [selectedId]);
 
-  async function handleFileUpload(e) {
+  async function handleFileUpload(e, category) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) { onNotify("Fayl hajmi 10MB dan oshmasligi kerak", "error"); return; }
-    setUploading(true);
+    if (file.size > 15 * 1024 * 1024) { onNotify("Fayl hajmi 15MB dan oshmasligi kerak", "error"); return; }
+    setUploadingCat(category);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const result = await apiFetch(`/api/employees/${selectedId}/upload-document`, { method: "POST", body: fd });
+      const result = await apiFetch(`/api/employees/${selectedId}/upload-document?category=${encodeURIComponent(category)}`, {
+        method: "POST",
+        headers: { "Content-Type": file.type || "application/octet-stream", "X-Filename": encodeURIComponent(file.name) },
+        body: file
+      });
       setUploadedFiles((prev) => [result, ...prev]);
       onNotify("Fayl muvaffaqiyatli yuklandi ✓");
     } catch (err) {
       onNotify(err.message || "Yuklashda xato", "error");
     } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      setUploadingCat(null);
+      if (catInputRefs.current[category]) catInputRefs.current[category].value = "";
     }
+  }
+
+  async function downloadCombinedDocJpeg() {
+    const imageFiles = uploadedFiles.filter((f) => f.type === "image");
+    if (!imageFiles.length) { onNotify("Yuklangan rasm topilmadi", "warning"); return; }
+    try {
+      const loaded = await Promise.all(imageFiles.map((f) => new Promise((res, rej) => {
+        const img = new window.Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => res({ img, f });
+        img.onerror = () => res(null);
+        img.src = `${f.url}?t=${Date.now()}`;
+      })));
+      const valid = loaded.filter(Boolean);
+      if (!valid.length) { onNotify("Rasmlarni yuklashda xato", "error"); return; }
+      const COLS = 2;
+      const CELL_W = 420;
+      const CELL_H = 300;
+      const LABEL_H = 28;
+      const HEADER_H = 52;
+      const rows = Math.ceil(valid.length / COLS);
+      const W = COLS * CELL_W;
+      const H = HEADER_H + rows * CELL_H;
+      const canvas = document.createElement("canvas");
+      canvas.width = W; canvas.height = H;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = "#1e40af"; ctx.fillRect(0, 0, W, HEADER_H);
+      ctx.fillStyle = "#fff"; ctx.font = "bold 17px Arial";
+      ctx.fillText(`${draft?.name || ""} — Shaxsiy hujjatlar`, 16, 34);
+      valid.forEach(({ img, f }, i) => {
+        const col = i % COLS;
+        const row = Math.floor(i / COLS);
+        const x = col * CELL_W;
+        const y = HEADER_H + row * CELL_H;
+        ctx.fillStyle = "#f1f5f9"; ctx.fillRect(x, y, CELL_W, LABEL_H);
+        ctx.fillStyle = "#334155"; ctx.font = "12px Arial";
+        const catLabel = DOC_CATEGORIES.find((c) => c.id === f.category)?.label || "Hujjat";
+        ctx.fillText(`${catLabel}`, x + 8, y + 18);
+        ctx.strokeStyle = "#e2e8f0"; ctx.strokeRect(x, y, CELL_W, CELL_H);
+        const drawH = CELL_H - LABEL_H;
+        const scale = Math.min((CELL_W - 16) / img.naturalWidth, (drawH - 16) / img.naturalHeight);
+        const iw = img.naturalWidth * scale;
+        const ih = img.naturalHeight * scale;
+        ctx.drawImage(img, x + (CELL_W - iw) / 2, y + LABEL_H + (drawH - ih) / 2, iw, ih);
+      });
+      const link = document.createElement("a");
+      link.href = canvas.toDataURL("image/jpeg", 0.92);
+      link.download = `${safeFileName(draft?.name || "xodim")}-hujjatlar.jpg`;
+      link.click();
+      onNotify("Hujjatlar JPEG sifatida yuklandi ✓");
+    } catch (err) { onNotify("Xato: " + err.message, "error"); }
   }
 
   async function deleteUploadedFile(filename) {
@@ -3663,40 +3829,63 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
           </button>
         )}
 
-        <div className="document-upload-area" onClick={() => fileInputRef.current?.click()}>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".jpg,.jpeg,.png,.pdf"
-            onChange={handleFileUpload}
-            style={{ display: "none" }}
-          />
-          <Paperclip size={18} />
-          <span>{uploading ? "Yuklanmoqda..." : "Fayl yuklash (JPEG, PNG, PDF)"}</span>
-        </div>
-
-        {uploadedFiles.length > 0 && (
-          <div className="uploaded-files-list">
-            <strong>Yuklangan fayllar ({uploadedFiles.length})</strong>
-            {uploadedFiles.map((doc) => (
-              <div className="doc-item" key={doc.filename}>
-                {doc.type === "image" && (
-                  <img src={doc.url} alt={doc.filename} className="doc-thumbnail" />
-                )}
-                <div className="doc-item-info">
-                  <span className="doc-item-name">{doc.filename}</span>
+        {/* ── Categorized document upload ── */}
+        <div className="doc-categories">
+          {DOC_CATEGORIES.map((cat) => {
+            const catFiles = getFilesByCategory(cat.id);
+            const isUploading = uploadingCat === cat.id;
+            return (
+              <div className="doc-category-slot" key={cat.id}>
+                <div className="doc-category-header">
+                  <span className="doc-category-label">{cat.emoji} {cat.label}</span>
+                  <label className={`doc-category-upload-btn${isUploading ? " uploading" : ""}`}>
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.pdf"
+                      style={{ display: "none" }}
+                      disabled={isUploading}
+                      ref={(el) => { catInputRefs.current[cat.id] = el; }}
+                      onChange={(e) => handleFileUpload(e, cat.id)}
+                    />
+                    <Upload size={13} />
+                    {isUploading ? "Yuklanmoqda..." : catFiles.length ? "Yana yuklash" : "Yuklash"}
+                  </label>
                 </div>
-                <a href={doc.url} download className="doc-download-btn" onClick={(e) => e.stopPropagation()} aria-label="Yuklab olish">
-                  <Download size={15} />
-                </a>
-                {isAdmin(currentUser) && (
-                  <button type="button" className="doc-delete-btn" onClick={() => deleteUploadedFile(doc.filename)} aria-label="O'chirish">
-                    <Trash2 size={14} />
-                  </button>
+                {catFiles.length > 0 && (
+                  <div className="doc-category-files">
+                    {catFiles.map((doc) => (
+                      <div className="doc-item" key={doc.filename}>
+                        {doc.type === "image" && (
+                          <img src={doc.url} alt={cat.label} className="doc-item-thumbnail" />
+                        )}
+                        {doc.type !== "image" && (
+                          <div className="doc-file-icon"><FileText size={18} /></div>
+                        )}
+                        <div className="doc-item-info">
+                          <span className="doc-item-name">{cat.label}</span>
+                          {doc.uploadedAt && <span className="doc-item-meta">{new Date(doc.uploadedAt).toLocaleDateString("uz-UZ")}</span>}
+                        </div>
+                        <a href={doc.url} download className="doc-download-btn" onClick={(e) => e.stopPropagation()} aria-label="Yuklab olish">
+                          <Download size={14} />
+                        </a>
+                        {isAdmin(currentUser) && (
+                          <button type="button" className="doc-delete-btn" onClick={() => deleteUploadedFile(doc.filename)} aria-label="O'chirish">
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-            ))}
-          </div>
+            );
+          })}
+        </div>
+
+        {uploadedFiles.filter((f) => f.type === "image").length > 0 && (
+          <button type="button" className="doc-combine-btn" onClick={downloadCombinedDocJpeg}>
+            <Download size={15} /> Barcha rasmlarni bitta JPEG sifatida yuklab olish
+          </button>
         )}
       </section>
 

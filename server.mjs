@@ -1676,20 +1676,25 @@ export async function handleRequest(request, response) {
       if (!["admin", "superadmin"].includes(authUser.role) && authUser.employeeId !== empId) {
         return sendJson(response, 403, { message: "Faqat o'z hujjatlaringizni yuklay olasiz" });
       }
-      let parts;
-      try { parts = await parseMultipartBody(request); } catch (e) { return sendJson(response, 400, { message: "Multipart xatosi: " + e.message }); }
-      const filePart = parts.find((p) => p.name === "file");
-      if (!filePart?.data?.length) return sendJson(response, 400, { message: "Fayl tanlanmagan" });
-      const origName = filePart.filename || "file";
+      // Raw binary upload — Content-Type + X-Filename headers, no multipart
+      const origName = decodeURIComponent(request.headers["x-filename"] || "upload.bin");
+      const category = (url.searchParams.get("category") || "other").replace(/[^a-zA-Z0-9-]/g, "");
       const ext = extname(origName).toLowerCase();
       if (![".jpg", ".jpeg", ".png", ".pdf"].includes(ext)) return sendJson(response, 400, { message: "Faqat JPEG, PNG va PDF fayllar ruxsat etilgan" });
+      const chunks = [];
+      for await (const chunk of request) chunks.push(chunk);
+      const fileData = Buffer.concat(chunks);
+      if (!fileData.length) return sendJson(response, 400, { message: "Fayl tanlanmagan" });
+      if (fileData.length > 15 * 1024 * 1024) return sendJson(response, 400, { message: "Fayl hajmi 15MB dan oshmasligi kerak" });
       const dir = join(__dirname, "uploads", "documents", `emp-${empId}`);
       mkdirSync(dir, { recursive: true });
-      const safeName = `${Date.now()}-${basename(origName).replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-      await writeFile(join(dir, safeName), filePart.data);
+      const ts = Date.now();
+      const safeName = `${category}_${ts}${ext}`;
+      await writeFile(join(dir, safeName), fileData);
       const fileUrl = `/uploads/documents/emp-${empId}/${safeName}`;
       pushAuditLog("UPLOAD", "Employee", empId, `${safeName} fayl yuklandi`);
-      return sendJson(response, 201, { filename: safeName, url: fileUrl, type: [".jpg", ".jpeg", ".png"].includes(ext) ? "image" : "document", uploadedAt: new Date().toISOString() });
+      const type = [".jpg", ".jpeg", ".png"].includes(ext) ? "image" : "document";
+      return sendJson(response, 201, { filename: safeName, url: fileUrl, type, category, uploadedAt: new Date(ts).toISOString() });
     }
 
     const listDocMatch = url.pathname.match(/^\/api\/employees\/(\d+)\/uploaded-files$/);
@@ -1704,10 +1709,21 @@ export async function handleRequest(request, response) {
       let files = [];
       if (existsSync(dir)) {
         try {
-          files = readdirSync(dir).map((name) => {
-            const e = extname(name).toLowerCase();
-            return { filename: name, url: `/uploads/documents/emp-${empId}/${name}`, type: [".jpg", ".jpeg", ".png"].includes(e) ? "image" : "document" };
-          });
+          files = readdirSync(dir)
+            .filter((name) => [".jpg", ".jpeg", ".png", ".pdf"].includes(extname(name).toLowerCase()))
+            .map((name) => {
+              const e = extname(name).toLowerCase();
+              const type = [".jpg", ".jpeg", ".png"].includes(e) ? "image" : "document";
+              // filename format: {category}_{timestamp}.ext
+              const base = name.slice(0, -e.length);
+              const lastUnd = base.lastIndexOf("_");
+              const category = lastUnd !== -1 ? base.slice(0, lastUnd) : "other";
+              const tsStr = lastUnd !== -1 ? base.slice(lastUnd + 1) : "";
+              const ts = Number(tsStr);
+              const uploadedAt = ts > 0 ? new Date(ts).toISOString() : "";
+              return { filename: name, url: `/uploads/documents/emp-${empId}/${name}`, type, category, uploadedAt };
+            })
+            .sort((a, b) => (b.uploadedAt > a.uploadedAt ? 1 : -1));
         } catch { files = []; }
       }
       return sendJson(response, 200, { files });
@@ -1844,8 +1860,7 @@ export async function handleRequest(request, response) {
       return sendJson(response, 200, { ok: true, restoredEmployees: db.employees.length, restoredUsers: db.users.length });
     }
 
-    // ─── Filming file attachments ────────────────────────────────────────────
-    // ─── Filming: single image per date (upload) ────────────────────────────
+    // ─── Filming: multi-image per date (upload) ──────────────────────────────
     const filmingUploadMatch = url.pathname.match(/^\/api\/filming\/([^/]+)\/upload$/);
     if (filmingUploadMatch && request.method === "POST") {
       const authUser = getAuthUser(request, response);
@@ -1862,37 +1877,40 @@ export async function handleRequest(request, response) {
       if (!fileData.length) return sendJson(response, 400, { message: "Fayl topilmadi" });
       const dir = join("uploads", "filming");
       if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-      // Delete any existing file for this date (any extension) to avoid stale caches
-      for (const oldExt of [".jpg", ".jpeg", ".png"]) {
-        const oldPath = join(dir, `${date}${oldExt}`);
-        if (existsSync(oldPath)) unlinkSync(oldPath);
-      }
-      const filename = `${date}${ext}`;
+      // Multi-image: timestamp in filename — do NOT delete existing images
+      const ts = Date.now();
+      const filename = `${date}_${ts}${ext}`;
       await writeFile(join(dir, filename), fileData);
       const imageUrl = `/uploads/filming/${filename}`;
-      const uploadedAt = new Date().toISOString();
+      const uploadedAt = new Date(ts).toISOString();
       const uploadedBy = authUser.fullName || authUser.username;
-      const metaKey = `filming-image-${date}`;
-      db.schedules[metaKey] = { imageUrl, uploadedAt, uploadedBy };
+      const metaKey = `filming-images-${date}`;
+      if (!db.schedules[metaKey]) db.schedules[metaKey] = { images: [] };
+      // Prepend — newest first
+      db.schedules[metaKey].images = [{ imageUrl, uploadedAt, uploadedBy, filename }, ...(db.schedules[metaKey].images || [])];
       try {
         await prisma.schedule.upsert({
           where: { weekStart: metaKey },
-          update: { data: { imageUrl, uploadedAt, uploadedBy } },
-          create: { weekStart: metaKey, data: { imageUrl, uploadedAt, uploadedBy } }
+          update: { data: db.schedules[metaKey] },
+          create: { weekStart: metaKey, data: db.schedules[metaKey] }
         });
-      } catch (e) { console.error("filming image upsert:", e.message); }
-      return sendJson(response, 200, { success: true, imageUrl, uploadedAt, uploadedBy });
+      } catch (e) { console.error("filming images upsert:", e.message); }
+      return sendJson(response, 200, { success: true, images: db.schedules[metaKey].images });
     }
 
-    // ─── Filming: get image for date ─────────────────────────────────────────
+    // ─── Filming: get images for date ────────────────────────────────────────
     const filmingImageGetMatch = url.pathname.match(/^\/api\/filming\/([^/]+)\/image$/);
     if (filmingImageGetMatch && request.method === "GET") {
       const authUser = getAuthUser(request, response);
       if (!authUser) return;
       const date = filmingImageGetMatch[1].replace(/[^0-9\-]/g, "");
-      const meta = db.schedules[`filming-image-${date}`];
-      if (!meta || !meta.imageUrl) return sendJson(response, 200, { success: true, imageUrl: null });
-      return sendJson(response, 200, { success: true, ...meta });
+      // New multi-image format
+      const multiMeta = db.schedules[`filming-images-${date}`];
+      if (multiMeta?.images?.length) return sendJson(response, 200, { success: true, images: multiMeta.images });
+      // Backward compat: old single-image format
+      const oldMeta = db.schedules[`filming-image-${date}`];
+      if (oldMeta?.imageUrl) return sendJson(response, 200, { success: true, images: [{ ...oldMeta, filename: basename(oldMeta.imageUrl) }] });
+      return sendJson(response, 200, { success: true, images: [] });
     }
 
     // ─── Filming: delete image for date ──────────────────────────────────────
@@ -1901,14 +1919,51 @@ export async function handleRequest(request, response) {
       if (!authUser) return;
       if (!["admin", "superadmin"].includes(authUser.role)) return sendJson(response, 403, { message: "Faqat admin o'chira oladi" });
       const date = filmingImageGetMatch[1].replace(/[^0-9\-]/g, "");
-      const metaKey = `filming-image-${date}`;
-      const meta = db.schedules[metaKey];
-      if (meta?.imageUrl) {
-        const filePath = join("uploads", "filming", basename(meta.imageUrl));
-        if (existsSync(filePath)) unlinkSync(filePath);
+      const filenameToDelete = url.searchParams.get("filename");
+      const metaKey = `filming-images-${date}`;
+      if (filenameToDelete) {
+        // Delete one specific image
+        const meta = db.schedules[metaKey];
+        if (meta?.images) {
+          const entry = meta.images.find((img) => img.filename === filenameToDelete || basename(img.imageUrl) === filenameToDelete);
+          if (entry) {
+            const fp = join("uploads", "filming", basename(entry.imageUrl));
+            if (existsSync(fp)) unlinkSync(fp);
+            db.schedules[metaKey].images = meta.images.filter((img) => img !== entry);
+            if (!db.schedules[metaKey].images.length) delete db.schedules[metaKey];
+            try {
+              if (db.schedules[metaKey]) {
+                await prisma.schedule.upsert({ where: { weekStart: metaKey }, update: { data: db.schedules[metaKey] }, create: { weekStart: metaKey, data: db.schedules[metaKey] } });
+              } else {
+                await prisma.schedule.deleteMany({ where: { weekStart: metaKey } });
+              }
+            } catch (e) { console.error("filming image delete:", e.message); }
+          }
+        }
+        // Also handle old single-image format
+        const oldMeta = db.schedules[`filming-image-${date}`];
+        if (oldMeta?.imageUrl && basename(oldMeta.imageUrl) === filenameToDelete) {
+          const fp = join("uploads", "filming", basename(oldMeta.imageUrl));
+          if (existsSync(fp)) unlinkSync(fp);
+          delete db.schedules[`filming-image-${date}`];
+          try { await prisma.schedule.deleteMany({ where: { weekStart: `filming-image-${date}` } }); } catch {}
+        }
+      } else {
+        // Delete all images for this date
+        const meta = db.schedules[metaKey];
+        if (meta?.images) {
+          for (const img of meta.images) { const fp = join("uploads", "filming", basename(img.imageUrl)); if (existsSync(fp)) unlinkSync(fp); }
+          delete db.schedules[metaKey];
+          try { await prisma.schedule.deleteMany({ where: { weekStart: metaKey } }); } catch (e) { console.error("filming image delete all:", e.message); }
+        }
+        const oldMeta = db.schedules[`filming-image-${date}`];
+        if (oldMeta?.imageUrl) {
+          const fp = join("uploads", "filming", basename(oldMeta.imageUrl));
+          if (existsSync(fp)) unlinkSync(fp);
+          delete db.schedules[`filming-image-${date}`];
+          try { await prisma.schedule.deleteMany({ where: { weekStart: `filming-image-${date}` } }); } catch {}
+        }
       }
-      delete db.schedules[metaKey];
-      try { await prisma.schedule.deleteMany({ where: { weekStart: metaKey } }); } catch (e) { console.error("filming image delete:", e.message); }
       return sendJson(response, 200, { success: true });
     }
 

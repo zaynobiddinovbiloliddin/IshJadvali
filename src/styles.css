@@ -10240,3 +10240,96 @@ body { overflow-x: hidden; }
 .btn-send-tg { display: flex; align-items: center; gap: .4rem; padding: .5rem 1.3rem; background: #2563eb; border: none; border-radius: 8px; color: #fff; font-size: .88rem; font-weight: 600; cursor: pointer; transition: background .15s; }
 .btn-send-tg:hover:not(:disabled) { background: #1d4ed8; }
 .btn-send-tg:disabled { opacity: .6; cursor: not-allowed; }
+
+/* ─── Document categories upload ───────────────────────────────────────────── */
+.doc-categories { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.doc-category-slot {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.doc-category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  background: var(--bg-secondary);
+  gap: 8px;
+}
+.doc-category-label { font-size: 0.83rem; font-weight: 600; color: var(--text-primary); flex: 1; }
+.doc-category-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.doc-category-upload-btn:hover { background: var(--accent-hover, #2563eb); }
+.doc-category-upload-btn.uploading { background: #94a3b8; cursor: default; }
+.doc-cat-actions { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.doc-category-share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid var(--accent);
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.doc-category-share-btn:hover { background: var(--accent); color: #fff; }
+.doc-category-files { padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; background: var(--bg-card); }
+.doc-combine-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 10px 14px;
+  margin-top: 4px;
+  border-radius: var(--radius-md);
+  border: 1.5px dashed var(--accent);
+  background: var(--accent-light);
+  color: var(--accent);
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.doc-combine-btn:hover { background: rgba(99,102,241,0.12); }
+
+/* ─── Monthly JPEG export button ────────────────────────────────────────────── */
+.monthly-jpeg-row {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 0 12px;
+}
+.monthly-jpeg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--accent);
+  background: var(--accent-light);
+  color: var(--accent);
+  font-size: 0.83rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.monthly-jpeg-btn:hover { background: var(--accent); color: #fff; }
+.monthly-jpeg-btn:disabled { opacity: 0.5; cursor: default; }
