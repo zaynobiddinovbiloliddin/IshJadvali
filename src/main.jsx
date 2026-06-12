@@ -3321,7 +3321,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
   const [uploading, setUploading] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [tgShareOpen, setTgShareOpen] = useState(false);
-  const [tgChatId, setTgChatId] = useState("");
+  const [tgChatId, setTgChatId] = useState("-1003978082075");
   const [tgFileType, setTgFileType] = useState("jpeg");
   const [tgSending, setTgSending] = useState(false);
   const formRef = useRef(null);
@@ -3329,7 +3329,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
 
   async function sendToTelegram() {
     if (!draft) return;
-    if (!tgChatId.trim()) { onNotify("Chat ID yoki username kiriting", "error"); return; }
+    if (!tgChatId.trim()) { onNotify("Chat ID kiriting", "error"); return; }
     setTgSending(true);
     try {
       const model = employeeDocumentModel(draft);
@@ -3845,16 +3845,42 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
               </div>
             </div>
             <div className="tg-share-field">
-              <label>Chat ID yoki username</label>
-              <input
-                type="text"
-                placeholder="Masalan: -1001234567890 yoki @username"
-                value={tgChatId}
-                onChange={(e) => setTgChatId(e.target.value)}
-                disabled={tgSending}
-                autoFocus
-              />
-              <p className="tg-share-hint">Guruh chat ID ni olish: guruhga @userinfobot ni qo'shing</p>
+              <label>Chat tanlang</label>
+              <div className="tg-quick-chats">
+                <button
+                  type="button"
+                  className={`tg-quick-chat-btn${tgChatId === "-1003978082075" ? " active" : ""}`}
+                  onClick={() => setTgChatId("-1003978082075")}
+                  disabled={tgSending}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z"/></svg>
+                  Asosiy kanal
+                </button>
+                <button
+                  type="button"
+                  className={`tg-quick-chat-btn${tgChatId !== "-1003978082075" ? " active" : ""}`}
+                  onClick={() => { setTgChatId(""); setTimeout(() => document.getElementById("tg-custom-chat-input")?.focus(), 50); }}
+                  disabled={tgSending}
+                >
+                  ✏️ Boshqa chat
+                </button>
+              </div>
+              {tgChatId !== "-1003978082075" && (
+                <input
+                  id="tg-custom-chat-input"
+                  type="text"
+                  placeholder="Chat ID yoki @username"
+                  value={tgChatId}
+                  onChange={(e) => setTgChatId(e.target.value)}
+                  disabled={tgSending}
+                  style={{ marginTop: ".5rem" }}
+                />
+              )}
+              <p className="tg-share-hint">
+                {tgChatId === "-1003978082075"
+                  ? "✅ Asosiy kanal (-1003978082075)"
+                  : "Guruh chat ID olish: guruhga @userinfobot qo'shing"}
+              </p>
             </div>
             <div className="tg-share-field">
               <label>Fayl turi</label>
