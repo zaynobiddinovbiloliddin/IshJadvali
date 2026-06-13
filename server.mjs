@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { readFile, writeFile } from "node:fs/promises";
-import { existsSync, mkdirSync, unlinkSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, unlinkSync, readdirSync, readFileSync, writeFileSync, statSync } from "node:fs";
 import { extname, join, normalize, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
@@ -87,12 +87,19 @@ async function migrateUsersToPin() {
   await saveDb();
 }
 
-const departments = [
-  { id: "pool", name: "Pool xizmati" },
-  { id: "operator", name: "Operatorlar" },
-  { id: "dron", name: "Dron bo'limi" },
-  { id: "tjk", name: "TJK guruhi" }
-];
+const DEPTS_FILE = join(__dirname, "data", "departments.json");
+let departments = (() => {
+  try { return JSON.parse(readFileSync(DEPTS_FILE, "utf8")); }
+  catch { return [
+    { id: "pool", name: "pool", label: "Pool xizmati", color: "#3b82f6" },
+    { id: "operator", name: "operator", label: "Operatorlar", color: "#6366f1" },
+    { id: "dron", name: "dron", label: "Dron bo'limi", color: "#22c55e" },
+    { id: "tjk", name: "tjk", label: "TJK guruhi", color: "#f59e0b" }
+  ]; }
+})();
+function saveDepartments() {
+  try { writeFileSync(DEPTS_FILE, JSON.stringify(departments, null, 2)); } catch {}
+}
 const statusMap = {
   working: "Studiyada",
   rest: "Damda",
@@ -1580,6 +1587,41 @@ export async function handleRequest(request, response) {
       db.users.splice(idx, 1);
       await saveDb();
       return sendJson(response, 200, { ok: true });
+    }
+
+    // ─── Departments ────────────────────────────────────────────────────────
+    if (url.pathname === "/api/departments" && request.method === "GET") {
+      const user = getAuthUser(request, response);
+      if (!user) return;
+      return sendJson(response, 200, { departments });
+    }
+
+    if (url.pathname === "/api/departments" && request.method === "POST") {
+      const user = getAuthUser(request, response, true);
+      if (!user) return;
+      const { name, label, color } = await readBody(request);
+      if (!name || !label) return sendJson(response, 400, { message: "name va label kerak" });
+      const id = String(name).toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 20);
+      if (departments.find((d) => d.id === id || d.name === id)) {
+        return sendJson(response, 409, { message: "Bu bo'lim allaqachon mavjud" });
+      }
+      const dept = { id, name: id, label: String(label).trim(), color: color || "#6366f1" };
+      departments.push(dept);
+      saveDepartments();
+      pushAuditLog("DEPT_CREATE", "Department", id, `${user.fullName} → ${label}`);
+      return sendJson(response, 201, { department: dept, departments });
+    }
+
+    if (url.pathname.startsWith("/api/departments/") && request.method === "DELETE") {
+      const user = getAuthUser(request, response, true);
+      if (!user) return;
+      const deptId = url.pathname.replace("/api/departments/", "");
+      const idx = departments.findIndex((d) => d.id === deptId || d.name === deptId);
+      if (idx === -1) return sendJson(response, 404, { message: "Bo'lim topilmadi" });
+      const removed = departments.splice(idx, 1)[0];
+      saveDepartments();
+      pushAuditLog("DEPT_DELETE", "Department", deptId, `${user.fullName} → ${removed.label}`);
+      return sendJson(response, 200, { ok: true, departments });
     }
 
     // ─── Audit Logs ─────────────────────────────────────────────────────────

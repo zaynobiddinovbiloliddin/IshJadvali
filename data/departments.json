@@ -1,0 +1,6 @@
+[
+  { "id": "pool", "name": "pool", "label": "Pool xizmati", "color": "#3b82f6" },
+  { "id": "operator", "name": "operator", "label": "Operatorlar", "color": "#6366f1" },
+  { "id": "dron", "name": "dron", "label": "Dron bo'limi", "color": "#22c55e" },
+  { "id": "tjk", "name": "tjk", "label": "TJK guruhi", "color": "#f59e0b" }
+]
