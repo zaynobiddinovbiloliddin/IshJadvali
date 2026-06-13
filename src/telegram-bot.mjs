@@ -1,6 +1,6 @@
 import TelegramBot from "node-telegram-bot-api";
 import cron from "node-cron";
-import { writeFileSync, unlinkSync, existsSync } from "fs";
+import { writeFileSync, readFileSync, unlinkSync, existsSync } from "fs";
 import { join } from "path";
 import {
   Document,
@@ -18,7 +18,25 @@ import {
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
-const bot = new TelegramBot(BOT_TOKEN, { polling: false });
+let bot = null;
+
+// username (lowercase, no @) → numeric chat_id string
+const USERS_FILE = join("data", "telegram-users.json");
+function loadUsers() {
+  try { return JSON.parse(readFileSync(USERS_FILE, "utf8")); } catch { return {}; }
+}
+function saveUsers(map) {
+  try { writeFileSync(USERS_FILE, JSON.stringify(map, null, 2)); } catch {}
+}
+const tgUsers = loadUsers();
+
+export function resolveChatId(input) {
+  if (!input) return null;
+  const s = String(input).trim();
+  if (/^-?\d+$/.test(s)) return s;
+  const key = s.replace(/^@/, "").toLowerCase();
+  return tgUsers[key] ? String(tgUsers[key]) : null;
+}
 
 const UZ_DAYS = ["Yakshanba", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"];
 const UZ_MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"];
@@ -383,11 +401,25 @@ export function startTelegramBot(getDb) {
 
   getDbRef = getDb;
 
-  console.log("🤖 Telegram bot ishga tushdi (06:00–22:00, har 30 daqiqada SQL backup)");
+  bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
-  // Har 30 daqiqada: 06:00, 06:30, 07:00, … 21:30
+  bot.on("message", (msg) => {
+    const chatId = String(msg.chat.id);
+    const username = msg.from?.username;
+    if (username) {
+      tgUsers[username.toLowerCase()] = chatId;
+      saveUsers(tgUsers);
+    }
+  });
+
+  bot.onText(/\/start/, (msg) => {
+    bot.sendMessage(msg.chat.id, "✅ Tayyor! Endi sizga hujjatlar yuborilishi mumkin.").catch(() => {});
+  });
+
+  bot.on("polling_error", (err) => console.error("Telegram polling:", err.message));
+
+  console.log("🤖 Telegram bot ishga tushdi (polling + 30 daqiqada backup)");
+
   cron.schedule("0,30 6-21 * * *", () => sendBackupAndSchedule(), { timezone: "Asia/Tashkent" });
-
-  // Soat 22:00 da (oxirgi backup)
   cron.schedule("0 22 * * *", () => sendBackupAndSchedule(), { timezone: "Asia/Tashkent" });
 }

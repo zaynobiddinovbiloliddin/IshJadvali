@@ -2019,8 +2019,20 @@ export async function handleRequest(request, response) {
       const user = getAuthUser(request, response);
       if (!user) return;
       const { empId, category, chatId } = await readBody(request);
-      const tid = String(chatId || "").trim();
-      if (!tid) return sendJson(response, 400, { message: "Chat ID yoki @username kiritilmagan" });
+      const rawId = String(chatId || "").trim();
+      if (!rawId) return sendJson(response, 400, { message: "Chat ID yoki @username kiritilmagan" });
+      // Resolve @username → numeric chat_id via stored mapping
+      let tid = rawId;
+      if (rawId.startsWith("@") || !/^-?\d+$/.test(rawId)) {
+        const { resolveChatId } = await import("./src/telegram-bot.mjs");
+        const resolved = resolveChatId(rawId);
+        if (!resolved) {
+          return sendJson(response, 400, {
+            message: `chat not found — @${rawId.replace(/^@/, "")} hali botga /start yuborgan emas`
+          });
+        }
+        tid = resolved;
+      }
       // xodim faqat o'z hujjatlarini ulasha oladi
       if (!["admin", "superadmin"].includes(user.role)) {
         const idMatch = Number(user.employeeId) === Number(empId);
