@@ -4391,6 +4391,7 @@ function TgDocSendModal({ modal, draft, uploadedFiles, onClose, onNotify }) {
   const hasFile = catFiles.length > 0;
   const [chatId, setChatId] = useState("");
   const [sending, setSending] = useState(false);
+  const [chatNotFound, setChatNotFound] = useState(false);
   const inputRef = useRef(null);
   useEffect(() => { setTimeout(() => inputRef.current?.focus(), 80); }, []);
 
@@ -4399,6 +4400,7 @@ function TgDocSendModal({ modal, draft, uploadedFiles, onClose, onNotify }) {
     if (!tid) { onNotify("Chat ID yoki @username kiritilmagan", "error"); return; }
     if (!hasFile) { onNotify("Avval faylni yuklang (Yuklash tugmasi)", "warning"); return; }
     setSending(true);
+    setChatNotFound(false);
     try {
       const res = await apiFetch("/api/telegram/send-doc", {
         method: "POST",
@@ -4408,9 +4410,31 @@ function TgDocSendModal({ modal, draft, uploadedFiles, onClose, onNotify }) {
       onNotify(res.message || "Telegram ga yuborildi ✓", "success");
       onClose();
     } catch (err) {
-      onNotify(err.message || "Yuborishda xato", "error");
+      const msg = err.message || "";
+      if (msg.includes("chat not found") || msg.includes("400")) {
+        setChatNotFound(true);
+      } else {
+        onNotify(msg || "Yuborishda xato", "error");
+      }
     } finally {
       setSending(false);
+    }
+  }
+
+  function openManual() {
+    if (hasFile) {
+      const a = document.createElement("a");
+      a.href = `${catFiles[0].url}?t=${Date.now()}`;
+      a.download = catFiles[0].filename || "doc.jpg";
+      a.click();
+    }
+    const username = chatId.trim().replace(/^@/, "");
+    if (username) {
+      setTimeout(() => {
+        const a = document.createElement("a");
+        a.href = `tg://resolve?domain=${username}`;
+        a.click();
+      }, 600);
     }
   }
 
@@ -4430,26 +4454,50 @@ function TgDocSendModal({ modal, draft, uploadedFiles, onClose, onNotify }) {
         {hasFile && catFiles[0].type === "image" && (
           <img src={catFiles[0].url} alt={cat.label} className="tg-doc-send-thumb" />
         )}
-        <div className="tg-doc-send-field">
-          <label>Kimga yuborish? (Chat ID yoki @username)</label>
-          <input
-            ref={inputRef}
-            value={chatId}
-            onChange={(e) => setChatId(e.target.value)}
-            placeholder="@uz24_official yoki -1001234567890"
-            onKeyDown={(e) => e.key === "Enter" && !sending && send()}
-            disabled={sending}
-          />
-          <p className="tg-doc-send-hint">Guruh @username yoki raqamli chat ID. Bot o'sha guruhda a'zo bo'lishi kerak.</p>
-        </div>
-        <div className="tg-doc-send-actions">
-          <button type="button" className="btn-cancel" onClick={onClose}>Bekor qilish</button>
-          <button type="button" className="btn-send-tg" onClick={send} disabled={sending || !chatId.trim()}>
-            {sending ? "Yuborilmoqda..." : (
-              <><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z"/></svg> Yuborish</>
-            )}
-          </button>
-        </div>
+
+        {chatNotFound ? (
+          <div className="tg-chat-not-found">
+            <p className="tg-chat-not-found-title">⚠️ Chat topilmadi</p>
+            <p className="tg-chat-not-found-desc">
+              <strong>{chatId}</strong> — bu shaxsiy foydalanuvchi. Bot faqat avval "/start" yuborgan odamlarga yubora oladi.
+            </p>
+            <p className="tg-chat-not-found-desc">
+              <strong>Yechim:</strong> Fayl qurilmangizga yuklanadi va Telegram da o'sha odam bilan chat ochiladi — siz faylni o'zingiz jo'natasiz.
+            </p>
+            <div className="tg-doc-send-actions" style={{ marginTop: "0.75rem" }}>
+              <button type="button" className="btn-cancel" onClick={() => setChatNotFound(false)}>← Orqaga</button>
+              <button type="button" className="btn-send-tg" onClick={openManual}>
+                <Download size={15} /> Yuklab + Telegramda ochish
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="tg-doc-send-field">
+              <label>Kimga yuborish?</label>
+              <input
+                ref={inputRef}
+                value={chatId}
+                onChange={(e) => setChatId(e.target.value)}
+                placeholder="@guruh_nomi yoki -1001234567890"
+                onKeyDown={(e) => e.key === "Enter" && !sending && send()}
+                disabled={sending}
+              />
+              <p className="tg-doc-send-hint">
+                <strong>Guruh/kanal</strong>: @username yoki raqamli chat ID (bot guruhda a'zo bo'lishi kerak).<br />
+                <strong>Shaxsiy</strong>: odam avval botga /start yuborishi kerak.
+              </p>
+            </div>
+            <div className="tg-doc-send-actions">
+              <button type="button" className="btn-cancel" onClick={onClose}>Bekor qilish</button>
+              <button type="button" className="btn-send-tg" onClick={send} disabled={sending || !chatId.trim()}>
+                {sending ? "Yuborilmoqda..." : (
+                  <><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z"/></svg> Yuborish</>
+                )}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
