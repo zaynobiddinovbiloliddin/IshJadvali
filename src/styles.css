@@ -10338,6 +10338,35 @@ body { overflow-x: hidden; }
 .tg-type-btn.active { background: #2563eb; border-color: #2563eb; color: #fff; font-weight: 600; }
 .tg-type-btn:disabled { opacity: .5; cursor: not-allowed; }
 .tg-share-actions { display: flex; gap: .75rem; justify-content: flex-end; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+
+/* ─── TgDocSendModal ─────────────────────────────────────────────────────── */
+.tg-doc-send-modal {
+  background: var(--card-bg);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+  width: min(420px, calc(100vw - 2rem));
+  padding: 1.4rem;
+  animation: modalIn 0.15s ease both;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.tg-doc-send-head { display: flex; align-items: center; gap: .6rem; }
+.tg-doc-send-head h3 { flex: 1; font-size: 1rem; font-weight: 700; margin: 0; }
+.tg-doc-send-close { background: none; border: none; cursor: pointer; color: var(--text-muted); padding: .25rem; border-radius: 6px; display: flex; }
+.tg-doc-send-close:hover { background: var(--bg-secondary); }
+.tg-doc-send-info { display: flex; flex-direction: column; gap: .2rem; padding: .75rem; background: var(--bg-secondary); border-radius: 10px; }
+.tg-doc-send-emp { font-weight: 700; font-size: .93rem; }
+.tg-doc-send-cat { font-size: .83rem; color: var(--text-muted); }
+.tg-doc-send-warn { font-size: .8rem; color: #f59e0b; margin-top: .2rem; }
+.tg-doc-send-thumb { width: 100%; max-height: 180px; object-fit: contain; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-secondary); }
+.tg-doc-send-field { display: flex; flex-direction: column; gap: .4rem; }
+.tg-doc-send-field label { font-size: .82rem; font-weight: 600; color: var(--text-muted); }
+.tg-doc-send-field input { padding: .6rem .85rem; border: 1.5px solid var(--border); border-radius: 10px; font-size: .9rem; background: var(--bg-input, var(--bg)); color: var(--text); outline: none; transition: border-color .15s; }
+.tg-doc-send-field input:focus { border-color: #2563eb; }
+.tg-doc-send-hint { font-size: .74rem; color: var(--text-muted); margin: 0; line-height: 1.4; }
+.tg-doc-send-actions { display: flex; gap: .6rem; justify-content: flex-end; }
 .btn-cancel { padding: .5rem 1.1rem; border: 1.5px solid var(--border); border-radius: 8px; background: none; color: var(--text-muted); cursor: pointer; font-size: .88rem; }
 .btn-cancel:hover { background: var(--bg-hover); }
 .btn-send-tg { display: flex; align-items: center; gap: .4rem; padding: .5rem 1.3rem; background: #2563eb; border: none; border-radius: 8px; color: #fff; font-size: .88rem; font-weight: 600; cursor: pointer; transition: background .15s; }

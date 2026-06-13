@@ -2014,6 +2014,43 @@ export async function handleRequest(request, response) {
       return sendJson(response, 200, { ok: true });
     }
 
+    // ─── Telegram: send specific doc category to a chat ─────────────────────
+    if (url.pathname === "/api/telegram/send-doc" && request.method === "POST") {
+      const user = getAuthUser(request, response, true);
+      if (!user) return;
+      const { empId, category, chatId } = await readBody(request);
+      const tid = String(chatId || "").trim();
+      if (!tid) return sendJson(response, 400, { message: "Chat ID yoki @username kiritilmagan" });
+      if (!process.env.TELEGRAM_BOT_TOKEN) return sendJson(response, 503, { message: "Telegram bot token .env da sozlanmagan" });
+      const dir = join(__dirname, "uploads", "documents", `emp-${empId}`);
+      if (!existsSync(dir)) return sendJson(response, 404, { message: "Bu xodimning fayllari topilmadi" });
+      const allFiles = readdirSync(dir).filter((n) => [".jpg", ".jpeg", ".png", ".pdf"].includes(extname(n).toLowerCase()));
+      const catFiles = category ? allFiles.filter((n) => n.startsWith(`${category}_`)) : allFiles;
+      if (!catFiles.length) return sendJson(response, 404, { message: "Bu bo'limda fayl yuklanmagan" });
+      const filename = [...catFiles].sort().reverse()[0];
+      const filePath = join(dir, filename);
+      const fileBuffer = await readFile(filePath);
+      const ext = extname(filename).toLowerCase();
+      const mime = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".pdf": "application/pdf" }[ext] || "application/octet-stream";
+      const emp = db.employees.find((e) => String(e.id) === String(empId));
+      const caption = `👤 ${emp?.name || "Xodim"}\n📄 ${category.replace(/-/g, " ")}`;
+      try {
+        const { default: TelegramBot } = await import("node-telegram-bot-api");
+        const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
+        const isImg = [".jpg", ".jpeg", ".png"].includes(ext);
+        if (isImg) {
+          await bot.sendPhoto(tid, fileBuffer, { caption }, { filename, contentType: mime });
+        } else {
+          await bot.sendDocument(tid, fileBuffer, { caption }, { filename, contentType: mime });
+        }
+        pushAuditLog("TELEGRAM_DOC_SHARE", "Employee", empId, `${user.fullName} → chat:${tid} | ${filename}`);
+        return sendJson(response, 200, { ok: true, message: "Telegram ga yuborildi ✓" });
+      } catch (err) {
+        const tgMsg = err.response?.body ? (() => { try { return JSON.parse(err.response.body)?.description; } catch { return null; } })() : null;
+        return sendJson(response, 502, { message: `Telegram xato: ${tgMsg || err.message}` });
+      }
+    }
+
     // ─── Telegram direct share ───────────────────────────────────────────────
     if (url.pathname === "/api/share-to-telegram" && request.method === "POST") {
       const user = getAuthUser(request, response, true);
