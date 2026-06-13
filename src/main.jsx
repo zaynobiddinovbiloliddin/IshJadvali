@@ -1440,7 +1440,7 @@ function AuthPage({ onAuth, onNotify }) {
     <main className="auth-shell">
       <section className="auth-panel pin-auth-panel">
         <div className="auth-brand">
-          <span><ShieldCheck size={24} /></span>
+          <img src="/logo.jpg" alt="O'zbekiston 24" className="auth-logo" onError={(e) => { e.target.style.display = "none"; }} />
           <div>
             <strong>O'zbekiston 24</strong>
             <p>Ish jadvali boshqaruvi</p>

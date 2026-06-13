@@ -99,6 +99,7 @@ html { -webkit-text-size-adjust: 100%; }
 body {
   min-width: 320px;
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg);
   overflow-x: hidden;
 }
@@ -166,6 +167,7 @@ button:active {
 .app-shell {
   display: flex;
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg);
   width: 100%;
 }
@@ -175,6 +177,7 @@ button:active {
     flex-direction: column;
     position: relative;
     overflow-x: hidden;
+    min-height: 100dvh;
   }
 }
 
@@ -249,7 +252,9 @@ button:active {
 
 .content {
   height: calc(100vh - 70px);
+  height: calc(100dvh - 70px);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 18px 17px calc(104px + env(safe-area-inset-bottom, 0px));
   animation: fadeIn 0.3s ease both;
   scroll-behavior: smooth;
@@ -258,11 +263,17 @@ button:active {
 
 .auth-shell {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 20px;
+  overflow-y: auto;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+@media (min-height: 680px) {
+  .auth-shell { align-items: center; }
 }
 
 .auth-panel {
@@ -283,10 +294,11 @@ button:active {
 }
 
 .auth-logo {
-  height: 64px;
-  width: auto;
-  object-fit: contain;
+  height: 48px;
+  width: 48px;
+  object-fit: cover;
   border-radius: 12px;
+  flex-shrink: 0;
 }
 
 .auth-logo-wrap h1 {
@@ -6136,6 +6148,7 @@ button.metric-card {
 
   .content {
     height: calc(100vh - 64px);
+    height: calc(100dvh - 64px);
     padding: 14px 14px calc(104px + env(safe-area-inset-bottom, 0px));
   }
 
@@ -6404,6 +6417,8 @@ button.metric-card {
   cursor: pointer;
   min-height: 48px;
   transition: color 0.15s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .bottom-nav button.active {
@@ -7736,6 +7751,7 @@ body { overflow-x: hidden; }
 
   .desktop-main {
     height: 100vh;
+    height: 100dvh;
     overflow-y: auto;
   }
 
@@ -9649,6 +9665,9 @@ body { overflow-x: hidden; }
   cursor: pointer;
   box-shadow: var(--shadow-sm);
   transition: all var(--transition);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
 .pin-key:hover:not(:disabled) {
@@ -9692,6 +9711,15 @@ body { overflow-x: hidden; }
   .pin-dash { font-size: 0.9rem; }
   .pin-keyboard { gap: 6px; }
   .pin-key { min-height: 46px; font-size: 1rem; }
+}
+
+/* Kichik balandlikdagi qurilmalar (landscape phones) */
+@media (max-height: 620px) {
+  .auth-panel.pin-auth-panel { padding: 16px 20px; gap: 12px; }
+  .pin-keyboard { gap: 6px; }
+  .pin-key { min-height: 42px; aspect-ratio: unset; }
+  .pin-display { gap: 4px; }
+  .pin-dot { width: 26px; height: 32px; font-size: 0.9rem; }
 }
 
 /* ── PIN reveal modal ─────────────────────────────────────── */
