@@ -9,14 +9,25 @@ export default defineConfig({
     }
   },
   build: {
-    chunkSizeWarningLimit: 1500,
+    target: "es2020",
+    minify: "esbuild",
+    cssMinify: true,
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
-        manualChunks: {
-          "vendor-react": ["react", "react-dom"],
-          "vendor-icons": ["lucide-react"],
-        }
+        manualChunks(id) {
+          if (id.includes("node_modules/react-dom") || id.includes("node_modules/react/")) {
+            return "vendor-react";
+          }
+          if (id.includes("node_modules/lucide-react")) {
+            return "vendor-icons";
+          }
+        },
+        chunkFileNames: "assets/[name]-[hash].js",
+        entryFileNames: "assets/[name]-[hash].js",
+        assetFileNames: "assets/[name]-[hash].[ext]"
       }
-    }
+    },
+    reportCompressedSize: false
   }
 });

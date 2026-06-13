@@ -1,9 +1,10 @@
 import { createServer } from "node:http";
 import { readFile, writeFile } from "node:fs/promises";
-import { existsSync, mkdirSync, unlinkSync, readdirSync } from "node:fs";
+import { existsSync, mkdirSync, unlinkSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { extname, join, normalize, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
+import { createHash } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import "dotenv/config";
@@ -1361,37 +1362,98 @@ async function readBody(request) {
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }
 
+// ─── Static file in-memory cache ────────────────────────────────────────────
+
+const MIME = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".ico": "image/x-icon",
+  ".woff2": "font/woff2",
+  ".woff": "font/woff",
+  ".ttf": "font/ttf",
+  ".pdf": "application/pdf"
+};
+const COMPRESSIBLE = new Set([".html", ".js", ".mjs", ".css", ".json", ".svg"]);
+
+const staticCache = new Map(); // urlPath → { raw, gz, type, etag, isHashed }
+
+function loadStaticCache() {
+  const distDir = join(__dirname, "dist");
+  if (!existsSync(distDir)) return;
+
+  function walk(dir, urlBase) {
+    for (const name of readdirSync(dir)) {
+      const full = join(dir, name);
+      const urlPath = urlBase + "/" + name;
+      if (statSync(full).isDirectory()) {
+        walk(full, urlPath);
+      } else {
+        const ext = extname(name).toLowerCase();
+        const type = MIME[ext] || "application/octet-stream";
+        const raw = readFileSync(full);
+        const gz = COMPRESSIBLE.has(ext) ? gzipSync(raw, { level: 9 }) : null;
+        const etag = `"${createHash("md5").update(raw).digest("hex").slice(0, 16)}"`;
+        // Assets with content hashes (e.g. index-BFXh6dZc.js) → 1-year cache
+        const isHashed = /[.-][a-zA-Z0-9]{8,}\.(js|css)$/.test(name);
+        staticCache.set(urlPath, { raw, gz, type, etag, isHashed });
+      }
+    }
+  }
+  walk(distDir, "");
+  console.log(`✅ Static cache: ${staticCache.size} fayllar xotiraga yuklandi`);
+}
+
+loadStaticCache();
+
 async function serveStatic(request, response) {
   const url = parseRequestUrl(request);
   const safePath = normalize(url.pathname).replace(/^(\.\.[/\\])+/, "");
-  const requestedPath = safePath === "/" ? "/index.html" : safePath;
-  const filePath = join(__dirname, "dist", requestedPath);
-  const fallback = join(__dirname, "dist", "index.html");
-  const target = existsSync(filePath) ? filePath : fallback;
-  const type = {
-    ".html": "text/html",
-    ".js": "text/javascript",
-    ".css": "text/css",
-    ".svg": "image/svg+xml",
-    ".png": "image/png"
-  }[extname(target)] || "text/plain";
+  const urlPath = safePath === "/" ? "/index.html" : safePath;
 
-  try {
-    const file = await readFile(target);
-    const ext = extname(target);
-    const compressible = [".js", ".css", ".html", ".svg", ".json"].includes(ext);
-    const acceptsGzip = (request.headers["accept-encoding"] || "").includes("gzip");
-    if (compressible && acceptsGzip) {
-      const gz = gzipSync(file);
-      response.writeHead(200, { "Content-Type": type, "Content-Encoding": "gzip", "Vary": "Accept-Encoding", "Cache-Control": "public, max-age=3600" });
-      return response.end(gz);
-    }
-    response.writeHead(200, { "Content-Type": type, "Cache-Control": "public, max-age=3600" });
-    response.end(file);
-  } catch {
+  const entry = staticCache.get(urlPath) || staticCache.get("/index.html");
+  if (!entry) {
     response.writeHead(404);
-    response.end("Not found");
+    return response.end("Not found");
   }
+
+  // ETag conditional request
+  if (request.headers["if-none-match"] === entry.etag) {
+    response.writeHead(304);
+    return response.end();
+  }
+
+  // Cache-Control: hashed assets live forever; index.html must revalidate
+  const cacheControl = entry.isHashed
+    ? "public, max-age=31536000, immutable"
+    : urlPath === "/index.html"
+      ? "no-cache"
+      : "public, max-age=86400";
+
+  const acceptsGzip = (request.headers["accept-encoding"] || "").includes("gzip");
+  if (entry.gz && acceptsGzip) {
+    response.writeHead(200, {
+      "Content-Type": entry.type,
+      "Content-Encoding": "gzip",
+      "Vary": "Accept-Encoding",
+      "Cache-Control": cacheControl,
+      "ETag": entry.etag
+    });
+    return response.end(entry.gz);
+  }
+  response.writeHead(200, {
+    "Content-Type": entry.type,
+    "Cache-Control": cacheControl,
+    "ETag": entry.etag
+  });
+  response.end(entry.raw);
 }
 
 function parseRequestUrl(request) {
