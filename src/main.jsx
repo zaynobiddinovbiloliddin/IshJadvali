@@ -42,7 +42,8 @@ import {
   User,
   UserCheck,
   UsersRound,
-  Umbrella
+  Umbrella,
+  X
 } from "lucide-react";
 import "./styles.css";
 
@@ -60,7 +61,7 @@ const STATUS_OPTIONS = [
   { id: "administration", code: "A", label: "Administratsiya", metric: "working" },
   { id: "presidential", code: "P", label: "Prezidentskiy", metric: "working" },
   { id: "otpiska", code: "O", label: "O'quv ta'tili", metric: "rest" },
-  { id: "sick", code: "B", label: "Kasal (больничный)", metric: "rest" },
+  { id: "sick", code: "B", label: "Kasal", metric: "rest" },
   { id: "unpaid", code: "U", label: "Pulsiz ta'til", metric: "rest" }
 ];
 const STATUS_META = Object.fromEntries(STATUS_OPTIONS.map((status) => [status.id, status]));
@@ -525,6 +526,15 @@ function calculateEfficiency(assignments = []) {
   return Math.min(96, Math.max(45, 52 + workingCount * 8 + assignments.length));
 }
 
+// ─── Global confirm (replaces window.confirm) ─────────────────────────────────
+let _showConfirmGlobal = null;
+function showConfirm(message) {
+  return new Promise((resolve) => {
+    if (!_showConfirmGlobal) { resolve(window.confirm(message)); return; }
+    _showConfirmGlobal(message, resolve);
+  });
+}
+
 function App() {
   const [page, setPage] = useState("weekly");
   const [previousPage, setPreviousPage] = useState("weekly");
@@ -550,6 +560,7 @@ function App() {
   const [departments, setDepartments] = useState([]);
   const [navDirection, setNavDirection] = useState("next");
   const [toasts, setToasts] = useState([]);
+  const [confirmData, setConfirmData] = useState(null);
   const [employeeCredentials, setEmployeeCredentials] = useState(null);
   const [documentsReady, setDocumentsReady] = useState(null);
   const hasLoadedDashboard = useRef(false);
@@ -564,6 +575,11 @@ function App() {
     window.setTimeout(() => {
       setToasts((items) => items.filter((item) => item.id !== id));
     }, 3000);
+  }, []);
+
+  useEffect(() => {
+    _showConfirmGlobal = (message, resolve) => setConfirmData({ message, resolve });
+    return () => { _showConfirmGlobal = null; };
   }, []);
 
   const loadDepartments = useCallback(async () => {
@@ -663,7 +679,6 @@ function App() {
     window.localStorage.setItem("currentUser", JSON.stringify(userData));
     window.localStorage.setItem("authToken", token);
     setCurrentUser(userData);
-    // Toast faqat shu yerda — AuthPage dagi onNotify() o'chirilgan
   }
 
   function updateCurrentUser(nextUser) {
@@ -722,7 +737,7 @@ function App() {
   }
 
   async function deleteSchedule() {
-    if (!window.confirm("Ushbu hafta jadvalini o'chirasizmi?")) return;
+    if (!await showConfirm("Ushbu hafta jadvalini o'chirasizmi?")) return;
     setLoadingMessage("Jadval o'chirilmoqda...");
     setGenerating(true);
     setError("");
@@ -786,7 +801,7 @@ function App() {
   }
 
   async function deleteEmployee(id) {
-    if (!window.confirm("Xodimni ro'yxatdan o'chirasizmi?")) return;
+    if (!await showConfirm("Xodimni ro'yxatdan o'chirasizmi?")) return;
     setLoadingMessage("Xodim o'chirilmoqda...");
     setGenerating(true);
     setError("");
@@ -933,6 +948,7 @@ function App() {
       <>
         <AuthPage onAuth={handleAuth} onNotify={notify} />
         <ToastViewport items={toasts} />
+        <ConfirmModal data={confirmData} onClose={() => setConfirmData(null)} />
       </>
     );
   }
@@ -1111,6 +1127,7 @@ function App() {
       </div>
 
       <ToastViewport items={toasts} />
+      <ConfirmModal data={confirmData} onClose={() => setConfirmData(null)} />
 
       {showLogoutConfirm && createPortal((
         <div className="modal-backdrop" role="dialog" aria-modal="true" onClick={() => setShowLogoutConfirm(false)}>
@@ -1285,7 +1302,7 @@ function DepartmentManagerModal({ departments, onClose, onSave, onDelete, onNoti
   }
 
   async function deleteDept(dept) {
-    if (!window.confirm(`"${dept.label}" bo'limini o'chirasizmi?`)) return;
+    if (!await showConfirm(`"${dept.label}" bo'limini o'chirasizmi?`)) return;
     try {
       await api(`/api/departments/${dept.id}`, { method: "DELETE" });
       onDelete();
@@ -1926,7 +1943,7 @@ function ShootingPage({ onNotify, currentUser }) {
   }
 
   async function handleDeleteImage(img) {
-    if (!window.confirm("Bu rasmni o'chirish?")) return;
+    if (!await showConfirm("Bu rasmni o'chirish?")) return;
     try {
       await apiFetch(`/api/filming/${filmingDate}/image?filename=${encodeURIComponent(img.filename || img.imageUrl.split("/").pop())}`, { method: "DELETE" });
       setUploadedImages((prev) => prev.filter((i) => i !== img));
@@ -2200,7 +2217,7 @@ const DAILY_STATUSES = {
   O:     { label: "O", bg: "#6b7280", fg: "#fff",    name: "O'quv ta'tili" },
   A:     { label: "A", bg: "#06b6d4", fg: "#fff",    name: "Administratsiya" },
   P:     { label: "P", bg: "#ec4899", fg: "#fff",    name: "Prezidentskiy" },
-  B:     { label: "B", bg: "#dc2626", fg: "#fff",    name: "Kasal (больничный)" },
+  B:     { label: "B", bg: "#dc2626", fg: "#fff",    name: "Kasal" },
   U:     { label: "U", bg: "#9ca3af", fg: "#fff",    name: "Pulsiz ta'til" }
 };
 const WORKING_DAILY = ["I", "S", "T", "K", "A", "P"];
@@ -2415,6 +2432,139 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
     onNotify?.("Oylik grafik JPEG sifatida yuklandi ✓");
   }
 
+  function exportMonthlyXlsx() {
+    function argb(hex) { return "FF" + hex.replace("#", "").toUpperCase(); }
+    const fillDefs = [
+      `<fill><patternFill patternType="none"/></fill>`,
+      `<fill><patternFill patternType="gray125"/></fill>`,
+    ];
+    const fillMap = {};
+    function addFill(hex) {
+      if (fillMap[hex] !== undefined) return fillMap[hex];
+      const idx = fillDefs.length; fillMap[hex] = idx;
+      fillDefs.push(`<fill><patternFill patternType="solid"><fgColor rgb="${argb(hex)}"/><bgColor indexed="64"/></patternFill></fill>`);
+      return idx;
+    }
+    const F_HDR  = addFill("#1E3A8A");
+    const F_GRAY = addFill("#f1f5f9");
+    const F_ALT  = addFill("#f8fafc");
+    const F_WKND = addFill("#fef2f2");
+    const F_TODA = addFill("#dbeafe");
+    const statusFill = {};
+    Object.entries(DAILY_STATUSES).forEach(([code, info]) => { statusFill[code] = addFill(info.bg); });
+
+    const fonts = [
+      `<font><sz val="10"/><name val="Calibri"/><color rgb="FF1E293B"/></font>`,
+      `<font><sz val="10"/><name val="Calibri"/><color rgb="FFFFFFFF"/></font>`,
+      `<font><sz val="10"/><name val="Calibri"/><b/><color rgb="FF1E293B"/></font>`,
+      `<font><sz val="10"/><name val="Calibri"/><b/><color rgb="FFFFFFFF"/></font>`,
+      `<font><sz val="12"/><name val="Calibri"/><b/><color rgb="FFFFFFFF"/></font>`,
+    ];
+    const borders = [
+      `<border><left/><right/><top/><bottom/><diagonal/></border>`,
+      `<border><left style="thin"><color rgb="FFCBD5E1"/></left><right style="thin"><color rgb="FFCBD5E1"/></right><top style="thin"><color rgb="FFCBD5E1"/></top><bottom style="thin"><color rgb="FFCBD5E1"/></bottom><diagonal/></border>`,
+    ];
+    const xfDefs = [];
+    function xf(fId, fnId, bId, ha) {
+      const al = ha ? `<alignment horizontal="${ha}" vertical="center"/>` : `<alignment vertical="center"/>`;
+      xfDefs.push(`<xf numFmtId="0" fontId="${fnId}" fillId="${fId}" borderId="${bId}" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">${al}</xf>`);
+      return xfDefs.length - 1;
+    }
+    const XF0  = xf(0, 0, 0, null);
+    const XF_TITLE   = xf(F_HDR,  4, 0, "center");
+    const XF_HHDR    = xf(F_GRAY, 2, 1, "center");
+    const XF_HHDR_L  = xf(F_GRAY, 2, 1, "left");
+    const XF_WKND_H  = xf(F_WKND, 2, 1, "center");
+    const XF_TODA_H  = xf(F_TODA, 2, 1, "center");
+    const XF_NAME    = xf(0,      0, 1, "left");
+    const XF_NAME_A  = xf(F_ALT,  0, 1, "left");
+    const XF_NUM     = xf(0,      0, 1, "center");
+    const XF_NUM_A   = xf(F_ALT,  0, 1, "center");
+    const XF_TOT     = xf(0,      2, 1, "center");
+    const XF_TOT_A   = xf(F_ALT,  2, 1, "center");
+    const XF_EMP     = xf(0,      0, 1, "center");
+    const XF_EMP_A   = xf(F_ALT,  0, 1, "center");
+    const statusXf = {};
+    Object.entries(DAILY_STATUSES).forEach(([code]) => {
+      statusXf[code] = { e: xf(statusFill[code], code === "empty" ? 0 : 1, 1, "center"), a: xf(statusFill[code], code === "empty" ? 0 : 1, 1, "center") };
+    });
+
+    function colLetter(n) {
+      let r = ""; n++;
+      while (n > 0) { n--; r = String.fromCharCode(65 + (n % 26)) + r; n = Math.floor(n / 26); }
+      return r;
+    }
+    const ss = []; const ssMap = {};
+    function S(str) {
+      if (ssMap[str] !== undefined) return ssMap[str];
+      const i = ss.length; ssMap[str] = i;
+      ss.push(`<si><t>${escapeXml(str)}</t></si>`); return i;
+    }
+    function SC(col, row, str, sIdx) { return `<c r="${colLetter(col)}${row}" s="${sIdx}" t="s"><v>${S(str)}</v></c>`; }
+    function EC(col, row, sIdx) { return `<c r="${colLetter(col)}${row}" s="${sIdx}"/>`; }
+
+    const totalCols = 2 + daysInMonth + 3;
+    const lastCol = colLetter(totalCols - 1);
+    const rows = [];
+
+    // Row 1 — title (merged)
+    const titleStr = `${MONTH_NAMES[month - 1]} ${year} — Oylik ish grafigi  (${employees.length} xodim)`;
+    let r1 = `<row r="1" ht="22" customHeight="1">${SC(0, 1, titleStr, XF_TITLE)}`;
+    for (let c = 1; c < totalCols; c++) r1 += EC(c, 1, XF_TITLE);
+    r1 += `</row>`; rows.push(r1);
+
+    // Row 2 — header
+    let r2 = `<row r="2" ht="18" customHeight="1">${SC(0, 2, "#", XF_HHDR)}${SC(1, 2, "Xodim", XF_HHDR_L)}`;
+    for (let di = 0; di < daysInMonth; di++) {
+      const dt = new Date(year, month - 1, di + 1);
+      const wd = dt.getDay();
+      const isToday = dt.toDateString() === new Date().toDateString();
+      const hXf = isToday ? XF_TODA_H : (wd === 0 || wd === 6) ? XF_WKND_H : XF_HHDR;
+      r2 += SC(2 + di, 2, String(di + 1), hXf);
+    }
+    const tb = 2 + daysInMonth;
+    r2 += SC(tb, 2, "Ish", XF_HHDR) + SC(tb + 1, 2, "Dam", XF_HHDR) + SC(tb + 2, 2, "Soat", XF_HHDR) + `</row>`;
+    rows.push(r2);
+
+    // Employee rows
+    employees.forEach((emp, idx) => {
+      const r = idx + 3;
+      const odd = idx % 2 === 1;
+      const rt = rowTotals[emp.id] || { working: 0, rest: 0, hours: 0 };
+      let row = `<row r="${r}" ht="15" customHeight="1">${SC(0, r, String(idx + 1), odd ? XF_NUM_A : XF_NUM)}${SC(1, r, emp.name, odd ? XF_NAME_A : XF_NAME)}`;
+      for (let di = 0; di < daysInMonth; di++) {
+        const code = getCode(emp.id, di + 1);
+        if (code && code !== "empty") {
+          row += SC(2 + di, r, code, statusXf[code]?.e ?? XF_EMP);
+        } else {
+          row += EC(2 + di, r, odd ? XF_EMP_A : XF_EMP);
+        }
+      }
+      row += SC(tb, r, String(rt.working), odd ? XF_TOT_A : XF_TOT) + SC(tb + 1, r, String(rt.rest), odd ? XF_TOT_A : XF_TOT) + SC(tb + 2, r, String(rt.hours), odd ? XF_TOT_A : XF_TOT) + `</row>`;
+      rows.push(row);
+    });
+
+    const colDefs = `<col min="1" max="1" width="4" customWidth="1"/><col min="2" max="2" width="22" customWidth="1"/><col min="3" max="${2 + daysInMonth}" width="3.5" customWidth="1"/><col min="${3 + daysInMonth}" max="${2 + daysInMonth + 3}" width="5" customWidth="1"/>`;
+    const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="2" topLeftCell="A3" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${colDefs}</cols><sheetData>${rows.join("")}</sheetData><mergeCells count="1"><mergeCell ref="A1:${lastCol}1"/></mergeCells></worksheet>`;
+    const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="${fonts.length}">${fonts.join("")}</fonts><fills count="${fillDefs.length}">${fillDefs.join("")}</fills><borders count="${borders.length}">${borders.join("")}</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="${xfDefs.length}">${xfDefs.join("")}</cellXfs></styleSheet>`;
+    const sharedStr = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${ss.length}" uniqueCount="${ss.length}">${ss.join("")}</sst>`;
+    const wb = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Oylik grafik" sheetId="1" r:id="rId1"/></sheets></workbook>`;
+    const wbRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`;
+    const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`;
+    const ct = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/></Types>`;
+    const blob = createZipBlob([
+      { name: "[Content_Types].xml", content: ct },
+      { name: "_rels/.rels", content: rels },
+      { name: "xl/workbook.xml", content: wb },
+      { name: "xl/_rels/workbook.xml.rels", content: wbRels },
+      { name: "xl/worksheets/sheet1.xml", content: sheet },
+      { name: "xl/styles.xml", content: styles },
+      { name: "xl/sharedStrings.xml", content: sharedStr },
+    ], "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    downloadBlob(blob, `oylik-grafik-${year}-${String(month).padStart(2, "0")}.xlsx`);
+    onNotify?.("Oylik grafik Excel sifatida yuklandi ✓");
+  }
+
   async function exportWordForDate(targetDate) {
     try {
       const data = await api(`/api/daily-status/working?date=${targetDate}`);
@@ -2455,8 +2605,11 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
         <button type="button" onClick={nextMonth}>Keyingi →</button>
       </div>
       <div className="monthly-jpeg-row">
-        <button type="button" className="monthly-jpeg-btn" onClick={exportMonthlyJpeg} disabled={loading}>
-          <Download size={15} /> Barcha xodimlar grafikini JPEG yuklab olish
+        <button type="button" className="monthly-jpeg-btn" onClick={exportMonthlyXlsx} disabled={loading}>
+          <Download size={15} /> Excel yuklab olish
+        </button>
+        <button type="button" className="monthly-jpeg-btn" style={{ background: "none", color: "#64748b", border: "1px solid #cbd5e1" }} onClick={exportMonthlyJpeg} disabled={loading}>
+          <Download size={15} /> JPEG yuklab olish
         </button>
       </div>
 
@@ -3488,8 +3641,21 @@ function EmployeeManager({ employees, onDelete, onNotify, onSave }) {
 }
 
 function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
-  const isOwnEmployee = !isAdmin(currentUser) && currentUser?.employeeId != null;
-  const ownEmpId = isOwnEmployee ? String(currentUser.employeeId) : null;
+  const xodimEmployee = (() => {
+    if (currentUser?.role !== "xodim") return null;
+    if (currentUser?.employeeId != null) {
+      const found = employees.find((e) => String(e.id) === String(currentUser.employeeId));
+      if (found) return found;
+    }
+    const nm = normalizeLookupName(currentUser?.name || "");
+    if (!nm) return null;
+    return employees.find((e) => {
+      const en = normalizeLookupName(e.name || "");
+      return en === nm || en.split(" ")[0] === nm.split(" ")[0];
+    }) || null;
+  })();
+  const isOwnEmployee = currentUser?.role === "xodim" && xodimEmployee != null;
+  const ownEmpId = xodimEmployee ? String(xodimEmployee.id) : null;
   const visibleEmployees = isOwnEmployee
     ? employees.filter((e) => String(e.id) === ownEmpId)
     : employees;
@@ -3504,10 +3670,8 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [uploadingCat, setUploadingCat] = useState(null);
   const [shareOpen, setShareOpen] = useState(false);
-  const [tgShareOpen, setTgShareOpen] = useState(false);
-  const [tgChatId, setTgChatId] = useState("-1003978082075");
-  const [tgFileType, setTgFileType] = useState("jpeg");
-  const [tgSending, setTgSending] = useState(false);
+  const [shareCatOpen, setShareCatOpen] = useState(null);
+  const [previewFile, setPreviewFile] = useState(null);
   const formRef = useRef(null);
   const catInputRefs = useRef({});
 
@@ -3562,11 +3726,12 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
 
   useEffect(() => {
     if (!selectedId) return;
+    if (!isAdmin(currentUser) && !isOwnEmployee) return;
     const id = selectedId;
     apiFetch(`/api/employees/${id}/uploaded-files`)
       .then((data) => setUploadedFiles(data.files || []))
       .catch(() => setUploadedFiles([]));
-  }, [selectedId]);
+  }, [selectedId, currentUser]);
 
   async function handleFileUpload(e, category) {
     const file = e.target.files?.[0];
@@ -3641,8 +3806,32 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
     } catch (err) { onNotify("Xato: " + err.message, "error"); }
   }
 
+  async function shareCatFile(catFiles, cat, cb) {
+    setShareCatOpen(null);
+    if (!catFiles.length) { onNotify("Bu bo'limda fayl yuklanmagan", "warning"); return; }
+    const shareFile = catFiles[0];
+    const shareTitle = `${draft?.name || ""} — ${cat.emoji} ${cat.label}`;
+    if (shareFile.type === "image") {
+      try {
+        const resp = await fetch(`${shareFile.url}?t=${Date.now()}`);
+        const blob = await resp.blob();
+        const fileObj = new File([blob], shareFile.filename || "doc.jpg", { type: blob.type });
+        if (navigator.share && navigator.canShare?.({ files: [fileObj] })) {
+          await navigator.share({ files: [fileObj], title: shareTitle });
+          return;
+        }
+      } catch {}
+      const a = document.createElement("a");
+      a.href = `${shareFile.url}?t=${Date.now()}`;
+      a.download = shareFile.filename || "doc.jpg";
+      a.click();
+      await new Promise((r) => setTimeout(r, 400));
+    }
+    cb();
+  }
+
   async function deleteUploadedFile(filename) {
-    if (!window.confirm(`"${filename}" faylini o'chirasizmi?`)) return;
+    if (!await showConfirm(`"${filename}" faylini o'chirasizmi?`)) return;
     try {
       await apiFetch(`/api/employees/${selectedId}/uploaded-files/${encodeURIComponent(filename)}`, { method: "DELETE" });
       setUploadedFiles((prev) => prev.filter((f) => f.filename !== filename));
@@ -3813,7 +4002,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
   if (!draft) return <EmptyCard text="Xodimlar ro'yxati bo'sh" />;
 
   return (
-    <section className="documents-page" onClick={() => shareOpen && setShareOpen(false)}>
+    <section className="documents-page" onClick={() => { if (shareOpen) setShareOpen(false); if (shareCatOpen) setShareCatOpen(null); }}>
       <section className="documents-card">
         <div className="section-head">
           <h2>Hujjatlar</h2>
@@ -3823,7 +4012,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
           <label className="document-select">
             Xodim
             <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
-              {visibleEmployees.map((employee) => (
+              {employees.map((employee) => (
                 <option key={employee.id} value={employee.id}>{employee.name}</option>
               ))}
             </select>
@@ -3927,23 +4116,53 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
               <div className="doc-category-slot" key={cat.id}>
                 <div className="doc-category-header">
                   <span className="doc-category-label">{cat.emoji} {cat.label}</span>
-                  <label className={`doc-category-upload-btn${isUploading ? " uploading" : ""}`}>
-                    <input
-                      type="file"
-                      accept=".jpg,.jpeg,.png,.pdf"
-                      style={{ display: "none" }}
-                      disabled={isUploading}
-                      ref={(el) => { catInputRefs.current[cat.id] = el; }}
-                      onChange={(e) => handleFileUpload(e, cat.id)}
-                    />
-                    <Upload size={13} />
-                    {isUploading ? "Yuklanmoqda..." : catFiles.length ? "Yana yuklash" : "Yuklash"}
-                  </label>
+                  {(isAdmin(currentUser) || isOwnEmployee) && (
+                    <div className="doc-cat-actions">
+                      <div className="share-btn-wrap">
+                        <button type="button" className="doc-category-share-btn" onClick={(e) => { e.stopPropagation(); setShareCatOpen((v) => v === cat.id ? null : cat.id); }}>
+                          <Send size={13} />
+                          Ulashish
+                        </button>
+                        {shareCatOpen === cat.id && (() => {
+                          const shareText = `${draft?.name || ""} — ${cat.emoji} ${cat.label}`;
+                          const enc = encodeURIComponent(shareText);
+                          return (
+                            <div className="share-panel" onClick={(e) => e.stopPropagation()}>
+                              <button type="button" className="share-option tg" onClick={() => shareCatFile(catFiles, cat, () => { const a = document.createElement("a"); a.href = `tg://msg?text=${enc}`; a.click(); })}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z"/></svg>
+                                Telegram
+                              </button>
+                              <button type="button" className="share-option wa" onClick={() => shareCatFile(catFiles, cat, () => window.open(`https://wa.me/?text=${enc}`, "_blank"))}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                                WhatsApp
+                              </button>
+                              <button type="button" className="share-option em" onClick={() => { setShareCatOpen(null); window.open(`mailto:?subject=${encodeURIComponent(cat.label)}&body=${enc}`); }}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                                Email
+                              </button>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                      <label className={`doc-category-upload-btn${isUploading ? " uploading" : ""}`}>
+                        <input
+                          type="file"
+                          accept=".jpg,.jpeg,.png,.pdf"
+                          style={{ display: "none" }}
+                          disabled={isUploading}
+                          ref={(el) => { catInputRefs.current[cat.id] = el; }}
+                          onChange={(e) => handleFileUpload(e, cat.id)}
+                        />
+                        <Upload size={13} />
+                        {isUploading ? "Yuklanmoqda..." : catFiles.length ? "Yana yuklash" : "Yuklash"}
+                      </label>
+                    </div>
+                  )}
                 </div>
                 {catFiles.length > 0 && (
                   <div className="doc-category-files">
                     {catFiles.map((doc) => (
-                      <div className="doc-item" key={doc.filename}>
+                      <div className="doc-item" key={doc.filename} onClick={() => setPreviewFile({ ...doc, catLabel: cat.label })} style={{ cursor: "pointer" }}>
                         {doc.type === "image" && (
                           <img src={doc.url} alt={cat.label} className="doc-item-thumbnail" />
                         )}
@@ -3957,8 +4176,8 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
                         <a href={doc.url} download className="doc-download-btn" onClick={(e) => e.stopPropagation()} aria-label="Yuklab olish">
                           <Download size={14} />
                         </a>
-                        {isAdmin(currentUser) && (
-                          <button type="button" className="doc-delete-btn" onClick={() => deleteUploadedFile(doc.filename)} aria-label="O'chirish">
+                        {(isAdmin(currentUser) || isOwnEmployee) && (
+                          <button type="button" className="doc-delete-btn" onClick={(e) => { e.stopPropagation(); deleteUploadedFile(doc.filename); }} aria-label="O'chirish">
                             <Trash2 size={13} />
                           </button>
                         )}
@@ -3980,17 +4199,48 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
 
       <EmployeeDocumentView employee={draft} mode={documentMode} />
 
-      <section className="documents-summary">
-        {employees.map((employee) => (
-          <button className={`${String(employee.id) === String(draft.id) ? "active" : ""} department-${employee.department || "operator"}`} key={employee.id} type="button" onClick={() => setSelectedId(employee.id)}>
-            <Avatar person={employee} />
-            <div>
-              <strong>{employee.name}</strong>
-              <span>{departmentMeta(employee.department).label} • {(employee.portfolio || []).length} video</span>
+      {isAdmin(currentUser) && (
+        <section className="documents-summary">
+          {employees.map((employee) => (
+            <button className={`${String(employee.id) === String(draft.id) ? "active" : ""} department-${employee.department || "operator"}`} key={employee.id} type="button" onClick={() => setSelectedId(employee.id)}>
+              <Avatar person={employee} />
+              <div>
+                <strong>{employee.name}</strong>
+                <span>{departmentMeta(employee.department).label} • {(employee.portfolio || []).length} video</span>
+              </div>
+            </button>
+          ))}
+        </section>
+      )}
+      {previewFile && createPortal(
+        <div className="doc-preview-backdrop" onClick={() => setPreviewFile(null)}>
+          <div className="doc-preview-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="doc-preview-header">
+              <span className="doc-preview-title">{previewFile.catLabel || previewFile.filename}</span>
+              <button type="button" className="doc-preview-close" onClick={() => setPreviewFile(null)}>
+                <X size={20} />
+              </button>
             </div>
-          </button>
-        ))}
-      </section>
+            <div className="doc-preview-body">
+              {previewFile.type === "image" ? (
+                <img src={previewFile.url} alt={previewFile.catLabel} className="doc-preview-img" />
+              ) : (
+                <div className="doc-preview-file-placeholder">
+                  <FileText size={56} />
+                  <p>{previewFile.filename}</p>
+                  <a href={previewFile.url} target="_blank" rel="noreferrer" className="doc-preview-open-btn">Faylni ochish</a>
+                </div>
+              )}
+            </div>
+            <div className="doc-preview-footer">
+              <a href={previewFile.url} download onClick={(e) => e.stopPropagation()} className="doc-preview-download-btn">
+                <Download size={15} /> Yuklab olish
+              </a>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
       {editOpen && editDraft && createPortal((
         <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Hujjatlarni tahrirlash" onClick={() => setEditOpen(false)}>
           <form ref={formRef} className="schedule-modal documents-modal" onSubmit={submit} onClick={(event) => event.stopPropagation()}>
@@ -4537,13 +4787,20 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
   const contacts = dashboard.contacts || [];
   const drivers = contacts.filter((contact) => contact.type === "Haydovchi").length;
   const profileEmployee = useMemo(() => {
+    if (currentUser?.employeeId != null) {
+      const found = dashboard.employees.find(
+        (e) => String(e.id) === String(currentUser.employeeId)
+      );
+      if (found) return found;
+    }
     const userName = normalizeLookupName(currentUser.name);
-    const matchedEmployee = dashboard.employees.find((employee) => {
+    return dashboard.employees.find((employee) => {
       const employeeName = normalizeLookupName(employee.name);
-      return employeeName === userName || employeeName.includes(userName) || userName.includes(employeeName);
-    });
-    return matchedEmployee || dashboard.employees[0] || null;
-  }, [currentUser.name, dashboard.employees]);
+      return employeeName === userName ||
+        employeeName.includes(userName) ||
+        userName.includes(employeeName);
+    }) || null;
+  }, [currentUser.employeeId, currentUser.name, dashboard.employees]);
   const shootingAssignment = useMemo(() => findShootingAssignmentForEmployee(profileEmployee), [profileEmployee]);
   const driverContact = useMemo(() => contacts.find((contact) => contact.type === "Haydovchi"), [contacts]);
   const todayAssignments = useMemo(() => {
@@ -5060,7 +5317,7 @@ function UsersPage({ currentUser, onNotify }) {
   }
 
   async function regeneratePin(user) {
-    if (!window.confirm(`${user.fullName} uchun yangi PIN kod yaratilsinmi? Eski PIN ishlamay qoladi.`)) return;
+    if (!await showConfirm(`${user.fullName} uchun yangi PIN kod yaratilsinmi? Eski PIN ishlamay qoladi.`)) return;
     setRegeneratingId(user.id);
     try {
       const updated = await api(`/api/users/${user.id}`, { method: "PUT", body: JSON.stringify({ regeneratePin: true }) });
@@ -5075,7 +5332,7 @@ function UsersPage({ currentUser, onNotify }) {
   }
 
   async function deleteUser(user) {
-    if (!window.confirm(`${user.fullName} ni o'chirishni tasdiqlaysizmi?`)) return;
+    if (!await showConfirm(`${user.fullName} ni o'chirishni tasdiqlaysizmi?`)) return;
     try {
       await api(`/api/users/${user.id}`, { method: "DELETE" });
       setUsers((prev) => prev.filter((u) => u.id !== user.id));
@@ -5337,7 +5594,7 @@ function RestoreSection({ onNotify }) {
 
   async function handleRestore() {
     if (!sqlText.trim()) return;
-    if (!window.confirm(`"${filename || "backup"}" faylidan ma'lumotlar tiklansinmi?`)) return;
+    if (!await showConfirm(`"${filename || "backup"}" faylidan ma'lumotlar tiklansinmi?`)) return;
     setRestoring(true);
     try {
       const res = await apiFetch("/api/admin/restore", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sql: sqlText }) });
@@ -5464,13 +5721,155 @@ function NotificationsPanel({ panelRef, notifications, onMarkRead, onMarkAllRead
   );
 }
 
+// ─── ClockTimePicker ─────────────────────────────────────────────────────────
+function ClockTimePicker({ valueH, valueM, period, onSelect, label }) {
+  const svgRef = useRef(null);
+  const [dragging, setDragging] = useState(false);
+  const [mode, setMode] = useState("h"); // "h" | "m"
+
+  const CX = 100, CY = 100, R = 80;
+  const HOURS = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+  const MINS  = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+
+  function angleFromEvent(e) {
+    const svg = svgRef.current;
+    if (!svg) return null;
+    const rect = svg.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return (Math.atan2(clientY - cy, clientX - cx) * 180 / Math.PI + 90 + 360) % 360;
+  }
+
+  function pick(e) {
+    const angle = angleFromEvent(e);
+    if (angle === null) return;
+    if (mode === "h") {
+      const h = Math.round(angle / 30) % 12 || 12;
+      onSelect(h, valueM, period);
+    } else {
+      const m = Math.round(angle / 6 / 5) * 5 % 60;
+      onSelect(valueH, m, period);
+    }
+  }
+
+  function handlePointerDown(e) { setDragging(true); pick(e); }
+  function handlePointerMove(e) { if (dragging) pick(e); }
+  function handlePointerUp()    { setDragging(false); }
+
+  // Hour hand angle
+  const hAngle = valueH != null ? ((valueH % 12) * 30 - 90) * Math.PI / 180 : null;
+  const hx = hAngle !== null ? CX + R * 0.55 * Math.cos(hAngle) : null;
+  const hy = hAngle !== null ? CY + R * 0.55 * Math.sin(hAngle) : null;
+
+  // Minute hand angle (longer hand)
+  const mAngle = valueM != null ? (valueM * 6 - 90) * Math.PI / 180 : null;
+  const mx = mAngle !== null ? CX + R * 0.75 * Math.cos(mAngle) : null;
+  const my = mAngle !== null ? CY + R * 0.75 * Math.sin(mAngle) : null;
+
+  // Display
+  const h24 = valueH != null
+    ? period === "PM" && valueH !== 12 ? valueH + 12
+    : period === "AM" && valueH === 12 ? 0
+    : valueH : null;
+  const displayStr = h24 != null
+    ? `${String(h24).padStart(2, "0")}:${String(valueM ?? 0).padStart(2, "0")}`
+    : null;
+
+  const markers = mode === "h" ? HOURS : MINS;
+
+  return (
+    <div className="clock-picker">
+      <div className="clock-picker-label">{label}</div>
+      <div className="clock-mode-row">
+        <button type="button" className={`clock-mode-btn${mode === "h" ? " active" : ""}`}
+          onClick={() => setMode("h")}>Soat</button>
+        <button type="button" className={`clock-mode-btn${mode === "m" ? " active" : ""}`}
+          onClick={() => setMode("m")}>Daqiqa</button>
+      </div>
+      <svg
+        ref={svgRef}
+        width={200} height={200} viewBox="0 0 200 200"
+        className="clock-face"
+        onMouseDown={handlePointerDown}
+        onMouseMove={handlePointerMove}
+        onMouseUp={handlePointerUp}
+        onMouseLeave={handlePointerUp}
+        onTouchStart={handlePointerDown}
+        onTouchMove={handlePointerMove}
+        onTouchEnd={handlePointerUp}
+        style={{ cursor: "crosshair", userSelect: "none", touchAction: "none" }}
+      >
+        <circle cx={CX} cy={CY} r={R + 10} fill="#f8fafc" stroke="#e2e8f0" strokeWidth={1.5} />
+        {/* tick marks */}
+        {Array.from({ length: 60 }, (_, i) => {
+          const a = (i * 6 - 90) * Math.PI / 180;
+          const isMaj = i % 5 === 0;
+          const r1 = R + 2, r2 = isMaj ? R + 8 : R + 5;
+          return <line key={i}
+            x1={CX + r1 * Math.cos(a)} y1={CY + r1 * Math.sin(a)}
+            x2={CX + r2 * Math.cos(a)} y2={CY + r2 * Math.sin(a)}
+            stroke={isMaj ? "#94a3b8" : "#cbd5e1"} strokeWidth={isMaj ? 1.5 : 0.8} />;
+        })}
+        {/* markers for current mode */}
+        {markers.map((val, i) => {
+          const a = (i * 30 - 90) * Math.PI / 180;
+          const x = CX + R * 0.78 * Math.cos(a);
+          const y = CY + R * 0.78 * Math.sin(a);
+          const sel = mode === "h" ? val === valueH : val === (valueM ?? 0);
+          return (
+            <g key={val}>
+              {sel && <circle cx={x} cy={y} r={14} fill={mode === "h" ? "var(--accent)" : "#0ea5e9"} />}
+              <text x={x} y={y} textAnchor="middle" dominantBaseline="central"
+                fill={sel ? "#fff" : "#334155"} fontSize={mode === "h" ? 13 : 11}
+                fontWeight={sel ? "700" : "500"} style={{ pointerEvents: "none" }}>
+                {mode === "h" ? val : String(val).padStart(2, "0")}
+              </text>
+            </g>
+          );
+        })}
+        {/* Hour hand — short, blue */}
+        {hx != null && <>
+          <line x1={CX} y1={CY} x2={hx} y2={hy}
+            stroke="var(--accent)" strokeWidth={3} strokeLinecap="round" />
+          <circle cx={hx} cy={hy} r={4} fill="var(--accent)" />
+        </>}
+        {/* Minute hand — long, cyan */}
+        {mx != null && <>
+          <line x1={CX} y1={CY} x2={mx} y2={my}
+            stroke="#0ea5e9" strokeWidth={2} strokeLinecap="round" />
+          <circle cx={mx} cy={my} r={3.5} fill="#0ea5e9" />
+        </>}
+        <circle cx={CX} cy={CY} r={4} fill="#475569" />
+        {valueH == null && valueM == null && (
+          <text x={CX} y={CY + 20} textAnchor="middle" fill="#94a3b8" fontSize={11}
+            style={{ pointerEvents: "none" }}>Bosing</text>
+        )}
+      </svg>
+      <div className="clock-period-row">
+        {["AM", "PM"].map((p) => (
+          <button key={p} type="button"
+            className={`clock-period-btn${period === p ? " active" : ""}`}
+            onClick={() => onSelect(valueH, valueM, p)}>
+            {p}
+          </button>
+        ))}
+      </div>
+      <div className="clock-display">{displayStr || "—"}</div>
+    </div>
+  );
+}
+
 // ─── VazifalarPage ────────────────────────────────────────────────────────────
 function VazifalarPage({ currentUser, onNotify, onNotificationsRefresh }) {
   const [tasks, setTasks] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
-  const [draft, setDraft] = useState({ title: "", description: "", assignedToId: "", dueDate: "" });
+  const emptyDraft = { title: "", description: "", assignedToId: "", dueDate: "", timeFromH: null, timeFromM: 0, timeFromP: "AM", timeToH: null, timeToM: 0, timeToP: "PM" };
+  const [draft, setDraft] = useState(emptyDraft);
+  const [editTask, setEditTask] = useState(null); // task being edited
   const [rejectModal, setRejectModal] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -5492,19 +5891,66 @@ function VazifalarPage({ currentUser, onNotify, onNotificationsRefresh }) {
     } catch {}
   }
 
+  function toHHMM(h, m, p) {
+    if (h == null) return null;
+    const h24 = p === "PM" && h !== 12 ? h + 12 : p === "AM" && h === 12 ? 0 : h;
+    return `${String(h24).padStart(2, "0")}:${String(m ?? 0).padStart(2, "0")}`;
+  }
+
+  function openEditModal(task) {
+    const timeMatch = task.description?.match(/^\[(\d{2}:\d{2})–(\d{2}:\d{2})\]\n?/);
+    const descText = timeMatch ? task.description.slice(timeMatch[0].length) : (task.description || "");
+    function parseHHMM(str) {
+      if (!str || str === "?") return { h: null, m: 0, p: "AM" };
+      const [hh, mm] = str.split(":").map(Number);
+      const p = hh >= 12 ? "PM" : "AM";
+      const h = hh % 12 || 12;
+      return { h, m: mm || 0, p };
+    }
+    const from = parseHHMM(timeMatch?.[1]);
+    const to   = parseHHMM(timeMatch?.[2]);
+    setDraft({
+      title: task.title,
+      description: descText,
+      assignedToId: String(task.assignedToId),
+      dueDate: task.dueDate || "",
+      timeFromH: from.h, timeFromM: from.m, timeFromP: from.p,
+      timeToH: to.h,   timeToM: to.m,   timeToP: to.p,
+    });
+    setEditTask(task);
+    setModalOpen(true);
+  }
+
   async function createTask(e) {
     e.preventDefault();
     if (!draft.title.trim()) { onNotify("Vazifa nomini kiriting", "error"); return; }
     if (!draft.assignedToId) { onNotify("Xodimni tanlang", "error"); return; }
     setSubmitting(true);
+    const timeFrom = toHHMM(draft.timeFromH, draft.timeFromM, draft.timeFromP);
+    const timeTo   = toHHMM(draft.timeToH,   draft.timeToM,   draft.timeToP);
     try {
-      await api("/api/tasks", { method: "POST", body: JSON.stringify(draft) });
-      onNotify("Vazifa muvaffaqiyatli yuborildi ✓");
+      if (editTask) {
+        await api(`/api/tasks/${editTask.id}`, { method: "PUT", body: JSON.stringify({ ...draft, timeFrom, timeTo }) });
+        onNotify("Vazifa yangilandi ✓");
+      } else {
+        await api("/api/tasks", { method: "POST", body: JSON.stringify({ ...draft, timeFrom, timeTo }) });
+        onNotify("Vazifa muvaffaqiyatli yuborildi ✓");
+      }
       setModalOpen(false);
-      setDraft({ title: "", description: "", assignedToId: "", dueDate: "" });
+      setEditTask(null);
+      setDraft(emptyDraft);
       loadTasks();
     } catch (err) { onNotify(err.message, "error"); }
     finally { setSubmitting(false); }
+  }
+
+  async function deleteTask(task) {
+    if (!await showConfirm(`"${task.title}" vazifasini o'chirasizmi?`)) return;
+    try {
+      await api(`/api/tasks/${task.id}`, { method: "DELETE" });
+      onNotify("Vazifa o'chirildi");
+      loadTasks();
+    } catch (err) { onNotify(err.message, "error"); }
   }
 
   async function updateStatus(taskId, status, reason = "") {
@@ -5532,7 +5978,7 @@ function VazifalarPage({ currentUser, onNotify, onNotificationsRefresh }) {
           <p>Jami {tasks.length} ta vazifa</p>
         </div>
         {isAdmin(currentUser) && (
-          <button className="btn-primary" type="button" onClick={() => setModalOpen(true)}>
+          <button className="btn-primary" type="button" onClick={() => { setEditTask(null); setDraft(emptyDraft); setModalOpen(true); }}>
             <Plus size={17} /> Yangi vazifa
           </button>
         )}
@@ -5547,19 +5993,37 @@ function VazifalarPage({ currentUser, onNotify, onNotificationsRefresh }) {
             </div>
           ) : tasks.map((task) => {
             const info = STATUS_INFO[task.status] || STATUS_INFO.PENDING;
+            const timeMatch = task.description?.match(/^\[(\d{2}:\d{2})–(\d{2}:\d{2})\]\n?/);
+            const taskTime = timeMatch ? `${timeMatch[1]} – ${timeMatch[2]}` : null;
+            const descText = timeMatch ? task.description.slice(timeMatch[0].length) : task.description;
             return (
               <div key={task.id} className="task-card">
                 <div className="task-card-header">
                   <strong>{task.title}</strong>
-                  <span className="task-status-badge" style={{ background: info.bg, color: info.color }}>{info.label}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span className="task-status-badge" style={{ background: info.bg, color: info.color }}>{info.label}</span>
+                    {isAdmin(currentUser) && (
+                      <>
+                        <button type="button" className="task-icon-btn" title="Tahrirlash"
+                          onClick={() => openEditModal(task)}>
+                          <Edit3 size={14} />
+                        </button>
+                        <button type="button" className="task-icon-btn danger" title="O'chirish"
+                          onClick={() => deleteTask(task)}>
+                          <Trash2 size={14} />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
-                {task.description && <p className="task-description">{task.description}</p>}
+                {descText && <p className="task-description">{descText}</p>}
                 <div className="task-meta">
                   {isAdmin(currentUser)
                     ? <span>👤 {task.assignedTo?.fullName}</span>
                     : <span>📤 {task.assignedBy?.fullName}</span>
                   }
                   {task.dueDate && <span>📅 {new Date(task.dueDate).toLocaleDateString("uz-UZ")}</span>}
+                  {taskTime && <span>⏰ {taskTime}</span>}
                   <span>🕐 {new Date(task.createdAt).toLocaleDateString("uz-UZ")}</span>
                 </div>
                 {task.rejectReason && (
@@ -5584,12 +6048,12 @@ function VazifalarPage({ currentUser, onNotify, onNotificationsRefresh }) {
 
       {/* Yangi vazifa modal */}
       {modalOpen && createPortal((
-        <div className="modal-backdrop" onClick={() => setModalOpen(false)}>
+        <div className="modal-backdrop" onClick={() => { setModalOpen(false); setEditTask(null); }}>
           <form className="schedule-modal task-create-modal" onSubmit={createTask} onClick={(e) => e.stopPropagation()}>
             <span className="modal-handle" />
             <div className="modal-head">
-              <strong>Yangi vazifa tayinlash</strong>
-              <button type="button" className="modal-close" onClick={() => setModalOpen(false)}>✕</button>
+              <strong>{editTask ? "Vazifani tahrirlash" : "Yangi vazifa tayinlash"}</strong>
+              <button type="button" className="modal-close" onClick={() => { setModalOpen(false); setEditTask(null); }}>✕</button>
             </div>
             <div className="modal-body">
               <label className="modal-field">
@@ -5613,8 +6077,50 @@ function VazifalarPage({ currentUser, onNotify, onNotificationsRefresh }) {
                 <span>Muddat (ixtiyoriy)</span>
                 <input type="date" value={draft.dueDate} onChange={(e) => setDraft({ ...draft, dueDate: e.target.value })} />
               </label>
+              <div className="modal-field">
+                <span>Vaqt oralig'i (ixtiyoriy)</span>
+                <div className="clock-pickers-row">
+                  <ClockTimePicker
+                    label="Dan"
+                    valueH={draft.timeFromH}
+                    valueM={draft.timeFromM}
+                    period={draft.timeFromP}
+                    onSelect={(h, m, p) => setDraft((d) => ({
+                      ...d,
+                      timeFromH: h ?? d.timeFromH,
+                      timeFromM: m ?? d.timeFromM,
+                      timeFromP: p ?? d.timeFromP
+                    }))}
+                  />
+                  <div className="clock-pickers-divider">–</div>
+                  <ClockTimePicker
+                    label="Gacha"
+                    valueH={draft.timeToH}
+                    valueM={draft.timeToM}
+                    period={draft.timeToP}
+                    onSelect={(h, m, p) => setDraft((d) => ({
+                      ...d,
+                      timeToH: h ?? d.timeToH,
+                      timeToM: m ?? d.timeToM,
+                      timeToP: p ?? d.timeToP
+                    }))}
+                  />
+                </div>
+                {(draft.timeFromH || draft.timeToH) && (() => {
+                  const fmt = (h, m, p) => {
+                    if (h == null) return "—";
+                    const h24 = p === "PM" && h !== 12 ? h + 12 : p === "AM" && h === 12 ? 0 : h;
+                    return `${String(h24).padStart(2, "0")}:${String(m ?? 0).padStart(2, "0")}`;
+                  };
+                  return (
+                    <div className="clock-range-preview">
+                      ⏰ {fmt(draft.timeFromH, draft.timeFromM, draft.timeFromP)} – {fmt(draft.timeToH, draft.timeToM, draft.timeToP)}
+                    </div>
+                  );
+                })()}
+              </div>
               <button type="submit" className="btn-primary" style={{ width: "100%", marginTop: 4 }} disabled={submitting}>
-                <Send size={16} /> {submitting ? "Yuborilmoqda..." : "Yuborish"}
+                <Send size={16} /> {submitting ? (editTask ? "Saqlanmoqda..." : "Yuborilmoqda...") : (editTask ? "Saqlash" : "Yuborish")}
               </button>
             </div>
           </form>
@@ -5681,6 +6187,26 @@ function LoadingScreen({ message = "Yuklanmoqda..." }) {
   );
 }
 
+function ConfirmModal({ data, onClose }) {
+  if (!data) return null;
+  function answer(ok) {
+    data.resolve(ok);
+    onClose();
+  }
+  return createPortal(
+    <div className="confirm-backdrop" onClick={() => answer(false)}>
+      <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
+        <p className="confirm-msg">{data.message}</p>
+        <div className="confirm-actions">
+          <button type="button" className="confirm-btn-cancel" onClick={() => answer(false)}>Bekor</button>
+          <button type="button" className="confirm-btn-ok" onClick={() => answer(true)}>Ha, tasdiqlash</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 function ToastViewport({ items }) {
   if (!items.length) return null;
 
@@ -5704,11 +6230,12 @@ function ToastViewport({ items }) {
 
 function BlotknotPage({ currentUser, onNotify }) {
   const [entries, setEntries] = useState([]);
-  const [text, setText] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [editText, setEditText] = useState("");
+  const [newText, setNewText] = useState("");
   const [uploading, setUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const feedRef = useRef(null);
   const fileInputRef = useRef(null);
+  const editRef = useRef(null);
 
   useEffect(() => {
     apiFetch("/api/notes")
@@ -5717,24 +6244,36 @@ function BlotknotPage({ currentUser, onNotify }) {
   }, []);
 
   useEffect(() => {
-    if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
-  }, [entries]);
+    if (editingId && editRef.current) editRef.current.focus();
+  }, [editingId]);
 
-  async function persistEntries(newEntries) {
-    setSaving(true);
+  async function persistEntries(next) {
     try {
-      await apiFetch("/api/notes", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entries: newEntries }) });
+      await apiFetch("/api/notes", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entries: next }) });
     } catch { onNotify?.("Saqlashda xatolik", "error"); }
-    finally { setSaving(false); }
   }
 
-  async function handleSend() {
-    const trimmed = text.trim();
+  async function addNote() {
+    const trimmed = newText.trim();
     if (!trimmed) return;
     const entry = { id: Date.now(), type: "text", content: trimmed, createdAt: new Date().toISOString() };
     const next = [...entries, entry];
     setEntries(next);
-    setText("");
+    setNewText("");
+    await persistEntries(next);
+  }
+
+  function startEdit(entry) {
+    setEditingId(entry.id);
+    setEditText(entry.content);
+  }
+
+  async function saveEdit(id) {
+    const trimmed = editText.trim();
+    setEditingId(null);
+    if (!trimmed) return;
+    const next = entries.map((e) => e.id === id ? { ...e, content: trimmed } : e);
+    setEntries(next);
     await persistEntries(next);
   }
 
@@ -5767,68 +6306,63 @@ function BlotknotPage({ currentUser, onNotify }) {
     await persistEntries(next);
   }
 
-  function handleKeyDown(e) {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
-  }
-
   return (
-    <section className="bloknot-page">
-      <div className="bloknot-feed" ref={feedRef}>
+    <section className="notepad-page">
+      <div className="notepad-header">
+        <BookOpen size={18} />
+        <span>Bloknot</span>
+      </div>
+      <div className="notepad-scroll">
         {entries.length === 0 && (
-          <div className="bloknot-empty">
-            <BookOpen size={36} />
-            <p>Hali hech narsa yo'q. Xabar yozing yoki fayl yuklang.</p>
-          </div>
+          <div className="notepad-empty">Hali hech narsa yo'q. Quyida eslatma qo'shing.</div>
         )}
         {entries.map((entry) => (
-          <div key={entry.id} className="bloknot-entry">
-            {entry.type === "text" && (
-              <div className="bloknot-bubble text">
-                <p>{entry.content}</p>
-                <span className="bloknot-time">{new Date(entry.createdAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })}</span>
-              </div>
-            )}
-            {entry.type === "image" && (
-              <div className="bloknot-bubble media">
-                <img src={entry.url} alt={entry.filename} className="bloknot-img" onClick={() => window.open(entry.url, "_blank")} />
-                <span className="bloknot-time">{new Date(entry.createdAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })}</span>
-              </div>
-            )}
-            {entry.type === "video" && (
-              <div className="bloknot-bubble media">
-                <video src={entry.url} controls className="bloknot-video" />
-                <span className="bloknot-time">{new Date(entry.createdAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })}</span>
-              </div>
-            )}
-            {entry.type === "file" && (
-              <div className="bloknot-bubble file">
-                <Paperclip size={16} />
-                <a href={entry.url} download className="bloknot-file-link">{entry.filename}</a>
-                <span className="bloknot-time">{new Date(entry.createdAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })}</span>
-              </div>
-            )}
-            <button type="button" className="bloknot-del" onClick={() => deleteEntry(entry.id)} title="O'chirish">
-              <Trash2 size={13} />
+          <div key={entry.id} className="notepad-row">
+            <div className="notepad-row-content">
+              {entry.type === "text" ? (
+                editingId === entry.id ? (
+                  <textarea
+                    ref={editRef}
+                    className="notepad-edit"
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    onBlur={() => saveEdit(entry.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); saveEdit(entry.id); }
+                      if (e.key === "Escape") setEditingId(null);
+                    }}
+                  />
+                ) : (
+                  <p className="notepad-text" onClick={() => startEdit(entry)}>{entry.content}</p>
+                )
+              ) : entry.type === "image" ? (
+                <img src={entry.url} alt={entry.filename} className="notepad-img" onClick={() => window.open(entry.url, "_blank")} />
+              ) : entry.type === "video" ? (
+                <video src={entry.url} controls className="notepad-video" />
+              ) : (
+                <a href={entry.url} download className="notepad-file"><Paperclip size={14} /> {entry.filename}</a>
+              )}
+            </div>
+            <button type="button" className="notepad-del" onClick={() => deleteEntry(entry.id)} title="O'chirish">
+              <Trash2 size={14} />
             </button>
           </div>
         ))}
       </div>
-
-      <div className="bloknot-input-bar">
-        <button type="button" className="bloknot-attach" onClick={() => fileInputRef.current?.click()} disabled={uploading} title="Fayl yuklash">
-          {uploading ? <RefreshCcw size={20} className="spin" /> : <Paperclip size={20} />}
+      <div className="notepad-bar">
+        <button type="button" className="notepad-attach" onClick={() => fileInputRef.current?.click()} disabled={uploading} title="Fayl yuklash">
+          {uploading ? <RefreshCcw size={18} className="spin" /> : <Paperclip size={18} />}
         </button>
         <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx,.xlsx,.zip" onChange={handleFileChange} style={{ display: "none" }} />
-        <textarea
-          className="bloknot-input"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Xabar yozing..."
-          rows={1}
+        <input
+          className="notepad-input"
+          value={newText}
+          onChange={(e) => setNewText(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") addNote(); }}
+          placeholder="Yangi eslatma..."
         />
-        <button type="button" className={`bloknot-send${text.trim() ? " active" : ""}`} onClick={handleSend} disabled={!text.trim() || saving}>
-          <Send size={20} />
+        <button type="button" className="notepad-add" onClick={addNote} disabled={!newText.trim()}>
+          <Plus size={18} />
         </button>
       </div>
     </section>

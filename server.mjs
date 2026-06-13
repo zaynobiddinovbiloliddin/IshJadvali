@@ -1440,7 +1440,7 @@ export async function handleRequest(request, response) {
       clearLoginFailures(ip);
       const token = `${Buffer.from(JSON.stringify({ id: user.id, role: user.role })).toString("base64")}.${JWT_SECRET.slice(0, 8)}`;
       return sendJson(response, 200, {
-        user: { id: user.id, username: user.username, fullName: user.fullName, role: user.role },
+        user: { id: user.id, username: user.username, fullName: user.fullName, role: user.role, employeeId: user.employeeId || null },
         token
       });
     }
@@ -1609,7 +1609,13 @@ export async function handleRequest(request, response) {
 
     const employeeDocsMatch = url.pathname.match(/^\/api\/employees\/(\d+)\/documents$/);
     if (employeeDocsMatch && request.method === "GET") {
-      if (!requireAdmin(request, response)) return;
+      const authUser = getAuthUser(request, response);
+      if (!authUser) return;
+      const empId = Number(employeeDocsMatch[1]);
+      const isOwner = Number(authUser.employeeId) === empId;
+      if (!["admin", "superadmin"].includes(authUser.role) && !isOwner) {
+        return sendJson(response, 403, { message: "Ruxsat yo'q" });
+      }
       const employee = db.employees.find((e) => String(e.id) === employeeDocsMatch[1]);
       if (!employee) return sendJson(response, 404, { message: "Xodim topilmadi" });
       return sendJson(response, 200, { address: employee.address || "", documents: employee.documents || {} });
@@ -1673,8 +1679,13 @@ export async function handleRequest(request, response) {
       const authUser = getAuthUser(request, response);
       if (!authUser) return;
       const empId = Number(uploadDocMatch[1]);
-      if (!["admin", "superadmin"].includes(authUser.role) && authUser.employeeId !== empId) {
-        return sendJson(response, 403, { message: "Faqat o'z hujjatlaringizni yuklay olasiz" });
+      if (!["admin", "superadmin"].includes(authUser.role)) {
+        const idMatch = Number(authUser.employeeId) === empId;
+        const emp = db.employees.find((e) => Number(e.id) === empId);
+        const firstWord = (s) => (s || "").trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+        const nameMatch = emp && firstWord(authUser.fullName) && firstWord(emp.name) &&
+          firstWord(emp.name) === firstWord(authUser.fullName);
+        if (!idMatch && !nameMatch) return sendJson(response, 403, { message: "Faqat o'z hujjatlaringizni yuklay olasiz" });
       }
       // Raw binary upload — Content-Type + X-Filename headers, no multipart
       const origName = decodeURIComponent(request.headers["x-filename"] || "upload.bin");
@@ -1702,7 +1713,7 @@ export async function handleRequest(request, response) {
       const authUser = getAuthUser(request, response);
       if (!authUser) return;
       const empId = Number(listDocMatch[1]);
-      if (!["admin", "superadmin"].includes(authUser.role) && authUser.employeeId !== empId) {
+      if (!["admin", "superadmin"].includes(authUser.role) && Number(authUser.employeeId) !== empId) {
         return sendJson(response, 403, { message: "Ruxsat yo'q" });
       }
       const dir = join(__dirname, "uploads", "documents", `emp-${empId}`);
@@ -1731,8 +1742,17 @@ export async function handleRequest(request, response) {
 
     const deleteDocFileMatch = url.pathname.match(/^\/api\/employees\/(\d+)\/uploaded-files\/([^/]+)$/);
     if (deleteDocFileMatch && request.method === "DELETE") {
-      if (!requireAdmin(request, response)) return;
+      const authUser = getAuthUser(request, response);
+      if (!authUser) return;
       const empId = Number(deleteDocFileMatch[1]);
+      if (!["admin", "superadmin"].includes(authUser.role)) {
+        const idMatch = Number(authUser.employeeId) === empId;
+        const emp = db.employees.find((e) => Number(e.id) === empId);
+        const firstWord = (s) => (s || "").trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+        const nameMatch = emp && firstWord(authUser.fullName) && firstWord(emp.name) &&
+          firstWord(emp.name) === firstWord(authUser.fullName);
+        if (!idMatch && !nameMatch) return sendJson(response, 403, { message: "Ruxsat yo'q" });
+      }
       const filename = decodeURIComponent(deleteDocFileMatch[2]);
       if (filename.includes("/") || filename.includes("..")) return sendJson(response, 400, { message: "Noto'g'ri fayl nomi" });
       const safeBase = normalize(join(__dirname, "uploads", "documents"));
@@ -2085,7 +2105,7 @@ export async function handleRequest(request, response) {
     if (url.pathname === "/api/tasks" && request.method === "POST") {
       const user = getAuthUser(request, response, true);
       if (!user) return;
-      const { title, description, assignedToId, dueDate } = await readBody(request);
+      const { title, description, assignedToId, dueDate, timeFrom, timeTo } = await readBody(request);
       if (!title?.trim()) return sendJson(response, 400, { message: "Vazifa nomini kiriting" });
       if (!assignedToId) return sendJson(response, 400, { message: "Xodimni tanlang" });
       const toId = Number(assignedToId);
@@ -2093,12 +2113,43 @@ export async function handleRequest(request, response) {
       if (!assignee) return sendJson(response, 404, { message: "Xodim topilmadi" });
       if (!db.tasks) db.tasks = [];
       const now = new Date().toISOString();
-      const task = { id: nextTaskId(), title: String(title).trim(), description: description ? String(description).trim() : null, assignedToId: toId, assignedById: user.id, status: "PENDING", rejectReason: null, dueDate: dueDate || null, completedAt: null, createdAt: now, updatedAt: now };
+      const timePrefix = (timeFrom || timeTo) ? `[${timeFrom || "?"}–${timeTo || "?"}]\n` : "";
+      const fullDesc = timePrefix + (description ? String(description).trim() : "");
+      const task = { id: nextTaskId(), title: String(title).trim(), description: fullDesc || null, assignedToId: toId, assignedById: user.id, status: "PENDING", rejectReason: null, dueDate: dueDate || null, completedAt: null, createdAt: now, updatedAt: now };
       db.tasks.push(task);
       createNotif(toId, "📋 Yangi vazifa tayinlandi", `${user.fullName || user.username} sizga vazifa yubordi: "${task.title}"`, "task", task.id);
       pushAuditLog("CREATE", "Task", task.id, `"${task.title}" vazifasi ${assignee.fullName} ga tayinlandi`);
       await saveDb();
       return sendJson(response, 201, { success: true, task: enrichTask(task) });
+    }
+
+    const taskEditMatch = url.pathname.match(/^\/api\/tasks\/(\d+)$/);
+    if (taskEditMatch && request.method === "PUT") {
+      const user = getAuthUser(request, response, true);
+      if (!user) return;
+      const taskId = Number(taskEditMatch[1]);
+      const { title, description, assignedToId, dueDate, timeFrom, timeTo } = await readBody(request);
+      if (!title?.trim()) return sendJson(response, 400, { message: "Vazifa nomini kiriting" });
+      if (!db.tasks) db.tasks = [];
+      const idx = db.tasks.findIndex((t) => t.id === taskId);
+      if (idx === -1) return sendJson(response, 404, { message: "Vazifa topilmadi" });
+      const toId = assignedToId ? Number(assignedToId) : db.tasks[idx].assignedToId;
+      const timePrefix = (timeFrom || timeTo) ? `[${timeFrom || "?"}–${timeTo || "?"}]\n` : "";
+      const fullDesc = timePrefix + (description ? String(description).trim() : "");
+      db.tasks[idx] = { ...db.tasks[idx], title: String(title).trim(), description: fullDesc || null, assignedToId: toId, dueDate: dueDate || null, updatedAt: new Date().toISOString() };
+      await saveDb();
+      return sendJson(response, 200, { success: true, task: enrichTask(db.tasks[idx]) });
+    }
+    if (taskEditMatch && request.method === "DELETE") {
+      const user = getAuthUser(request, response, true);
+      if (!user) return;
+      const taskId = Number(taskEditMatch[1]);
+      if (!db.tasks) db.tasks = [];
+      const idx = db.tasks.findIndex((t) => t.id === taskId);
+      if (idx === -1) return sendJson(response, 404, { message: "Vazifa topilmadi" });
+      db.tasks.splice(idx, 1);
+      await saveDb();
+      return sendJson(response, 200, { success: true });
     }
 
     const taskStatusMatch = url.pathname.match(/^\/api\/tasks\/(\d+)\/status$/);
