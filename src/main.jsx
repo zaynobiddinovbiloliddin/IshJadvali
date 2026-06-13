@@ -4243,6 +4243,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
         <TgDocSendModal
           modal={tgDocModal}
           draft={draft}
+          uploadedFiles={uploadedFiles}
           onClose={() => setTgDocModal(null)}
           onNotify={onNotify}
         />,
@@ -4384,8 +4385,10 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
   );
 }
 
-function TgDocSendModal({ modal, draft, onClose, onNotify }) {
-  const { cat, catFiles, empId } = modal;
+function TgDocSendModal({ modal, draft, uploadedFiles, onClose, onNotify }) {
+  const { cat, empId } = modal;
+  const catFiles = (uploadedFiles || []).filter((f) => f.category === cat.id || (!f.category && cat.id === "other"));
+  const hasFile = catFiles.length > 0;
   const [chatId, setChatId] = useState("");
   const [sending, setSending] = useState(false);
   const inputRef = useRef(null);
@@ -4394,7 +4397,7 @@ function TgDocSendModal({ modal, draft, onClose, onNotify }) {
   async function send() {
     const tid = chatId.trim();
     if (!tid) { onNotify("Chat ID yoki @username kiritilmagan", "error"); return; }
-    if (!catFiles.length) { onNotify("Bu bo'limda fayl yuklanmagan", "warning"); return; }
+    if (!hasFile) { onNotify("Avval faylni yuklang (Yuklash tugmasi)", "warning"); return; }
     setSending(true);
     try {
       const res = await apiFetch("/api/telegram/send-doc", {
@@ -4422,9 +4425,9 @@ function TgDocSendModal({ modal, draft, onClose, onNotify }) {
         <div className="tg-doc-send-info">
           <span className="tg-doc-send-emp">{draft?.name}</span>
           <span className="tg-doc-send-cat">{cat.emoji} {cat.label}</span>
-          {!catFiles.length && <span className="tg-doc-send-warn">⚠️ Bu bo'limda hali fayl yuklanmagan</span>}
+          {!hasFile && <span className="tg-doc-send-warn">⚠️ Avval faylni yuklang — "Yuklash" tugmasidan foydalaning</span>}
         </div>
-        {catFiles.length > 0 && catFiles[0].type === "image" && (
+        {hasFile && catFiles[0].type === "image" && (
           <img src={catFiles[0].url} alt={cat.label} className="tg-doc-send-thumb" />
         )}
         <div className="tg-doc-send-field">
@@ -4435,13 +4438,13 @@ function TgDocSendModal({ modal, draft, onClose, onNotify }) {
             onChange={(e) => setChatId(e.target.value)}
             placeholder="@uz24_official yoki -1001234567890"
             onKeyDown={(e) => e.key === "Enter" && !sending && send()}
-            disabled={sending || !catFiles.length}
+            disabled={sending}
           />
-          <p className="tg-doc-send-hint">Bot o'sha guruh/kanalda a'zo bo'lishi kerak. Guruh uchun @username yoki raqamli chat ID.</p>
+          <p className="tg-doc-send-hint">Guruh @username yoki raqamli chat ID. Bot o'sha guruhda a'zo bo'lishi kerak.</p>
         </div>
         <div className="tg-doc-send-actions">
           <button type="button" className="btn-cancel" onClick={onClose}>Bekor qilish</button>
-          <button type="button" className="btn-send-tg" onClick={send} disabled={sending || !catFiles.length || !chatId.trim()}>
+          <button type="button" className="btn-send-tg" onClick={send} disabled={sending || !chatId.trim()}>
             {sending ? "Yuborilmoqda..." : (
               <><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z"/></svg> Yuborish</>
             )}

@@ -10378,7 +10378,8 @@ body { overflow-x: hidden; }
 .doc-category-slot {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
 }
 .doc-category-header {
   display: flex;
@@ -10386,6 +10387,7 @@ body { overflow-x: hidden; }
   justify-content: space-between;
   padding: 9px 12px;
   background: var(--bg-secondary);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
   gap: 8px;
 }
 .doc-category-label { font-size: 0.83rem; font-weight: 600; color: var(--text-primary); flex: 1; }
@@ -10424,7 +10426,7 @@ body { overflow-x: hidden; }
   white-space: nowrap;
 }
 .doc-category-share-btn:hover { background: var(--accent); color: #fff; }
-.doc-category-files { padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; background: var(--bg-card); }
+.doc-category-files { padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; background: var(--bg-card); border-radius: 0 0 var(--radius-md) var(--radius-md); }
 .doc-combine-btn {
   display: flex;
   align-items: center;
