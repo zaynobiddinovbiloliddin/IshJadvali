@@ -2016,11 +2016,20 @@ export async function handleRequest(request, response) {
 
     // ─── Telegram: send specific doc category to a chat ─────────────────────
     if (url.pathname === "/api/telegram/send-doc" && request.method === "POST") {
-      const user = getAuthUser(request, response, true);
+      const user = getAuthUser(request, response);
       if (!user) return;
       const { empId, category, chatId } = await readBody(request);
       const tid = String(chatId || "").trim();
       if (!tid) return sendJson(response, 400, { message: "Chat ID yoki @username kiritilmagan" });
+      // xodim faqat o'z hujjatlarini ulasha oladi
+      if (!["admin", "superadmin"].includes(user.role)) {
+        const idMatch = Number(user.employeeId) === Number(empId);
+        const emp = db.employees.find((e) => Number(e.id) === Number(empId));
+        const firstWord = (s) => (s || "").trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+        const nameMatch = emp && firstWord(user.fullName) && firstWord(emp.name) &&
+          firstWord(emp.name) === firstWord(user.fullName);
+        if (!idMatch && !nameMatch) return sendJson(response, 403, { message: "Faqat o'z hujjatlaringizni ulasha olasiz" });
+      }
       if (!process.env.TELEGRAM_BOT_TOKEN) return sendJson(response, 503, { message: "Telegram bot token .env da sozlanmagan" });
       const dir = join(__dirname, "uploads", "documents", `emp-${empId}`);
       if (!existsSync(dir)) return sendJson(response, 404, { message: "Bu xodimning fayllari topilmadi" });
