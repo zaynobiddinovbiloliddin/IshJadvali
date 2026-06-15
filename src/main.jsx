@@ -1106,7 +1106,7 @@ function App() {
               {page === "audit" && <AuditPage />}
               {page === "bloknot" && <BlotknotPage currentUser={currentUser} onNotify={notify} />}
               {page === "users" && isSuper(currentUser) && (
-                <UsersPage currentUser={currentUser} onNotify={notify} />
+                <UsersPage currentUser={currentUser} employees={dashboard.employees} onNotify={notify} />
               )}
               {page === "profile" && (
                 <ProfilePage
@@ -1118,6 +1118,7 @@ function App() {
                   onRefresh={loadDashboard}
                   onThemeChange={setTheme}
                   onUpdateUser={updateCurrentUser}
+                  onSaveEmployee={saveEmployee}
                   onNotify={notify}
                   onSaveContact={saveContact}
                   onDeleteContact={deleteContact}
@@ -3645,8 +3646,9 @@ function EmployeeManager({ employees, onDelete, onNotify, onSave }) {
 }
 
 function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
+  // All non-admin users see only their own employee's documents
   const xodimEmployee = (() => {
-    if (currentUser?.role !== "xodim") return null;
+    if (isAdmin(currentUser)) return null; // admins see all via dropdown
     if (currentUser?.employeeId != null) {
       const found = employees.find((e) => String(e.id) === String(currentUser.employeeId));
       if (found) return found;
@@ -3658,14 +3660,29 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
       return en === nm || en.split(" ")[0] === nm.split(" ")[0];
     }) || null;
   })();
-  const isOwnEmployee = currentUser?.role === "xodim" && xodimEmployee != null;
+  const isOwnEmployee = !isAdmin(currentUser) && xodimEmployee != null;
   const ownEmpId = xodimEmployee ? String(xodimEmployee.id) : null;
+  // For admins: find their own employee to default the dropdown to
+  const adminOwnEmployee = (() => {
+    if (!isAdmin(currentUser)) return null;
+    if (currentUser?.employeeId != null) {
+      return employees.find(e => String(e.id) === String(currentUser.employeeId)) || null;
+    }
+    const nm = normalizeLookupName(currentUser?.name || "");
+    if (!nm) return null;
+    return employees.find(e => {
+      const en = normalizeLookupName(e.name || "");
+      return en === nm || en.split(" ")[0] === nm.split(" ")[0];
+    }) || null;
+  })();
   const visibleEmployees = isOwnEmployee
     ? employees.filter((e) => String(e.id) === ownEmpId)
     : employees;
-  const [selectedId, setSelectedId] = useState(() =>
-    isOwnEmployee ? (ownEmpId || employees[0]?.id || "") : (employees[0]?.id || "")
-  );
+  const [selectedId, setSelectedId] = useState(() => {
+    if (isOwnEmployee) return ownEmpId || "";
+    // Admins: default to their own employee, else first in list
+    return adminOwnEmployee ? String(adminOwnEmployee.id) : (employees[0]?.id || "");
+  });
   const [draft, setDraft] = useState(null);
   const [editDraft, setEditDraft] = useState(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -3967,7 +3984,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
       department: editDraft.department,
       address: editDraft.address,
       portfolio: editDraft.portfolio,
-      avatar: editDraft.avatar
+      avatar: editDraft.avatar || editDraft.photo3x4 || ""
     });
     if (!saved) { setSaving(false); return; }
 
@@ -4102,7 +4119,7 @@ function DocumentsPage({ employees, onNotify, onSaveEmployee, currentUser }) {
             </div>
           </div>
         )}
-        {isAdmin(currentUser) && (
+        {(isAdmin(currentUser) || isOwnEmployee) && (
           <button className="document-edit-open" type="button" onClick={openEdit}>
             <Edit3 size={17} />
             Ma'lumotlarni tahrirlash
@@ -4905,7 +4922,7 @@ function AuditPage() {
   );
 }
 
-function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThemeChange, onSaveContact, onDeleteContact, onUpdateUser, onNotify }) {
+function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThemeChange, onSaveContact, onDeleteContact, onUpdateUser, onSaveEmployee, onNotify }) {
   const [notify, setNotify] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [draft, setDraft] = useState(currentUser);
@@ -4997,8 +5014,14 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
   const showAssignmentDetail = selectedDay && !["rest", "vacation", "otpiska", "empty"].includes(selectedDay.status);
 
   useEffect(() => {
-    setDraft(currentUser);
-  }, [currentUser]);
+    setDraft({
+      ...currentUser,
+      name: profileEmployee?.name || currentUser.name,
+      phone: profileEmployee?.phone || currentUser.phone || "",
+      telegram: profileEmployee?.telegram || currentUser.telegram || "",
+      avatar: profileEmployee?.avatar || currentUser.avatar || "",
+    });
+  }, [currentUser, profileEmployee]);
 
   useEffect(() => {
     setStatsLoading(true);
@@ -5038,7 +5061,7 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
     else setProfileCalMonth((m) => m + 1);
   }
 
-  function submitProfile(event) {
+  async function submitProfile(event) {
     event.preventDefault();
     if (!String(draft.name || "").trim()) {
       onNotify("Ism familiyani kiriting.", "error");
@@ -5046,6 +5069,19 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
       return;
     }
     onUpdateUser({ name: draft.name, phone: draft.phone, telegram: draft.telegram, avatar: draft.avatar });
+    if (profileEmployee && onSaveEmployee) {
+      await onSaveEmployee({
+        id: profileEmployee.id,
+        name: draft.name || profileEmployee.name,
+        role: profileEmployee.role,
+        phone: draft.phone || profileEmployee.phone,
+        telegram: draft.telegram || profileEmployee.telegram || "",
+        department: profileEmployee.department || "operator",
+        address: profileEmployee.address || "",
+        portfolio: profileEmployee.portfolio || [],
+        avatar: draft.avatar || profileEmployee.avatar || "",
+      });
+    }
     setEditOpen(false);
   }
 
@@ -5085,11 +5121,13 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
 
       <div className="profile-hero">
         <span className="profile-avatar large">
-          {currentUser.avatar ? <img src={currentUser.avatar} alt={currentUser.name} /> : <User size={38} />}
+          {(profileEmployee?.avatar || currentUser.avatar)
+            ? <img src={profileEmployee?.avatar || currentUser.avatar} alt={profileEmployee?.name || currentUser.name} />
+            : <User size={38} />}
         </span>
         <div>
-          <strong>{currentUser.name}</strong>
-          <p>{currentUser.role}</p>
+          <strong>{profileEmployee?.name || currentUser.name}</strong>
+          <p>{profileEmployee?.role || currentUser.role}</p>
         </div>
         <button type="button" aria-label="Profilni tahrirlash" onClick={() => setEditOpen((value) => !value)}>
           <Edit3 size={17} />
@@ -5474,12 +5512,12 @@ function EmptyCard({ text }) {
   );
 }
 
-function UsersPage({ currentUser, onNotify }) {
+function UsersPage({ currentUser, employees = [], onNotify }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editUser, setEditUser] = useState(null);
-  const [form, setForm] = useState({ username: "", fullName: "", role: "xodim", pin: "" });
+  const [form, setForm] = useState({ employeeId: "", pin: "", role: "xodim" });
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [pinReveal, setPinReveal] = useState(null);
@@ -5506,37 +5544,37 @@ function UsersPage({ currentUser, onNotify }) {
 
   function openCreate() {
     setEditUser(null);
-    setForm({ username: "", fullName: "", role: "xodim", pin: "" });
+    setForm({ employeeId: "", pin: "", role: "xodim" });
     setShowForm(true);
   }
 
   function openEdit(user) {
     setEditUser(user);
-    setForm({ username: user.username, fullName: user.fullName, role: user.role, pin: "" });
+    setForm({ employeeId: user.employeeId ? String(user.employeeId) : "", pin: "", role: user.role });
     setShowForm(true);
   }
 
   async function saveUser(event) {
     event.preventDefault();
-    if (!form.fullName.trim()) { onNotify("To'liq ism kiritilmadi", "error"); return; }
-    if (!editUser && !form.username.trim()) { onNotify("Login (username) kiritilmadi", "error"); return; }
-    if (editUser && form.pin && !/^\d{8}$/.test(form.pin)) { onNotify("PIN kod 8 ta raqamdan iborat bo'lishi kerak", "error"); return; }
+    if (!editUser && !form.employeeId) { onNotify("Xodimni tanlang", "error"); return; }
+    if (!editUser && !form.pin.trim()) { onNotify("PIN kodni kiriting", "error"); return; }
+    if (form.pin && !/^\d{8}$/.test(form.pin)) { onNotify("PIN kod 8 ta raqamdan iborat bo'lishi kerak", "error"); return; }
     setSaving(true);
     try {
-      const body = { fullName: form.fullName, role: form.role };
-      if (!editUser) body.username = form.username;
-      if (editUser && form.pin) body.pin = form.pin;
-
       if (editUser) {
+        const body = { role: form.role };
+        if (form.pin) body.pin = form.pin;
+        if (form.employeeId) body.employeeId = Number(form.employeeId);
         const updated = await api(`/api/users/${editUser.id}`, { method: "PUT", body: JSON.stringify(body) });
         setUsers((prev) => prev.map((u) => u.id === updated.id ? updated : u));
         onNotify(form.pin ? "Foydalanuvchi va PIN kod yangilandi" : "Foydalanuvchi yangilandi");
       } else {
+        const body = { employeeId: Number(form.employeeId), pin: form.pin, role: form.role };
         const created = await api("/api/users", { method: "POST", body: JSON.stringify(body) });
         const { generatedPin, ...safeUser } = created;
         setUsers((prev) => [...prev, safeUser]);
-        onNotify("Foydalanuvchi qo'shildi");
-        if (generatedPin) setPinReveal({ fullName: safeUser.fullName, username: safeUser.username, pin: generatedPin });
+        onNotify("Foydalanuvchi qo'shildi ✓");
+        setPinReveal({ fullName: safeUser.fullName, username: safeUser.username, pin: form.pin || generatedPin });
       }
       setShowForm(false);
     } catch (err) {
@@ -5644,43 +5682,52 @@ function UsersPage({ currentUser, onNotify }) {
               <button type="button" className="modal-close-btn" onClick={() => setShowForm(false)}>✕</button>
             </div>
             <form className="users-form" onSubmit={saveUser}>
+              {(() => {
+                // Employees not yet linked to any user
+                const linkedEmpIds = new Set(users.filter(u => u.employeeId).map(u => String(u.employeeId)));
+                const availableEmps = employees.filter(e => !linkedEmpIds.has(String(e.id)) || String(e.id) === form.employeeId);
+                const selectedEmp = employees.find(e => String(e.id) === form.employeeId);
+                return (
+                  <>
+                    <label>
+                      Xodim
+                      <select
+                        value={form.employeeId}
+                        onChange={(e) => setForm({ ...form, employeeId: e.target.value })}
+                      >
+                        <option value="">— Xodim tanlang —</option>
+                        {availableEmps.map((e) => (
+                          <option key={e.id} value={String(e.id)}>{e.name} · {e.role}</option>
+                        ))}
+                        {editUser && !availableEmps.find(e => String(e.id) === form.employeeId) && selectedEmp && (
+                          <option value={String(selectedEmp.id)}>{selectedEmp.name} · {selectedEmp.role}</option>
+                        )}
+                      </select>
+                    </label>
+                    {selectedEmp && (
+                      <div className="user-emp-preview">
+                        <Avatar person={selectedEmp} size={32} />
+                        <div>
+                          <strong>{selectedEmp.name}</strong>
+                          <span>{selectedEmp.role}</span>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
               <label>
-                To'liq ism
+                PIN kod (8 raqam)
                 <input
-                  value={form.fullName}
-                  onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-                  placeholder="Ism Familiya"
-                />
-              </label>
-              <label>
-                Login (username)
-                <input
-                  value={form.username}
-                  onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase().replace(/\s/g, "") })}
-                  placeholder="username"
+                  value={form.pin}
+                  onChange={(e) => setForm({ ...form, pin: e.target.value.replace(/\D/g, "").slice(0, 8) })}
+                  placeholder={editUser ? "Bo'sh = o'zgarmaydi" : "12345678"}
+                  inputMode="numeric"
                   autoComplete="off"
-                  readOnly={editUser?.id === currentUser?.id}
+                  maxLength={8}
                 />
+                {editUser && <span className="pw-hint">Bo'sh qoldirsangiz joriy PIN o'zgarmaydi</span>}
               </label>
-              {!editUser && (
-                <p className="pw-hint pin-auto-hint">
-                  8 xonali PIN kod avtomatik yaratiladi va bir martagina ko'rsatiladi — uni xodimga yetkazib qo'ying.
-                </p>
-              )}
-              {editUser && (
-                <label>
-                  PIN kod
-                  <input
-                    value={form.pin}
-                    onChange={(e) => setForm({ ...form, pin: e.target.value.replace(/\D/g, "").slice(0, 8) })}
-                    placeholder="Yangi 8 xonali PIN"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    maxLength={8}
-                  />
-                  <span className="pw-hint">Bo'sh qoldirsangiz, joriy PIN o'zgarmaydi. O'zgartirish uchun yangi 8 xonali kodni kiriting.</span>
-                </label>
-              )}
               <label>
                 Rol
                 <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
@@ -5764,7 +5811,13 @@ function UsersPage({ currentUser, onNotify }) {
               </label>
               <div className="user-card-info">
                 <span className="user-card-name">{user.fullName}</span>
-                <span className="user-card-login">@{user.username}</span>
+                {user.employeeId && employees.find(e => String(e.id) === String(user.employeeId)) ? (
+                  <span className="user-card-login" style={{ color: "#22c55e" }}>
+                    ● ● ● ● ● ● ● ● &nbsp; PIN bilan kiradi
+                  </span>
+                ) : (
+                  <span className="user-card-login">@{user.username}</span>
+                )}
                 <div className="user-card-badges">
                   <span className={`role-badge ${user.role}`}>
                     {ROLES.find((r) => r.id === user.role)?.label || user.role}

@@ -1561,20 +1561,53 @@ export async function handleRequest(request, response) {
     if (request.method === "POST" && url.pathname === "/api/users") {
       if (!requireAdmin(request, response)) return;
       const body = await readBody(request);
-      if (!body.username || !body.fullName) {
-        return sendJson(response, 400, { message: "username va fullName talab qilinadi" });
+
+      // Resolve linked employee
+      let linkedEmployee = null;
+      if (body.employeeId) {
+        linkedEmployee = db.employees.find((e) => String(e.id) === String(body.employeeId));
+        if (!linkedEmployee) return sendJson(response, 404, { message: "Xodim topilmadi" });
+        const alreadyLinked = db.users.find((u) => String(u.employeeId) === String(body.employeeId));
+        if (alreadyLinked) return sendJson(response, 409, { message: `Bu xodim allaqachon "${alreadyLinked.fullName}" foydalanuvchisiga bog'liq` });
       }
-      if (db.users.find((u) => u.username === body.username)) {
-        return sendJson(response, 409, { message: "Bu username allaqachon mavjud" });
+
+      const fullName = (linkedEmployee?.name || String(body.fullName || "")).trim();
+      if (!fullName) return sendJson(response, 400, { message: "Xodim tanlanmadi yoki ism kiritilmadi" });
+
+      // Auto-generate unique username from name
+      function nameToUsername(name) {
+        const parts = name.toLowerCase().replace(/[^a-z0-9]/g, " ").trim().split(/\s+/).filter(Boolean);
+        if (parts.length >= 2) return `${parts[0]}.${parts[1].charAt(0)}`;
+        if (parts.length === 1) return parts[0];
+        return `user${Date.now()}`;
       }
-      const pin = generateUniquePin();
+      let username = nameToUsername(fullName);
+      let counter = 2;
+      while (db.users.find((u) => u.username === username)) username = `${nameToUsername(fullName)}${counter++}`;
+
+      // Handle PIN: use provided or auto-generate
+      let pin, hashedPin;
+      if (body.pin && String(body.pin).trim()) {
+        pin = String(body.pin).trim();
+        if (!/^\d{8}$/.test(pin)) return sendJson(response, 400, { message: "PIN kod 8 ta raqamdan iborat bo'lishi kerak" });
+        if (db.users.some((u) => u.pinCode && compareSync(pin, u.pinCode))) {
+          return sendJson(response, 409, { message: "Bu PIN kod boshqa foydalanuvchida band, boshqasini tanlang" });
+        }
+        hashedPin = hashSync(pin, 10);
+      } else {
+        pin = generateUniquePin();
+        hashedPin = hashSync(pin, 10);
+      }
+
       const newUser = {
         id: Math.max(0, ...db.users.map((u) => u.id)) + 1,
-        username: String(body.username).trim(),
-        pinCode: hashSync(pin, 10),
-        fullName: String(body.fullName).trim(),
+        username,
+        pinCode: hashedPin,
+        fullName,
         role: ["superadmin", "admin", "xodim"].includes(body.role) ? body.role : "xodim",
         isActive: true,
+        avatar: linkedEmployee?.avatar || "",
+        employeeId: linkedEmployee ? Number(linkedEmployee.id) : null,
         createdAt: new Date().toISOString()
       };
       db.users.push(newUser);
@@ -1608,6 +1641,19 @@ export async function handleRequest(request, response) {
       if (body.role && ["superadmin", "admin", "xodim"].includes(body.role)) db.users[idx].role = body.role;
       if (typeof body.isActive === "boolean") db.users[idx].isActive = body.isActive;
       if (typeof body.avatar === "string") db.users[idx].avatar = body.avatar;
+      // Link/unlink employee
+      if ("employeeId" in body) {
+        if (!body.employeeId) {
+          db.users[idx].employeeId = null;
+        } else {
+          const emp = db.employees.find((e) => String(e.id) === String(body.employeeId));
+          if (!emp) return sendJson(response, 404, { message: "Xodim topilmadi" });
+          const alreadyLinked = db.users.find((u) => u.id !== uid && String(u.employeeId) === String(body.employeeId));
+          if (alreadyLinked) return sendJson(response, 409, { message: `Bu xodim allaqachon "${alreadyLinked.fullName}" foydalanuvchisiga bog'liq` });
+          db.users[idx].employeeId = Number(body.employeeId);
+          if (emp.name && !body.fullName) db.users[idx].fullName = emp.name;
+        }
+      }
       await saveDb();
       const { pinCode: _pin, ...safeUser } = db.users[idx];
       return sendJson(response, 200, generatedPin ? { ...safeUser, generatedPin } : safeUser);
