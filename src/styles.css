@@ -130,7 +130,7 @@
 html { -webkit-text-size-adjust: 100%; }
 
 body {
-  min-width: 320px;
+  min-width: 0;
   min-height: 100vh;
   min-height: 100vh;
   min-height: 100dvh;
@@ -205,6 +205,8 @@ button:active {
   min-height: 100dvh;
   background: var(--bg);
   width: 100%;
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
 @media (max-width: 767px) {
@@ -3353,7 +3355,7 @@ button.metric-card {
 }
 
 .monthly-table {
-  display: grid;
+  display: table;
   min-width: max-content;
 }
 
@@ -8610,7 +8612,7 @@ body { overflow-x: hidden; }
 .monthly-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--border); border-radius: var(--radius-md); }
 .monthly-loading { text-align: center; padding: 40px; color: var(--text-secondary); font-size: 0.9rem; }
 
-.monthly-table { border-collapse: collapse; min-width: 100%; font-size: 0.76rem; }
+.monthly-table { display: table; border-collapse: collapse; min-width: 100%; font-size: 0.76rem; }
 .monthly-table thead th { background: var(--card-bg); border-bottom: 2px solid var(--border); font-weight: 600; white-space: nowrap; }
 .mth-num  { padding: 7px 6px; text-align: center; position: sticky; left: 0; z-index: 3; min-width: 28px; }
 .mth-name { padding: 7px 10px; text-align: left; position: sticky; left: 28px; z-index: 3; min-width: 120px; }
@@ -10461,7 +10463,8 @@ body { overflow-x: hidden; }
 .restore-section h3 { margin: 0 0 6px; font-size: 1rem; }
 .restore-hint { font-size: 0.8rem; color: var(--text-secondary); margin: 0 0 12px; line-height: 1.5; }
 .restore-hint code { background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-size: 0.78rem; }
-.restore-actions { display: flex; gap: 8px; margin-bottom: 10px; }
+.restore-actions { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
+.restore-actions .btn-sm { width: auto; height: auto; padding: 6px 12px; gap: 6px; font-size: 0.82rem; white-space: nowrap; }
 .restore-textarea {
   width: 100%;
   min-height: 100px;
@@ -10798,3 +10801,558 @@ body { overflow-x: hidden; }
 }
 .monthly-jpeg-btn:hover { background: var(--accent); color: #fff; }
 .monthly-jpeg-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE: Samsung A35 va kichik ekranlar uchun — 270px gacha
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 380px: Samsung A35 va shunga o'xshash qurilmalar ─────────────────── */
+@media (max-width: 380px) {
+  /* ── Global layout ── */
+  .content { padding-inline: 10px; }
+  .topbar { height: 60px; padding: 0 10px; }
+  .topbar-logo { height: 26px; }
+
+  /* ── Bottom nav ── */
+  .bottom-nav button { font-size: 10px; padding: 4px 2px; gap: 2px; min-height: 44px; }
+
+  /* ── Modal (bottom sheet) ── */
+  .schedule-modal { padding: 8px 14px 24px; }
+
+  /* ── Home: metric cards ── */
+  .metric-grid { gap: 7px; }
+  .metric-card { padding: 10px 8px; min-height: 100px; }
+  .metric-card strong { font-size: 1.25rem; }
+  .metric-card span { font-size: 0.68rem; }
+
+  /* ── Home: week nav ── */
+  .week-nav { gap: 4px; }
+  .week-nav button { padding: 6px 8px; font-size: 0.78rem; }
+
+  /* ── Home: day tabs ── */
+  .day-tabs button { padding: 6px 10px; font-size: 0.75rem; min-height: 34px; }
+
+  /* ── Home: staff rows ── */
+  .staff-row { padding: 8px; gap: 8px; }
+
+  /* ── Team page ── */
+  .team-daily-card { padding: 10px; gap: 8px; min-height: 72px; }
+  .team-daily-card strong { font-size: 13px; }
+
+  /* ── Documents page ── */
+  .document-view-actions { grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 6px; }
+  .document-view-actions button { min-height: 36px; font-size: 11px; gap: 5px; }
+  .document-edit-open { width: 100%; justify-content: center; }
+
+  /* Doc category header: sarlavha ustiga, tugmalar pastga */
+  .doc-category-header { flex-wrap: wrap; padding: 8px 10px; gap: 6px; }
+  .doc-category-label { flex: 1 1 100%; font-size: 0.8rem; }
+  .doc-cat-actions { width: 100%; justify-content: flex-end; }
+  .doc-category-share-btn { padding: 5px 10px; font-size: 0.76rem; }
+  .doc-category-upload-btn { padding: 5px 10px; font-size: 0.76rem; }
+
+  /* Doc items */
+  .doc-item { padding: 6px 8px; gap: 8px; }
+  .doc-item-thumbnail { width: 34px; height: 34px; }
+  .doc-file-icon { width: 34px; height: 34px; }
+  .doc-item-name { font-size: 0.78rem; }
+  .doc-item-meta { font-size: 0.7rem; }
+  .doc-download-btn, .doc-delete-btn { padding: 4px 7px; }
+
+  /* Share panel */
+  .share-panel { right: 0; left: auto; min-width: 148px; }
+  .share-option { padding: 9px 12px; font-size: 0.82rem; }
+
+  /* ── Profile page ── */
+  .profile-hero { padding: 14px; gap: 10px; }
+  .profile-hero strong { font-size: 16px; }
+  .profile-hero p, .profile-hero em, .profile-hero small { font-size: 12px; }
+  .profile-calendar-grid { gap: 4px; }
+  .pcal-day strong { font-size: 11px; }
+  .pcal-day span { font-size: 9px; }
+  .pcal-legend span { font-size: 10.5px; padding: 3px 8px 3px 6px; }
+  .pms-chip strong { font-size: 15px; }
+  .pms-chip em { font-size: 9px; }
+
+  /* ── Users page ── */
+  .user-card { padding: 10px 12px; gap: 10px; }
+  .user-card-name { font-size: 0.84rem; }
+
+  /* ── Tasks page ── */
+  .task-card { padding: 12px; }
+  .task-card-header strong { font-size: 0.87rem; }
+  .tasks-header h2 { font-size: 1.05rem; }
+
+  /* ── Section heads ── */
+  .section-head { font-size: 0.88rem; }
+  .page-title { font-size: 1.05rem; }
+}
+
+/* ── 320px: kichikroq Android/iPhone SE ───────────────────────────────── */
+@media (max-width: 320px) {
+  /* ── Global layout ── */
+  .content { padding-inline: 8px; }
+  .topbar { height: 56px; padding: 0 8px; }
+  .topbar-logo { height: 23px; }
+
+  /* ── Bottom nav: juda kichik matn ── */
+  .bottom-nav button { font-size: 9px; padding: 3px 1px; }
+
+  /* ── Modal ── */
+  .schedule-modal { padding: 6px 12px 20px; }
+  .modal-head { padding: 10px 0 6px; }
+  .modal-head strong { font-size: 0.92rem; }
+  .modal-actions { gap: 8px; }
+
+  /* ── Home: metric grid ── */
+  .metric-grid { gap: 5px; }
+  .metric-card { padding: 8px 6px; min-height: 88px; border-radius: 9px; }
+  .metric-card strong { font-size: 1.1rem; }
+  .metric-card span { font-size: 0.62rem; }
+
+  /* ── Home: overview weekly grid ── */
+  .overview-grid { gap: 5px; }
+  .overview-grid strong { font-size: 11px; }
+
+  /* ── Home: staff rows ── */
+  .staff-row { grid-template-columns: 38px minmax(0, 1fr) auto auto; padding: 7px; gap: 7px; }
+  .staff-row .profile-avatar { width: 38px; height: 38px; }
+
+  /* ── Documents ── */
+  .document-view-actions { grid-template-columns: repeat(2, 1fr); gap: 5px; }
+  .document-view-actions button { min-height: 34px; font-size: 10px; gap: 4px; }
+  .documents-card { padding: 10px; gap: 10px; }
+  .doc-category-share-btn { padding: 4px 8px; font-size: 0.72rem; gap: 4px; }
+  .doc-category-upload-btn { padding: 4px 8px; font-size: 0.72rem; gap: 4px; }
+  .doc-item { padding: 5px 7px; gap: 6px; }
+  .doc-item-thumbnail, .doc-file-icon { width: 30px; height: 30px; }
+  .doc-combine-btn { padding: 8px 10px; font-size: 0.8rem; }
+
+  /* ── Profile hero ── */
+  .profile-hero { grid-template-columns: 58px minmax(0,1fr) 36px; padding: 12px 10px; gap: 8px; }
+  .profile-avatar.large { width: 58px; height: 58px; }
+  .profile-hero > button { width: 36px; height: 36px; border-radius: 8px; }
+  .profile-hero strong { font-size: 14px; }
+
+  /* ── Profile stats chips: 2x2 grid ── */
+  .profile-monthly-stats-row { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .pms-chip { padding: 6px 4px; }
+  .pms-chip strong { font-size: 14px; }
+
+  /* ── Profile calendar ── */
+  .profile-calendar-grid { gap: 3px; }
+  .pcal-day strong { font-size: 10px; }
+  .pcal-day span { font-size: 8px; }
+  .pcal-legend { gap: 4px; }
+  .pcal-legend span { font-size: 9.5px; padding: 3px 6px 3px 5px; }
+
+  /* ── Users page ── */
+  .user-card { padding: 9px 10px; gap: 8px; }
+  .user-card-name { font-size: 0.8rem; }
+  .user-card-login { font-size: 0.7rem; }
+  .action-btn { width: 30px; height: 30px; }
+
+  /* ── Tasks ── */
+  .task-card { padding: 10px; }
+  .task-accept-btn, .task-reject-btn { padding: 7px; font-size: 0.78rem; }
+  .btn-primary { padding: 8px 12px; font-size: 0.78rem; }
+
+  /* ── Dept tabs ── */
+  .dept-tab { padding: 5px 10px; font-size: 0.74rem; }
+
+  /* ── Section heads ── */
+  .section-head { font-size: 0.82rem; }
+  .page-title { font-size: 0.97rem; }
+  .page-subtitle { font-size: 0.72rem; }
+
+  /* ── Restore section ── */
+  .restore-section { padding: 14px; margin-top: 20px; }
+}
+
+/* ── 270px: minimal qo'llab-quvvatlash darajasi ──────────────────────── */
+@media (max-width: 270px) {
+  /* ── Global ── */
+  .content { padding-inline: 6px; }
+  .topbar { height: 52px; padding: 0 6px; grid-template-columns: 38px minmax(0, 1fr) 38px; }
+  .topbar-logo { height: 20px; }
+
+  /* ── Bottom nav: faqat ikonkalar ── */
+  .bottom-nav button span { font-size: 0; width: 0; height: 0; overflow: hidden; display: block; }
+  .bottom-nav button { min-height: 40px; padding: 6px 0; }
+
+  /* ── Modal ── */
+  .schedule-modal { padding: 6px 8px 18px; }
+  .modal-head strong { font-size: 0.85rem; }
+
+  /* ── Home metric cards: juda ixcham ── */
+  .metric-grid { gap: 4px; }
+  .metric-card { padding: 6px 4px; min-height: 76px; border-radius: 8px; gap: 4px; }
+  .metric-card strong { font-size: 1rem; }
+  .metric-card span { font-size: 0.58rem; }
+  .metric-icon { width: 26px; height: 26px; }
+
+  /* ── Staff rows: 3 ustun ── */
+  .staff-row { grid-template-columns: 34px minmax(0, 1fr) auto; gap: 5px; padding: 6px; }
+  .staff-row .profile-avatar { width: 34px; height: 34px; }
+
+  /* ── Dept tabs: kichik ── */
+  .dept-tab { padding: 4px 8px; font-size: 0.68rem; }
+
+  /* ── Documents: icon + text tugmalar icon-ga ── */
+  .document-view-actions { grid-template-columns: repeat(2, 1fr); gap: 4px; }
+  .document-view-actions button { min-height: 32px; font-size: 9px; gap: 3px; padding: 0 6px; }
+  .document-view-actions button svg { flex-shrink: 0; }
+  .documents-card { padding: 8px; }
+  .doc-category-header { padding: 7px 8px; }
+  .doc-category-label { font-size: 0.75rem; }
+  .doc-category-share-btn { font-size: 0.68rem; padding: 3px 6px; }
+  .doc-category-upload-btn { font-size: 0.68rem; padding: 3px 6px; }
+  .doc-item { padding: 4px 5px; gap: 5px; }
+  .doc-item-thumbnail, .doc-file-icon { width: 26px; height: 26px; }
+  .doc-item-name { font-size: 0.72rem; }
+  .doc-item-meta { font-size: 0.65rem; }
+  .doc-download-btn, .doc-delete-btn { padding: 3px 5px; }
+  .doc-combine-btn { font-size: 0.72rem; padding: 6px 8px; }
+  .document-edit-open { font-size: 0.8rem; padding: 8px 10px; }
+
+  /* ── Profile hero: ixcham ── */
+  .profile-hero { grid-template-columns: 48px minmax(0,1fr) 32px; padding: 10px 8px; gap: 7px; min-height: auto; }
+  .profile-avatar.large { width: 48px; height: 48px; font-size: 20px; }
+  .profile-hero > button { width: 32px; height: 32px; border-radius: 7px; }
+  .profile-hero strong { font-size: 13px; }
+  .profile-hero p, .profile-hero em, .profile-hero small { font-size: 10.5px; }
+
+  /* ── Profile stats: 2×2 ── */
+  .profile-monthly-stats-row { grid-template-columns: repeat(2, 1fr); gap: 5px; }
+  .pms-chip { padding: 5px 3px; border-radius: 8px; }
+  .pms-chip strong { font-size: 13px; }
+  .pms-chip em { font-size: 8px; }
+
+  /* ── Profile calendar ── */
+  .profile-calendar-grid { gap: 2px; }
+  .pcal-day { border-radius: 5px; border-width: 1px; }
+  .pcal-day strong { font-size: 9px; }
+  .pcal-day span { font-size: 7px; }
+  .profile-calendar-weekdays span { font-size: 9px; }
+  .pcal-legend { gap: 3px; }
+  .pcal-legend span { font-size: 9px; padding: 2px 5px; gap: 3px; }
+
+  /* ── Users page ── */
+  .user-card { padding: 7px 8px; gap: 7px; }
+  .user-card-name { font-size: 0.76rem; }
+  .user-card-login { font-size: 0.65rem; padding: 1px 5px; }
+  .action-btn { width: 28px; height: 28px; border-radius: 6px; }
+
+  /* ── Tasks ── */
+  .task-card { padding: 8px; gap: 8px; }
+  .task-card-header strong { font-size: 0.82rem; }
+  .task-accept-btn, .task-reject-btn { padding: 6px; font-size: 0.74rem; }
+  .task-complete-btn { padding: 8px; font-size: 0.78rem; }
+  .tasks-header h2 { font-size: 0.95rem; }
+  .btn-primary { padding: 7px 10px; font-size: 0.74rem; gap: 4px; }
+
+  /* ── Team page ── */
+  .team-daily-card { padding: 8px; gap: 6px; min-height: 62px; }
+  .team-daily-card strong { font-size: 12px; }
+  .team-daily-card span { font-size: 10px; }
+  .team-daily-card button { padding: 0 8px; font-size: 9px; }
+  .team-search input { font-size: 0.8rem; }
+
+  /* ── Section heads ── */
+  .section-head { font-size: 0.78rem; }
+  .page-title { font-size: 0.92rem; }
+  .page-subtitle { font-size: 0.68rem; }
+
+  /* ── Restore / backup section ── */
+  .restore-section { padding: 10px; margin-top: 14px; }
+  .restore-section h3 { font-size: 0.88rem; }
+  .restore-hint { font-size: 0.74rem; }
+
+  /* ── Dept modal ── */
+  .dept-add-form { padding: 10px; }
+  .dept-list-row { padding: 6px 8px; gap: 8px; }
+
+  /* ── Overview weekly grid: gorizontal scroll ── */
+  .overview-card { overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 10px 8px; }
+  .overview-grid { min-width: 240px; gap: 5px; }
+  .overview-grid strong { font-size: 10px; }
+
+  /* ── PIN auth: to'liq sig'ishi ── */
+  .auth-panel.pin-auth-panel { padding: 20px 10px; }
+  .pin-keyboard { gap: 5px; }
+  .pin-key { min-height: 44px; font-size: 0.95rem; }
+
+  /* ── Form inputs ── */
+  input, textarea, select { font-size: 0.82rem !important; }
+}
+
+/* ═══════════════════════════════════════
+   270px RESPONSIVE — ULTRA NARROW SUPPORT
+   ═══════════════════════════════════════ */
+
+@media (max-width: 320px) {
+
+  /* Body */
+  body { min-width: 270px; }
+
+  /* Topbar */
+  .topbar {
+    padding: 0 8px;
+    gap: 4px;
+  }
+  .topbar-brand { display: none; }
+
+  /* Content padding */
+  .content {
+    padding: 12px 8px;
+  }
+
+  /* Hero block */
+  .hero-block {
+    padding: 14px 12px;
+    border-radius: 12px;
+  }
+  .hero-block h2 { font-size: 1rem; }
+  .hero-block p { font-size: 0.75rem; }
+
+  /* Metric grid — 1 column */
+  .metric-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  /* Day tabs */
+  .day-tabs {
+    margin: 0 -8px 12px;
+    padding: 6px 8px;
+    gap: 6px;
+  }
+  .day-tabs button {
+    min-width: 70px;
+    height: 36px;
+    padding: 0 10px;
+    font-size: 0.72rem;
+  }
+
+  /* Staff row */
+  .staff-row {
+    padding: 8px;
+    gap: 6px;
+  }
+  .staff-row strong { font-size: 0.78rem; }
+  .staff-row span { font-size: 0.68rem; }
+
+  /* Status select */
+  .status-select {
+    font-size: 0.7rem;
+    padding: 4px 2px;
+    min-width: 0;
+    max-width: 80px;
+  }
+
+  /* Avatar */
+  .avatar { width: 32px; height: 32px; font-size: 0.75rem; }
+
+  /* Document view actions — 2 columns */
+  .document-view-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .document-view-actions button {
+    font-size: 0.68rem;
+    padding: 0 6px;
+    min-height: 36px;
+    gap: 4px;
+  }
+  .document-view-actions button svg { width: 12px; height: 12px; }
+
+  /* Document profile */
+  .document-profile { gap: 8px; }
+  .document-profile strong { font-size: 0.85rem; }
+  .document-profile span { font-size: 0.72rem; }
+
+  /* Document select */
+  .document-select select {
+    font-size: 0.78rem;
+    padding: 8px;
+  }
+
+  /* PIN auth */
+  .auth-panel.pin-auth-panel {
+    padding: 16px 10px;
+    gap: 12px;
+  }
+  .pin-display { gap: 3px; }
+  .pin-dot {
+    width: 20px;
+    height: 28px;
+    font-size: 0.75rem;
+    border-radius: 6px;
+  }
+  .pin-dash { font-size: 0.75rem; }
+  .pin-keyboard {
+    gap: 5px;
+    max-width: 230px;
+  }
+  .pin-key {
+    min-height: 40px;
+    font-size: 0.9rem;
+    border-radius: 10px;
+  }
+
+  /* Bottom nav */
+  .bottom-nav {
+    padding: 4px 0 8px;
+    gap: 0;
+  }
+  .bottom-nav button {
+    padding: 4px 2px;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+  }
+  .bottom-nav button svg { width: 18px; height: 18px; }
+  .bottom-nav button span {
+    font-size: 0.58rem;
+    line-height: 1.1;
+  }
+
+  /* Section heads */
+  .section-head h2 { font-size: 0.95rem; }
+  .section-head span { font-size: 0.72rem; }
+
+  /* Modal */
+  .schedule-modal {
+    padding: 16px 12px;
+    border-radius: 16px 16px 0 0;
+  }
+  .modal-head strong { font-size: 0.9rem; }
+
+  /* Cards padding */
+  .documents-card,
+  .team-page,
+  .profile-page,
+  .reports-page,
+  .audit-page {
+    gap: 10px;
+  }
+
+  /* Filming header */
+  .filming-header {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px;
+  }
+  .filming-header-right {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .filming-upload-btn,
+  .shooting-action-btn {
+    font-size: 0.7rem;
+    padding: 6px 8px;
+  }
+
+  /* Monthly table */
+  .monthly-table th,
+  .monthly-table td {
+    padding: 2px;
+    font-size: 0.6rem;
+  }
+  .mth-name { max-width: 60px; font-size: 0.6rem; }
+  .mc { width: 16px; height: 16px; font-size: 0.5rem; }
+
+  /* Team member row */
+  .team-member-row {
+    padding: 8px;
+    gap: 6px;
+  }
+  .team-member-main strong { font-size: 0.78rem; }
+  .team-member-main span { font-size: 0.68rem; }
+  .dept-badge { font-size: 0.62rem; padding: 2px 6px; }
+
+  /* Dept tabs */
+  .dept-tabs { gap: 4px; }
+  .dept-tab {
+    padding: 4px 8px;
+    font-size: 0.68rem;
+    height: 30px;
+  }
+
+  /* Week insight */
+  .week-insight {
+    padding: 12px;
+    gap: 8px;
+  }
+  .week-insight strong { font-size: 1rem; }
+  .week-insight p { font-size: 0.72rem; }
+
+  /* Profile */
+  .profile-hero { gap: 8px; padding: 12px; }
+  .profile-hero strong { font-size: 0.95rem; }
+
+  /* Bloknot */
+  .bloknot-input-bar { padding: 6px 8px; gap: 6px; }
+  .bloknot-input { font-size: 0.82rem; }
+
+  /* Task cards */
+  .task-card { padding: 10px 12px; gap: 6px; }
+  .task-card strong { font-size: 0.82rem; }
+
+  /* Uploaded files */
+  .uploaded-files-list { gap: 6px; }
+  .doc-item { padding: 6px 8px; gap: 6px; }
+  .doc-item-name { font-size: 0.72rem; }
+
+  /* Word document */
+  .word-document-grid div { gap: 4px; }
+  .word-document-grid dt { font-size: 0.7rem; }
+  .word-document-grid dd { font-size: 0.75rem; }
+
+  /* Group card */
+  .group-head { padding: 10px 12px; }
+  .group-head strong { font-size: 0.85rem; }
+  .group-head span { font-size: 0.72rem; }
+
+  /* Reports */
+  .reports-kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+  .reports-kpi-card { padding: 10px; }
+  .reports-kpi-card strong { font-size: 1.1rem; }
+
+  /* Users page */
+  .user-card { padding: 8px 10px; gap: 6px; }
+  .user-card-name { font-size: 0.78rem; }
+  .user-card-login { font-size: 0.68rem; }
+  .action-btn { width: 28px; height: 28px; }
+
+  /* Contacts */
+  .contact-row { padding: 8px; gap: 6px; }
+  .contact-row strong { font-size: 0.78rem; }
+
+  /* Notifications */
+  .notif-body strong { font-size: 0.78rem; }
+  .notif-body p { font-size: 0.7rem; }
+
+  /* Shooting table */
+  .shooting-table th { font-size: 0.62rem; padding: 4px; }
+  .shooting-table td { font-size: 0.65rem; }
+  .shooting-table textarea { font-size: 0.65rem; }
+
+  /* Desktop sidebar — completely hidden */
+  .desktop-sidebar { display: none !important; }
+  .desktop-main { margin-left: 0 !important; }
+}
+
+/* Prevent horizontal scroll globally for narrow screens */
+@media (max-width: 320px) {
+  .app-shell,
+  .desktop-main,
+  .content {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+  * { word-break: break-word; }
+}

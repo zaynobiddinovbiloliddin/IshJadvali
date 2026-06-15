@@ -4985,12 +4985,9 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
       const dateText = toInputDate(date);
       const dow = date.getDay(); // 0=Yak, 1=Du, 2=Se, 3=Cho, 4=Pay, 5=Jum, 6=Sha
       const explicitCode = empStatuses[dateText];
-      // Smart default: Sun=rest, Wed=studio, Sat=work, other weekdays=work
-      const defaultCode = dow === 0 ? "D" : dow === 3 ? "S" : "I";
-      const code = explicitCode || defaultCode;
-      const isDefault = !explicitCode;
+      const code = explicitCode || "empty";
       const status = codeToMonthlyStatus(code);
-      return { date, dateText, day: index + 1, status, code, isToday: dateText === toInputDate(new Date()), isDefault };
+      return { date, dateText, day: index + 1, status, code, isToday: dateText === toInputDate(new Date()) };
     });
     return { title: `${MONTH_NAMES[month0]} ${year}`, days: [...blanks, ...days] };
   }, [profileEmployee, profileStatuses, profileCalYear, profileCalMonth]);
@@ -5001,10 +4998,7 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
     const prefix = `${profileCalYear}-${String(profileCalMonth).padStart(2, "0")}`;
     let working = 0, rest = 0, trip = 0;
     for (let d = 1; d <= daysInMonth; d++) {
-      const date = new Date(profileCalYear, profileCalMonth - 1, d);
-      const dow = date.getDay();
-      const defaultCode = dow === 0 ? "D" : dow === 3 ? "S" : "I";
-      const code = empStatuses[`${prefix}-${String(d).padStart(2, "0")}`] || defaultCode;
+      const code = empStatuses[`${prefix}-${String(d).padStart(2, "0")}`] || "";
       if (["I", "S", "T", "A", "P"].includes(code)) working++;
       else if (code === "K") trip++;
       else if (["D", "M", "O", "B", "U"].includes(code)) rest++;
@@ -5250,10 +5244,10 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
               <button
                 key={day.dateText}
                 type="button"
-                className={`pcal-day${isEmpty ? " pcal-empty" : ""}${day.isDefault ? " pcal-default" : ""} ${day.isToday ? "today" : ""} ${selectedDate === day.dateText ? "selected" : ""}`}
-                style={!isEmpty ? { background: info.bg, color: info.fg, opacity: day.isDefault ? 0.72 : 1 } : undefined}
+                className={`pcal-day${isEmpty ? " pcal-empty" : ""} ${day.isToday ? "today" : ""} ${selectedDate === day.dateText ? "selected" : ""}`}
+                style={!isEmpty ? { background: info.bg, color: info.fg } : undefined}
                 onClick={() => setSelectedDate(day.dateText)}
-                title={`${info?.name || "Belgilanmagan"}${day.isDefault ? " (taxminiy)" : ""}`}
+                title={info?.name || "Belgilanmagan"}
               >
                 <strong>{day.day}</strong>
                 <span>{!isEmpty ? day.code : ""}</span>
@@ -5269,7 +5263,6 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
             </span>
           ))}
         </div>
-        <p className="pcal-default-note">Rangli katakchalar bazada yozilmagan kunlar uchun taxminiy ko'rsatilgan</p>
 
         {selectedDay && (() => {
           const selInfo = DAILY_STATUSES[selectedDay.code];
