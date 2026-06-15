@@ -1251,15 +1251,31 @@ function getScheduleKey(weekStartValue) {
   return formatInputDate(getWeekStart(weekStartValue));
 }
 
+const _dashCache = new Map(); // key → { data, ts }
+const DASH_TTL = 3000; // 3 soniya
+
+function invalidateDashCache(key) {
+  if (key) _dashCache.delete(key);
+  else _dashCache.clear();
+}
+
 function getDashboard(weekStartValue) {
   const key = getScheduleKey(weekStartValue);
+  const now = Date.now();
+  const cached = _dashCache.get(key);
+  if (cached && now - cached.ts < DASH_TTL) return cached.data;
+
+  let data;
   if (db.schedules[key]) {
     db.schedules[key].employees = publicEmployees();
     db.schedules[key].contacts = publicContacts();
     refreshScheduleDerivedData(db.schedules[key]);
-    return db.schedules[key];
+    data = db.schedules[key];
+  } else {
+    data = buildDashboard(key);
   }
-  return buildDashboard(key);
+  _dashCache.set(key, { data, ts: now });
+  return data;
 }
 
 async function generateAndStoreSchedule(weekStartValue) {
@@ -1273,6 +1289,7 @@ async function generateAndStoreSchedule(weekStartValue) {
   });
 
   db.schedules[key] = dashboard;
+  invalidateDashCache(key);
   await saveDb();
   return dashboard;
 }
@@ -1280,6 +1297,7 @@ async function generateAndStoreSchedule(weekStartValue) {
 async function deleteSchedule(weekStartValue) {
   const key = getScheduleKey(weekStartValue);
   delete db.schedules[key];
+  invalidateDashCache(key);
   await saveDb();
   return { ok: true };
 }
@@ -1311,6 +1329,7 @@ async function updatePersonStatus(weekStartValue, payload) {
   if (!updated) throw new Error("Jadvaldagi xodim topilmadi");
   schedule.week.saved = true;
   refreshScheduleDerivedData(schedule);
+  invalidateDashCache(key);
   await saveDb();
   return schedule;
 }
@@ -1357,14 +1376,23 @@ async function addScheduleGroup(weekStartValue, payload) {
   return schedule;
 }
 
-function sendJson(response, status, payload) {
-  response.writeHead(status, {
-    "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
-  });
-  response.end(JSON.stringify(payload));
+const CORS_HEADERS = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
+};
+
+function sendJson(response, status, payload, request = null) {
+  const body = JSON.stringify(payload);
+  const acceptsGzip = request && (request.headers["accept-encoding"] || "").includes("gzip");
+  if (acceptsGzip && body.length > 1024) {
+    const gz = gzipSync(Buffer.from(body), { level: 6 });
+    response.writeHead(status, { ...CORS_HEADERS, "Content-Encoding": "gzip", "Vary": "Accept-Encoding", "Content-Length": gz.length });
+    return response.end(gz);
+  }
+  response.writeHead(status, CORS_HEADERS);
+  response.end(body);
 }
 
 async function readBody(request) {
@@ -1645,7 +1673,7 @@ export async function handleRequest(request, response) {
     if (url.pathname === "/api/daily-status" && request.method === "GET") {
       const year = Number(url.searchParams.get("year")) || new Date().getFullYear();
       const month = Number(url.searchParams.get("month")) || new Date().getMonth() + 1;
-      return sendJson(response, 200, getDailyStatusForMonth(year, month));
+      return sendJson(response, 200, getDailyStatusForMonth(year, month), request);
     }
 
     if (url.pathname === "/api/daily-status" && request.method === "POST") {
@@ -1685,11 +1713,11 @@ export async function handleRequest(request, response) {
     }
 
     if (request.method === "GET" && url.pathname === "/api/dashboard") {
-      return sendJson(response, 200, getDashboard(url.searchParams.get("weekStart")));
+      return sendJson(response, 200, getDashboard(url.searchParams.get("weekStart")), request);
     }
 
     if (request.method === "GET" && url.pathname === "/api/employees") {
-      return sendJson(response, 200, { employees: publicEmployees() });
+      return sendJson(response, 200, { employees: publicEmployees() }, request);
     }
 
     if (request.method === "POST" && url.pathname === "/api/employees") {

@@ -1,18 +1,24 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import legacy from "@vitejs/plugin-legacy";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    legacy({
+      targets: ["chrome >= 60", "safari >= 12", "ios >= 12", "firefox >= 60"],
+      additionalLegacyPolyfills: ["regenerator-runtime/runtime"],
+      modernPolyfills: true,
+    }),
+  ],
   server: {
     proxy: {
       "/api": "http://localhost:3001"
     }
   },
   build: {
-    target: "es2020",
-    minify: "esbuild",
     cssMinify: true,
-    chunkSizeWarningLimit: 600,
+    chunkSizeWarningLimit: 800,
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -21,6 +27,9 @@ export default defineConfig({
           }
           if (id.includes("node_modules/lucide-react")) {
             return "vendor-icons";
+          }
+          if (id.includes("node_modules/docx")) {
+            return "vendor-docx";
           }
         },
         chunkFileNames: "assets/[name]-[hash].js",

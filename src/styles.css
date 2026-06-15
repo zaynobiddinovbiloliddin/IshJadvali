@@ -50,6 +50,23 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+
+  /* compat: replaces color-mix() for older browsers */
+  --_surface-92: rgba(255,255,255,0.92);
+  --_surface-94: rgba(255,255,255,0.94);
+  --_surfsoft-88: rgba(248,250,252,0.88);
+  --_surfsoft-90: rgba(248,250,252,0.90);
+  --_surfsoft-92: rgba(248,250,252,0.92);
+  --_bg-92: rgba(248,250,252,0.92);
+  --_border-70: rgba(226,232,240,0.70);
+  --_pri12-surf: #eceef9;
+  --_pri13-surf: #eaebfd;
+  --_pri15-surf: #e8e8fd;
+  --_pri18-bord: #cbd0f0;
+  --_pri32-bord: #babef0;
+  --_pri44-bord: #aaafe0;
+  --_suc34-bord: #a0dcbe;
+  --_acc6-card: #f5f5fe;
 }
 
 [data-theme="dark"] {
@@ -78,6 +95,22 @@
   --shadow-soft: 0 4px 14px rgba(0,0,0,0.25);
   --success-soft: var(--success-light);
   --danger-soft: var(--danger-light);
+  /* compat dark overrides */
+  --_surface-92: rgba(30,41,59,0.92);
+  --_surface-94: rgba(30,41,59,0.94);
+  --_surfsoft-88: rgba(15,23,42,0.88);
+  --_surfsoft-90: rgba(15,23,42,0.90);
+  --_surfsoft-92: rgba(15,23,42,0.92);
+  --_bg-92: rgba(15,23,42,0.92);
+  --_border-70: rgba(51,65,85,0.70);
+  --_pri12-surf: #263051;
+  --_pri13-surf: #273152;
+  --_pri15-surf: #283256;
+  --_pri18-bord: #3c4871;
+  --_pri32-bord: #434d87;
+  --_pri44-bord: #4a5490;
+  --_suc34-bord: #2d4e3f;
+  --_acc6-card: #1f273c;
 
   color: var(--text-primary);
   background: var(--bg);
@@ -98,6 +131,7 @@ html { -webkit-text-size-adjust: 100%; }
 
 body {
   min-width: 320px;
+  min-height: 100vh;
   min-height: 100vh;
   min-height: 100dvh;
   background: var(--bg);
@@ -167,6 +201,7 @@ button:active {
 .app-shell {
   display: flex;
   min-height: 100vh;
+  min-height: 100vh;
   min-height: 100dvh;
   background: var(--bg);
   width: 100%;
@@ -177,12 +212,14 @@ button:active {
     flex-direction: column;
     position: relative;
     overflow-x: hidden;
+    min-height: 100vh;
     min-height: 100dvh;
   }
 }
 
 .topbar {
   position: sticky;
+  position: -webkit-sticky;
   top: 0;
   z-index: 20;
   display: grid;
@@ -191,8 +228,9 @@ button:active {
   height: 70px;
   padding: 0 14px;
   border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  background: var(--_surface-92);
   backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 .topbar-title {
@@ -252,6 +290,7 @@ button:active {
 
 .content {
   height: calc(100vh - 70px);
+  height: calc(100vh - 70px);
   height: calc(100dvh - 70px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -262,6 +301,7 @@ button:active {
 }
 
 .auth-shell {
+  min-height: 100vh;
   min-height: 100vh;
   min-height: 100dvh;
   display: flex;
@@ -472,10 +512,10 @@ button:active {
   margin-bottom: 12px;
   overflow: hidden;
   padding: 18px 76px 18px 18px;
-  border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+  border: 1px solid var(--_pri18-bord);
   border-radius: 14px;
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--primary) 18%, transparent), color-mix(in srgb, var(--success) 10%, transparent) 72%),
+    linear-gradient(135deg, rgba(99,102,241,0.18), rgba(34,197,94,0.10) 72%),
     var(--surface);
   box-shadow: var(--shadow-soft);
 }
@@ -487,7 +527,7 @@ button:active {
   width: 146px;
   height: 146px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--primary) 16%, transparent);
+  background: rgba(99,102,241,0.16);
 }
 
 .hero-block span {
@@ -525,7 +565,7 @@ button:active {
   border-radius: 14px;
   color: #ffffff;
   background: linear-gradient(135deg, var(--primary-strong), var(--primary));
-  box-shadow: 0 12px 24px color-mix(in srgb, var(--primary) 22%, transparent);
+  box-shadow: 0 12px 24px rgba(99,102,241,0.22);
   font-size: 21px;
   font-style: normal;
   font-weight: 900;
@@ -661,7 +701,7 @@ button.metric-card {
 
 .metric-card.active {
   border-color: var(--primary);
-  box-shadow: 0 12px 28px color-mix(in srgb, var(--primary) 18%, transparent);
+  box-shadow: 0 12px 28px rgba(99,102,241,0.18);
 }
 
 .metric-grid.studio .metric-card {
@@ -754,6 +794,7 @@ button.metric-card {
 
 .day-tabs {
   position: sticky;
+  position: -webkit-sticky;
   top: 0;
   z-index: 12;
   display: flex;
@@ -761,8 +802,9 @@ button.metric-card {
   margin: 0 -17px 16px;
   padding: 8px 17px;
   overflow-x: auto;
-  background: color-mix(in srgb, var(--surface-soft) 92%, transparent);
+  background: var(--_surfsoft-92);
   backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   scrollbar-width: none;
 }
 
@@ -787,7 +829,7 @@ button.metric-card {
   border-color: #6366f1;
   color: #ffffff;
   background: linear-gradient(135deg, var(--primary-strong), var(--primary));
-  box-shadow: 0 8px 18px color-mix(in srgb, var(--primary) 24%, transparent);
+  box-shadow: 0 8px 18px rgba(99,102,241,0.24);
 }
 
 .schedule-groups {
@@ -1177,7 +1219,7 @@ button.metric-card {
   z-index: 1000;
   display: block;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--primary) 10%, transparent), transparent 220px),
+    linear-gradient(180deg, rgba(99,102,241,0.10), transparent 220px),
     var(--surface-soft);
   animation: sheetBackdropIn 0.18s ease both;
 }
@@ -1187,7 +1229,9 @@ button.metric-card {
   align-content: start;
   gap: 14px;
   width: min(100vw, 430px);
+  min-height: 100vh;
   min-height: 100dvh;
+  max-height: 100vh;
   max-height: 100dvh;
   margin: 0 auto;
   overflow-y: auto;
@@ -1199,6 +1243,7 @@ button.metric-card {
 
 .person-sheet-top {
   position: sticky;
+  position: -webkit-sticky;
   top: 0;
   z-index: 3;
   display: flex;
@@ -1207,8 +1252,9 @@ button.metric-card {
   gap: 10px;
   min-height: 52px;
   padding: 4px 0 8px;
-  background: color-mix(in srgb, var(--surface-soft) 90%, transparent);
+  background: var(--_surfsoft-90);
   backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .person-sheet-top button {
@@ -1239,7 +1285,7 @@ button.metric-card {
   padding: 8px 10px;
   border-radius: 999px;
   color: var(--primary-strong);
-  background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+  background: var(--_pri12-surf);
   font-size: 12px;
   font-weight: 900;
   text-overflow: ellipsis;
@@ -1373,7 +1419,7 @@ button.metric-card {
   padding: 0 10px;
   border-radius: 12px;
   color: var(--primary-strong);
-  background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+  background: var(--_pri12-surf);
   font-size: 13px;
   font-weight: 800;
   text-decoration: none;
@@ -2270,6 +2316,7 @@ button.metric-card {
 
 .shooting-table th {
   position: sticky;
+  position: -webkit-sticky;
   top: 0;
   z-index: 2;
   padding: 8px 7px;
@@ -2430,6 +2477,7 @@ button.metric-card {
   justify-content: center;
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   padding: 0;
   animation: fadeIn 0.2s ease;
 }
@@ -2657,6 +2705,7 @@ button.metric-card {
 .team-page {
   display: grid;
   gap: 10px;
+  min-height: calc(100vh - 156px);
   min-height: calc(100dvh - 156px);
   color: #111827;
 }
@@ -3043,12 +3092,14 @@ button.metric-card {
   font-size: 12px;
   font-weight: 900;
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .team-person-sheet {
   display: grid;
   gap: 10px;
   width: min(100%, 430px);
+  max-height: calc(100vh - 70px);
   max-height: calc(100dvh - 70px);
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -3317,6 +3368,7 @@ button.metric-card {
 
 .month-header {
   position: sticky;
+  position: -webkit-sticky;
   top: 0;
   z-index: 4;
   display: grid;
@@ -3337,6 +3389,7 @@ button.metric-card {
 
 .month-sticky {
   position: sticky;
+  position: -webkit-sticky;
   left: 0;
   z-index: 3;
 }
@@ -4104,6 +4157,7 @@ button.metric-card {
   position: fixed;
   inset: auto;
   width: min(calc(100vw - 24px), 430px);
+  max-height: calc(100vh - 24px);
   max-height: calc(100dvh - 24px);
 }
 
@@ -4123,7 +4177,9 @@ button.metric-card {
 
   .modal-backdrop .schedule-modal {
     width: 100vw;
+    max-height: 100vh;
     max-height: 100dvh;
+    min-height: 100vh;
     min-height: 100dvh;
     border-radius: 0;
   }
@@ -4135,7 +4191,9 @@ button.metric-card {
   .contact-modal {
     inset: 0;
     width: 100vw;
+    max-height: 100vh;
     max-height: 100dvh;
+    min-height: 100vh;
     min-height: 100dvh;
     border-radius: 0;
   }
@@ -4225,7 +4283,7 @@ button.metric-card {
   height: 36px;
   border-radius: 8px;
   color: var(--primary-strong);
-  background: color-mix(in srgb, var(--primary) 15%, var(--surface));
+  background: var(--_pri15-surf);
 }
 
 .report-kpi strong {
@@ -4344,7 +4402,7 @@ button.metric-card {
   min-height: 38px;
   border-radius: 8px;
   color: var(--primary-strong);
-  background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+  background: var(--_pri12-surf);
   font-size: 13px;
   font-weight: 800;
 }
@@ -4372,10 +4430,10 @@ button.metric-card {
 
 .document-view-actions button.active,
 .document-view-actions button:hover {
-  border-color: color-mix(in srgb, var(--primary) 44%, var(--border));
+  border-color: var(--_pri44-bord);
   color: #ffffff;
   background: linear-gradient(135deg, var(--primary-strong), var(--primary));
-  box-shadow: 0 10px 22px color-mix(in srgb, var(--primary) 18%, transparent);
+  box-shadow: 0 10px 22px rgba(99,102,241,0.18);
 }
 
 .team-document-actions button {
@@ -4397,13 +4455,13 @@ button.metric-card {
 .word-mode {
   padding: 22px;
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--primary) 8%, transparent), transparent 38%),
+    linear-gradient(90deg, rgba(99,102,241,0.08), transparent 38%),
     var(--surface);
 }
 
 .word-mode header {
   padding-bottom: 14px;
-  border-bottom: 2px solid color-mix(in srgb, var(--primary) 32%, var(--border));
+  border-bottom: 2px solid var(--_pri32-bord);
 }
 
 .word-mode header span,
@@ -4545,7 +4603,7 @@ button.metric-card {
   padding: 6px 9px;
   border-radius: 999px;
   color: var(--primary-strong);
-  background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+  background: var(--_pri12-surf);
   font-size: 11px;
   font-style: normal;
   font-weight: 900;
@@ -4554,13 +4612,13 @@ button.metric-card {
 .jpeg-mode {
   padding: 22px;
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--primary) 8%, transparent), transparent 38%),
+    linear-gradient(90deg, rgba(99,102,241,0.08), transparent 38%),
     var(--surface);
 }
 
 .jpeg-mode header {
   padding-bottom: 14px;
-  border-bottom: 2px solid color-mix(in srgb, var(--primary) 32%, var(--border));
+  border-bottom: 2px solid var(--_pri32-bord);
 }
 
 .jpeg-mode header span,
@@ -4719,7 +4777,7 @@ button.metric-card {
   gap: 16px;
   padding: 18px;
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--primary) 16%, transparent), transparent 42%),
+    linear-gradient(135deg, rgba(99,102,241,0.16), transparent 42%),
     var(--surface);
 }
 
@@ -4745,8 +4803,8 @@ button.metric-card {
   height: 92px;
   border-radius: 50%;
   color: #ffffff;
-  background: conic-gradient(var(--success) 72%, color-mix(in srgb, var(--border) 70%, transparent) 0);
-  box-shadow: inset 0 0 0 10px color-mix(in srgb, var(--surface) 92%, transparent);
+  background: conic-gradient(var(--success) 72%, var(--_border-70) 0);
+  box-shadow: inset 0 0 0 10px var(--_surface-92);
 }
 
 .reports-coverage b {
@@ -5043,7 +5101,7 @@ button.metric-card {
   min-height: 124px;
   padding: 20px;
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--primary) 10%, transparent), transparent 58%),
+    linear-gradient(135deg, rgba(99,102,241,0.10), transparent 58%),
     var(--surface);
 }
 
@@ -5054,7 +5112,7 @@ button.metric-card {
   height: 42px;
   border-radius: 10px;
   color: var(--primary-strong);
-  background: color-mix(in srgb, var(--primary) 13%, var(--surface));
+  background: var(--_pri13-surf);
 }
 
 .profile-hero strong {
@@ -5159,7 +5217,7 @@ button.metric-card {
 .documents-form input:focus,
 .documents-form textarea:focus,
 .documents-form select:focus {
-  outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent);
+  outline: 2px solid rgba(99,102,241,0.55);
   outline-offset: 1px;
   background: var(--surface);
 }
@@ -5412,82 +5470,100 @@ button.metric-card {
 }
 
 .profile-calendar-grid i,
-.profile-calendar-grid button {
+.profile-calendar-grid .pcal-day {
   aspect-ratio: 1;
   min-width: 0;
   border-radius: 8px;
 }
 
-.profile-calendar-grid button {
+/* ── Profile calendar: unified day cells (same colors as MonthlyPage) ── */
+.pcal-day {
   display: grid;
   place-items: center;
   gap: 2px;
-  border: 1px solid transparent;
-  color: #ffffff;
-  background: #16a34a;
+  aspect-ratio: 1;
+  min-width: 0;
+  border-radius: 8px;
+  border: 1.5px solid transparent;
+  background: var(--surface-raised);
+  color: var(--text-muted);
   box-shadow: var(--shadow-soft);
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
 }
 
-.profile-calendar-grid button strong,
-.profile-calendar-grid button span {
+.pcal-day strong,
+.pcal-day span {
   display: block;
   line-height: 1;
 }
 
-.profile-calendar-grid button strong {
-  font-size: 14px;
+.pcal-day strong {
+  font-size: 13px;
+  font-weight: 700;
 }
 
-.profile-calendar-grid button span {
+.pcal-day span {
   font-size: 10px;
   font-weight: 900;
 }
 
-.profile-calendar-grid button.work {
-  background: #16a34a;
+.pcal-day.pcal-empty {
+  background: var(--surface-raised);
+  color: var(--text-muted);
+  border-style: dashed;
+  border-color: var(--border);
+  opacity: 0.55;
 }
 
-.profile-calendar-grid button.rest,
-.profile-calendar-grid button.vacation {
-  background: #ef4444;
+.pcal-day:not(.pcal-empty) {
+  color: #fff;
 }
 
-.profile-calendar-grid button.sick {
-  background: #8b5cf6;
+.pcal-day.today {
+  opacity: 1;
+  box-shadow: 0 0 0 2.5px #fff, 0 0 0 4.5px currentColor;
 }
 
-.profile-calendar-grid button.otpiska {
-  background: #f97316;
-}
-
-.profile-calendar-grid button.trip {
-  background: #2563eb;
-}
-
-.profile-calendar-grid button.tjk {
-  background: #f59e0b;
-}
-
-.profile-calendar-grid button.studio {
-  background: #047857;
-}
-
-.profile-calendar-grid button.administration {
-  background: #7c3aed;
-}
-
-.profile-calendar-grid button.presidential {
-  background: #0f766e;
-}
-
-.profile-calendar-grid button.today {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 24%, transparent);
-}
-
-.profile-calendar-grid button.selected {
+.pcal-day.selected {
   border-color: #111827;
-  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.12), var(--shadow-soft);
-  transform: translateY(-1px);
+  box-shadow: 0 0 0 3px rgba(17,24,39,0.18), var(--shadow-soft);
+  transform: translateY(-1px) scale(1.05);
+  opacity: 1;
+}
+
+/* Legend strip */
+.pcal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 6px 0 2px;
+}
+
+.pcal-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: default;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.pcal-legend span strong {
+  font-weight: 900;
+  font-size: 12px;
+}
+
+.pcal-default-note {
+  font-size: 11px;
+  color: var(--text-secondary);
+  opacity: 0.7;
+  margin-top: 4px;
+  font-style: italic;
 }
 
 .profile-day-detail {
@@ -5526,91 +5602,106 @@ button.metric-card {
   background: #fff7ed;
 }
 
-.profile-day-detail.studio {
-  border-color: #a7f3d0;
-  background: #ecfdf5;
-}
-
-.profile-day-detail.tjk {
-  border-color: #fde68a;
-  background: #fffbeb;
-}
-
-.profile-day-detail.administration {
-  border-color: #ddd6fe;
-  background: #f5f3ff;
-}
-
-.profile-day-detail.presidential {
-  border-color: #99f6e4;
-  background: #f0fdfa;
-}
-
-.profile-day-detail.empty-day,
-.profile-day-detail.empty {
-  border-color: var(--border);
+/* ── New unified day-detail card ── */
+.profile-day-detail-v2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
   background: var(--surface-raised);
 }
 
-.profile-day-detail.unpaid {
-  border-color: #e5e7eb;
-  background: #f9fafb;
-}
-
-.profile-day-detail span,
-.profile-day-detail strong,
-.profile-day-detail p {
-  display: block;
-}
-
-.profile-day-detail span {
-  color: #64748b;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.profile-day-detail strong {
-  margin-top: 3px;
-  color: #111827;
-  font-size: 16px;
-}
-
-.profile-day-detail p {
-  margin: 6px 0 0;
-  color: #334155;
-  font-size: 13px;
-  line-height: 1.35;
-}
-
-.profile-day-detail dl {
-  display: grid;
-  gap: 7px;
-  margin: 0;
-}
-
-.profile-day-detail dl div {
+.pdv2-left {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
   gap: 10px;
-  padding-top: 7px;
-  border-top: 1px solid rgba(15, 23, 42, 0.1);
+  flex-shrink: 0;
 }
 
-.profile-day-detail dt,
-.profile-day-detail dd {
-  margin: 0;
-  color: #334155;
-  font-size: 12px;
-}
-
-.profile-day-detail dt {
+.pdv2-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  font-size: 18px;
   font-weight: 900;
+  background: var(--surface);
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
 
-.profile-day-detail dd {
-  max-width: 68%;
+.pdv2-left > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pdv2-left strong {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.pdv2-left span {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.pdv2-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  margin-left: auto;
   text-align: right;
-  white-space: pre-line;
+}
+
+.pdv2-meta div {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.pdv2-meta dt {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.pdv2-meta dd {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+/* no-emp banner */
+.profile-no-emp-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(245,158,11,0.10);
+  border: 1px solid rgba(245,158,11,0.30);
+}
+
+.profile-no-emp-banner span {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.profile-no-emp-banner p {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0;
 }
 
 .profile-stats {
@@ -5815,7 +5906,7 @@ button.metric-card {
   border-bottom: 1px solid var(--border);
   color: var(--text);
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--primary) 9%, transparent), transparent 60%),
+    linear-gradient(135deg, rgba(99,102,241,0.09), transparent 60%),
     var(--surface);
 }
 
@@ -6054,8 +6145,9 @@ button.metric-card {
   z-index: 130;
   display: grid;
   place-items: center;
-  background: color-mix(in srgb, var(--surface-soft) 88%, transparent);
+  background: var(--_surfsoft-88);
   backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   animation: sheetBackdropIn 0.18s ease both;
 }
 
@@ -6063,7 +6155,7 @@ button.metric-card {
   content: "";
   width: 54px;
   height: 54px;
-  border: 5px solid color-mix(in srgb, var(--primary) 18%, transparent);
+  border: 5px solid rgba(99,102,241,0.18);
   border-top-color: var(--primary);
   border-radius: 999px;
   animation: spin 0.85s linear infinite;
@@ -6151,6 +6243,7 @@ button.metric-card {
   box-shadow: var(--shadow-lg);
   animation: toastIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .toast-success {
@@ -6256,6 +6349,7 @@ button.metric-card {
 
   .content {
     height: calc(100vh - 64px);
+    height: calc(100vh - 64px);
     height: calc(100dvh - 64px);
     padding: 14px 14px calc(104px + env(safe-area-inset-bottom, 0px));
   }
@@ -6291,12 +6385,14 @@ button.metric-card {
 
   .week-nav {
     position: sticky;
+    position: -webkit-sticky;
     top: 0;
     z-index: 13;
     margin-inline: -14px;
     padding: 8px 14px;
-    background: color-mix(in srgb, var(--surface-soft) 92%, transparent);
+    background: var(--_surfsoft-92);
     backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
   }
 
   .week-nav button,
@@ -6509,6 +6605,7 @@ button.metric-card {
   border-top: 1px solid var(--border);
   padding: 8px 0 max(8px, env(safe-area-inset-bottom, 0px));
   backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 .bottom-nav button {
@@ -6816,7 +6913,7 @@ button.metric-card {
 }
 
 .staff-row {
-  border-color: color-mix(in srgb, var(--success) 34%, var(--border));
+  border-color: var(--_suc34-bord);
   background: var(--success-soft);
 }
 
@@ -6922,8 +7019,9 @@ button.metric-card {
 .bottom-nav {
   height: 76px;
   border-color: var(--border);
-  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  background: var(--_surface-94);
   backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 .bottom-nav button {
@@ -6934,8 +7032,8 @@ button.metric-card {
 
 .bottom-nav .active {
   color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 13%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 20%, transparent);
+  background: rgba(99,102,241,0.13);
+  box-shadow: inset 0 0 0 1px rgba(99,102,241,0.20);
 }
 
 .profile-page {
@@ -7289,6 +7387,7 @@ button.metric-card {
 
   .team-person-sheet {
     width: min(100%, 720px);
+    max-height: calc(100vh - 36px);
     max-height: calc(100dvh - 36px);
     overflow-y: auto;
   }
@@ -7325,6 +7424,7 @@ button.metric-card {
     flex-shrink: 0;
     height: 100vh;
     position: sticky;
+    position: -webkit-sticky;
     top: 0;
     background: var(--surface);
     border-right: 1px solid var(--border);
@@ -7846,6 +7946,7 @@ body { overflow-x: hidden; }
     background: var(--card-bg);
     border-right: 1px solid var(--border);
     position: sticky;
+    position: -webkit-sticky;
     top: 0;
     height: 100vh;
     overflow-y: auto;
@@ -7858,6 +7959,7 @@ body { overflow-x: hidden; }
   .bottom-nav { display: none !important; }
 
   .desktop-main {
+    height: 100vh;
     height: 100vh;
     height: 100dvh;
     overflow-y: auto;
@@ -8751,7 +8853,7 @@ body { overflow-x: hidden; }
   box-shadow: none;
 }
 [data-theme="dark"] .day-tabs {
-  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  background: var(--_bg-92);
 }
 
 /* ── Group / studio / today / overview / legend cards ────────────── */
@@ -9325,7 +9427,7 @@ body { overflow-x: hidden; }
   position: relative;
 }
 .notif-item:hover { background: var(--accent-light); }
-.notif-item.unread { background: color-mix(in srgb, var(--accent) 6%, var(--card-bg)); }
+.notif-item.unread { background: var(--_acc6-card); }
 .notif-item.unread:hover { background: var(--accent-light); }
 .notif-icon { font-size: 1.15rem; flex-shrink: 0; margin-top: 1px; line-height: 1.3; }
 .notif-body { flex: 1; min-width: 0; }
@@ -10440,6 +10542,7 @@ body { overflow-x: hidden; }
   justify-content: center;
   background: rgba(0,0,0,0.5);
   backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   padding: 1rem;
   animation: fadeIn 0.2s ease;
 }

@@ -4962,21 +4962,28 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
     const days = Array.from({ length: totalDays }, (_, index) => {
       const date = new Date(year, month0, index + 1);
       const dateText = toInputDate(date);
-      const code = empStatuses[dateText] || "empty";
+      const dow = date.getDay(); // 0=Yak, 1=Du, 2=Se, 3=Cho, 4=Pay, 5=Jum, 6=Sha
+      const explicitCode = empStatuses[dateText];
+      // Smart default: Sun=rest, Wed=studio, Sat=work, other weekdays=work
+      const defaultCode = dow === 0 ? "D" : dow === 3 ? "S" : "I";
+      const code = explicitCode || defaultCode;
+      const isDefault = !explicitCode;
       const status = codeToMonthlyStatus(code);
-      return { date, dateText, day: index + 1, status, code, isToday: dateText === toInputDate(new Date()) };
+      return { date, dateText, day: index + 1, status, code, isToday: dateText === toInputDate(new Date()), isDefault };
     });
     return { title: `${MONTH_NAMES[month0]} ${year}`, days: [...blanks, ...days] };
   }, [profileEmployee, profileStatuses, profileCalYear, profileCalMonth]);
 
   const monthlyStats = useMemo(() => {
-    if (!profileEmployee) return { working: 0, rest: 0, hours: 0, trip: 0 };
-    const empStatuses = profileStatuses[profileEmployee.id] || {};
+    const empStatuses = profileEmployee ? (profileStatuses[profileEmployee.id] || {}) : {};
     const daysInMonth = new Date(profileCalYear, profileCalMonth, 0).getDate();
     const prefix = `${profileCalYear}-${String(profileCalMonth).padStart(2, "0")}`;
     let working = 0, rest = 0, trip = 0;
     for (let d = 1; d <= daysInMonth; d++) {
-      const code = empStatuses[`${prefix}-${String(d).padStart(2, "0")}`] || "empty";
+      const date = new Date(profileCalYear, profileCalMonth - 1, d);
+      const dow = date.getDay();
+      const defaultCode = dow === 0 ? "D" : dow === 3 ? "S" : "I";
+      const code = empStatuses[`${prefix}-${String(d).padStart(2, "0")}`] || defaultCode;
       if (["I", "S", "T", "A", "P"].includes(code)) working++;
       else if (code === "K") trip++;
       else if (["D", "M", "O", "B", "U"].includes(code)) rest++;
@@ -5182,53 +5189,78 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
             </span>
           </div>
         ) : (
-          <p className="profile-no-emp-note">Profil xodimga ulanmagan — statistika ko'rinmaydi.</p>
+          <div className="profile-no-emp-banner">
+            <span>Profil xodim ro'yxatiga ulanmagan</span>
+            <p>Admin panel → Foydalanuvchilar → <strong>employeeId</strong> bilan bog'lash kerak</p>
+          </div>
         )}
 
         <div className="profile-calendar-weekdays">
           {["Du", "Se", "Cho", "Pa", "Ju", "Sha", "Ya"].map((day) => <span key={day}>{day}</span>)}
         </div>
+
         <div className={`profile-calendar-grid${statsLoading ? " loading-dim" : ""}`}>
-          {calendarInfo.days.map((day, index) => day ? (
-            <button
-              className={`${day.status === "empty" ? "empty-day" : day.status} ${day.isToday ? "today" : ""} ${selectedDate === day.dateText ? "selected" : ""}`}
-              type="button"
-              key={day.dateText}
-              onClick={() => setSelectedDate(day.dateText)}
-              title={MONTHLY_STATUS_OPTIONS[day.status]?.shift || (day.status === "empty" ? "Belgilanmagan" : day.status)}
-            >
-              <strong>{day.day}</strong>
-              <span>
-                {day.code !== "empty"
-                  ? (day.code || MONTHLY_STATUS_OPTIONS[day.status]?.label || "")
-                  : ""}
-              </span>
-            </button>
-          ) : <i key={`blank-${index}`} />)}
+          {calendarInfo.days.map((day, index) => {
+            if (!day) return <i key={`blank-${index}`} />;
+            const info = DAILY_STATUSES[day.code] || null;
+            const isEmpty = day.code === "empty" || !info;
+            return (
+              <button
+                key={day.dateText}
+                type="button"
+                className={`pcal-day${isEmpty ? " pcal-empty" : ""}${day.isDefault ? " pcal-default" : ""} ${day.isToday ? "today" : ""} ${selectedDate === day.dateText ? "selected" : ""}`}
+                style={!isEmpty ? { background: info.bg, color: info.fg, opacity: day.isDefault ? 0.72 : 1 } : undefined}
+                onClick={() => setSelectedDate(day.dateText)}
+                title={`${info?.name || "Belgilanmagan"}${day.isDefault ? " (taxminiy)" : ""}`}
+              >
+                <strong>{day.day}</strong>
+                <span>{!isEmpty ? day.code : ""}</span>
+              </button>
+            );
+          })}
         </div>
-        {selectedDay && (
-          <article className={`profile-day-detail ${selectedDay.status}`}>
-            <div>
-              <span>{selectedDay.dateText}</span>
-              <strong>
-                {selectedDay.code !== "empty"
-                  ? (MONTHLY_STATUS_OPTIONS[selectedDay.status]?.shift || selectedStatusMeta?.shift || "Ish kuni")
-                  : "Belgilanmagan"}
-              </strong>
-              <p>{profileEmployee ? profileEmployee.name : "Xodim topilmadi"}</p>
-            </div>
-            <dl>
-              <div><dt>Kod</dt><dd>{selectedDay.code !== "empty" ? selectedDay.code : "—"}</dd></div>
-              <div><dt>Soat</dt><dd>{selectedDay.code !== "empty" ? formatHourLabel(MONTHLY_STATUS_OPTIONS[selectedDay.status]?.hours ?? 9) : "00:00"}</dd></div>
-              {showAssignmentDetail && (
-                <>
-                  <div><dt>Kamera raqami</dt><dd>{extractCameraNumber(shootingAssignment?.camera) || "Kiritilmagan"}</dd></div>
-                  <div><dt>Muxbir</dt><dd>{shootingAssignment?.reporters?.join(", ") || "Kiritilmagan"}</dd></div>
-                </>
-              )}
-            </dl>
-          </article>
-        )}
+
+        <div className="pcal-legend">
+          {Object.entries(DAILY_STATUSES).filter(([k]) => k !== "empty").map(([code, info]) => (
+            <span key={code} style={{ background: info.bg, color: info.fg }} title={info.name}>
+              <strong>{code}</strong> — {info.name}
+            </span>
+          ))}
+        </div>
+        <p className="pcal-default-note">Rangli katakchalar bazada yozilmagan kunlar uchun taxminiy ko'rsatilgan</p>
+
+        {selectedDay && (() => {
+          const selInfo = DAILY_STATUSES[selectedDay.code];
+          const isEmpty = selectedDay.code === "empty" || !selInfo;
+          const workCodes = ["I", "S", "T", "K", "A", "P"];
+          const hours = isEmpty ? 0 : workCodes.includes(selectedDay.code) ? 9 : 0;
+          return (
+            <article
+              className="profile-day-detail-v2"
+              style={selInfo ? { borderColor: selInfo.bg + "55", background: selInfo.bg + "18" } : undefined}
+            >
+              <div className="pdv2-left">
+                <div
+                  className="pdv2-badge"
+                  style={selInfo ? { background: selInfo.bg, color: selInfo.fg } : undefined}
+                >
+                  {isEmpty ? "—" : selectedDay.code}
+                </div>
+                <div>
+                  <strong>{isEmpty ? "Belgilanmagan" : selInfo.name}</strong>
+                  <span>{selectedDay.dateText}</span>
+                </div>
+              </div>
+              <dl className="pdv2-meta">
+                <div><dt>Xodim</dt><dd>{profileEmployee ? profileEmployee.name : "Ulanmagan"}</dd></div>
+                <div><dt>Soat</dt><dd>{hours ? `${hours}:00` : "—"}</dd></div>
+                {!isEmpty && workCodes.includes(selectedDay.code) && shootingAssignment && (
+                  <div><dt>Kamera</dt><dd>{extractCameraNumber(shootingAssignment.camera) || "—"}</dd></div>
+                )}
+              </dl>
+            </article>
+          );
+        })()}
       </section>
 
       <section className="profile-stats">
