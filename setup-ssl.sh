@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-DOMAIN="uzbekiston24.uz"
-WWW_DOMAIN="www.uzbekiston24.uz"
-EMAIL="admin@uzbekiston24.uz"
+DOMAIN="operatorlar24.uz"
+WWW_DOMAIN="www.operatorlar24.uz"
+EMAIL="homidovomadbek249@gmail.com"
 APP_DIR="/var/www/ishjadvali"
 
 echo "=== SSL Setup: $DOMAIN ==="

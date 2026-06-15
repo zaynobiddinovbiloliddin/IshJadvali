@@ -1116,9 +1116,10 @@ async function deleteEmployee(id) {
 
   for (const key of Object.keys(db.schedules)) {
     const schedule = db.schedules[key];
+    if (!Array.isArray(schedule.groups)) schedule.groups = [];
     schedule.groups = schedule.groups.map((group) => ({
       ...group,
-      people: group.people.filter((person) => String(person.id) !== String(id))
+      people: (group.people || []).filter((person) => String(person.id) !== String(id))
     }));
     schedule.employees = publicEmployees();
     refreshScheduleDerivedData(schedule);
@@ -1182,6 +1183,7 @@ async function scanAttendance(payload) {
 }
 
 function refreshScheduleDerivedData(schedule) {
+  if (!Array.isArray(schedule.groups)) schedule.groups = [];
   schedule.groups = schedule.groups.map((group) => ({
     ...group,
     people: group.people.map((person) => {

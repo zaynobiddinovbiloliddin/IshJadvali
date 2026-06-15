@@ -2262,10 +2262,13 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
   const [selectedCell, setSelectedCell] = useState(null);
   const [pickerEmp, setPickerEmp] = useState(null);
   const [pickerDay, setPickerDay] = useState(null);
-  const [empModal, setEmpModal] = useState(null); // null | { mode:"add"|"edit", emp?:obj }
+  const [empModal, setEmpModal] = useState(null);
   const [empForm, setEmpForm] = useState({ name:"", role:"", department:"" });
   const [empSaving, setEmpSaving] = useState(false);
-  const [localEmployees, setLocalEmployees] = useState(null); // null = use dashboard
+  const [localEmployees, setLocalEmployees] = useState(null);
+  const [confirmModal, setConfirmModal] = useState(null); // { message, onConfirm }
+  const [newEmpId, setNewEmpId] = useState(null); // highlight newly added row
+  const newRowRef = useRef(null);
 
   // deduplicate by id
   const employees = useMemo(() => {
@@ -2273,6 +2276,13 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
     const seen = new Set();
     return source.filter((e) => { if (seen.has(e.id)) return false; seen.add(e.id); return true; });
   }, [localEmployees, dashboard.employees]);
+
+  // scroll new row into view
+  useEffect(() => {
+    if (newEmpId && newRowRef.current) {
+      newRowRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [newEmpId]);
 
   async function reloadEmployees() {
     try {
@@ -2289,30 +2299,54 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
     setEmpForm({ name: emp.name, role: emp.role || "Operator", department: emp.department || "operator" });
     setEmpModal({ mode: "edit", emp });
   }
+
   async function saveEmpForm(e) {
     e.preventDefault();
     if (!empForm.name.trim()) { onNotify?.("Ism kiritilmadi", "error"); return; }
     setEmpSaving(true);
-    try {
-      if (empModal.mode === "add") {
-        await api("/api/employees", { method: "POST", body: JSON.stringify({ name: empForm.name, role: empForm.role, department: empForm.department }) });
-        onNotify?.(`${empForm.name} qo'shildi ✓`);
-      } else {
-        await api(`/api/employees/${empModal.emp.id}`, { method: "PUT", body: JSON.stringify({ ...empModal.emp, name: empForm.name, role: empForm.role, department: empForm.department }) });
-        onNotify?.(`${empForm.name} yangilandi ✓`);
-      }
+    if (empModal.mode === "add") {
+      // Optimistic: darhol qo'shish (_loading flag bilan)
+      const tempId = `_tmp_${Date.now()}`;
+      const tempEmp = { id: tempId, name: empForm.name, role: empForm.role, department: empForm.department, _loading: true };
+      setLocalEmployees(prev => [...(prev ?? dashboard.employees), tempEmp]);
       setEmpModal(null);
-      await reloadEmployees();
-    } catch (err) { onNotify?.(err.message, "error"); }
-    finally { setEmpSaving(false); }
+      try {
+        const created = await api("/api/employees", { method: "POST", body: JSON.stringify({ name: empForm.name, role: empForm.role, department: empForm.department }) });
+        await reloadEmployees();
+        setNewEmpId(created?.id ?? null);
+        onNotify?.(`${empForm.name} qo'shildi ✓`);
+      } catch (err) {
+        await reloadEmployees(); // revert
+        onNotify?.(err.message, "error");
+      } finally { setEmpSaving(false); }
+    } else {
+      setEmpModal(null);
+      try {
+        await api(`/api/employees/${empModal.emp.id}`, { method: "PUT", body: JSON.stringify({ ...empModal.emp, name: empForm.name, role: empForm.role, department: empForm.department }) });
+        await reloadEmployees();
+        onNotify?.(`${empForm.name} yangilandi ✓`);
+      } catch (err) { onNotify?.(err.message, "error"); }
+      finally { setEmpSaving(false); }
+    }
   }
-  async function deleteEmp(emp) {
-    if (!window.confirm(`"${emp.name}" ni o'chirasizmi? Bu amalni qaytarib bo'lmaydi.`)) return;
-    try {
-      await api(`/api/employees/${emp.id}`, { method: "DELETE" });
-      onNotify?.(`${emp.name} o'chirildi`);
-      await reloadEmployees();
-    } catch (err) { onNotify?.(err.message, "error"); }
+
+  function deleteEmp(emp) {
+    setConfirmModal({
+      message: `"${emp.name}" ni jadvaldan o'chirasizmi?`,
+      onConfirm: async () => {
+        setConfirmModal(null);
+        // Optimistic: darhol o'chirish
+        setLocalEmployees(prev => (prev ?? dashboard.employees).filter(e => String(e.id) !== String(emp.id)));
+        try {
+          await api(`/api/employees/${emp.id}`, { method: "DELETE" });
+          onNotify?.(`${emp.name} o'chirildi`);
+          await reloadEmployees();
+        } catch (err) {
+          onNotify?.(err.message, "error");
+          await reloadEmployees(); // revert
+        }
+      }
+    });
   }
   const daysInMonth = new Date(year, month, 0).getDate();
   const days = useMemo(() => Array.from({ length: daysInMonth }, (_, i) => i + 1), [year, month, daysInMonth]);
@@ -2736,10 +2770,21 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
             <tbody>
               {employees.map((emp, idx) => {
                 const rt = rowTotals[emp.id] || { working: 0, rest: 0, hours: 0 };
+                const isNew = String(emp.id) === String(newEmpId);
+                const isLoading = !!emp._loading;
                 return (
-                  <tr key={emp.id} className="mtr">
+                  <tr
+                    key={emp.id}
+                    ref={isNew ? newRowRef : null}
+                    className={`mtr${isNew ? " mtr-new" : ""}${isLoading ? " mtr-loading" : ""}`}
+                    onAnimationEnd={() => { if (isNew) setNewEmpId(null); }}
+                  >
                     <td className="mtd-num">{idx + 1}</td>
-                    <td className="mtd-name">{emp.name}<br /><small style={{color:"var(--text-secondary)",fontSize:"0.67rem"}}>{emp.role}</small></td>
+                    <td className="mtd-name">
+                      {emp.name}
+                      {isLoading && <span className="mtr-spinner" />}
+                      <br /><small style={{color:"var(--text-secondary)",fontSize:"0.67rem"}}>{emp.role}</small>
+                    </td>
                     {days.map((d) => {
                       const code = getCode(emp.id, d);
                       const dt = new Date(year, month - 1, d);
@@ -2750,7 +2795,7 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
                             emp={emp}
                             day={d}
                             code={code}
-                            adminMode={isAdmin(currentUser)}
+                            adminMode={isAdmin(currentUser) && !emp._loading}
                             onSelect={handleCellSelect}
                           />
                         </td>
@@ -2780,8 +2825,6 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
           <span className="mci-badge" style={{ background: selectedCell.info.bg || "#6b7280", color: selectedCell.info.fg || "#fff" }}>
             {selectedCell.code} — {selectedCell.info.name}
           </span>
-          {WORKING_DAILY.includes(selectedCell.code) && <span className="mci-word">✓ Word jadvalga tushadi</span>}
-          {!WORKING_DAILY.includes(selectedCell.code) && selectedCell.code !== "empty" && <span className="mci-noword">✗ Word jadvalga tushmaydi</span>}
         </div>
       )}
 
@@ -2819,6 +2862,26 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
               {code === "empty" ? "— Bo'sh" : `${code} — ${info.name}`}
             </button>
           ))}
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  const confirmPanel = confirmModal ? (
+    <div style={{ position:"fixed", inset:0, zIndex:10002, background:"rgba(0,0,0,0.55)", display:"flex", alignItems:"flex-end", justifyContent:"center" }}
+      onClick={() => setConfirmModal(null)}>
+      <div style={{ width:"100%", maxWidth:460, background:"var(--card-bg,#fff)", borderRadius:"16px 16px 0 0", padding:"20px 20px 44px" }}
+        onClick={(e) => e.stopPropagation()}>
+        <p style={{ fontSize:"0.95rem", marginBottom:20, color:"var(--text-primary)", lineHeight:1.5 }}>{confirmModal.message}</p>
+        <div style={{ display:"flex", gap:10 }}>
+          <button type="button" onClick={() => setConfirmModal(null)}
+            style={{ flex:1, padding:"12px", border:"1.5px solid var(--border)", borderRadius:10, background:"transparent", cursor:"pointer", color:"var(--text-primary)", font:"inherit", fontSize:"0.88rem" }}>
+            Bekor qilish
+          </button>
+          <button type="button" onClick={confirmModal.onConfirm}
+            style={{ flex:1, padding:"12px", border:"none", borderRadius:10, background:"#ef4444", color:"#fff", cursor:"pointer", font:"inherit", fontSize:"0.88rem", fontWeight:700 }}>
+            O'chirish
+          </button>
         </div>
       </div>
     </div>
@@ -2880,6 +2943,7 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
       <section className="monthly-page">{monthlyBody}</section>
       {pickerPanel}
       {empModalPanel}
+      {confirmPanel}
     </>
   );
 
@@ -2899,6 +2963,7 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
       </div>
       {pickerPanel}
       {empModalPanel}
+      {confirmPanel}
     </>
   ), document.body);
 }
