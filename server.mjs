@@ -1458,7 +1458,11 @@ async function serveStatic(request, response) {
   const safePath = normalize(url.pathname).replace(/^(\.\.[/\\])+/, "");
   const urlPath = safePath === "/" ? "/index.html" : safePath;
 
-  const entry = staticCache.get(urlPath) || staticCache.get("/index.html");
+  // Assets (hashed filenames) must return 404 if not found — no SPA fallback for them
+  const isAsset = urlPath.startsWith("/assets/");
+  const entry = isAsset
+    ? staticCache.get(urlPath)
+    : (staticCache.get(urlPath) || staticCache.get("/index.html"));
   if (!entry) {
     response.writeHead(404);
     return response.end("Not found");
