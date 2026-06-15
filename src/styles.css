@@ -5300,6 +5300,103 @@ button.metric-card {
   margin: 0;
 }
 
+.profile-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.profile-cal-head h2 {
+  font-size: 15px;
+  font-weight: 800;
+  text-align: center;
+  flex: 1;
+}
+
+.cal-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.cal-nav-btn:hover {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.profile-monthly-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.pms-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 4px;
+  border-radius: 10px;
+  border: 1.5px solid transparent;
+}
+
+.pms-chip strong {
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.pms-chip em {
+  font-size: 10px;
+  font-weight: 700;
+  font-style: normal;
+  opacity: 0.75;
+}
+
+.pms-chip.pms-work { background: #f0fdf4; border-color: #86efac; color: #16a34a; }
+.pms-chip.pms-rest { background: #fef2f2; border-color: #fca5a5; color: #dc2626; }
+.pms-chip.pms-trip { background: #eff6ff; border-color: #93c5fd; color: #2563eb; }
+.pms-chip.pms-hours { background: #f5f3ff; border-color: #c4b5fd; color: #7c3aed; }
+
+[data-theme="dark"] .pms-chip.pms-work { background: rgba(22,163,74,0.12); border-color: rgba(22,163,74,0.3); color: #4ade80; }
+[data-theme="dark"] .pms-chip.pms-rest { background: rgba(220,38,38,0.12); border-color: rgba(220,38,38,0.3); color: #f87171; }
+[data-theme="dark"] .pms-chip.pms-trip { background: rgba(37,99,235,0.12); border-color: rgba(37,99,235,0.3); color: #60a5fa; }
+[data-theme="dark"] .pms-chip.pms-hours { background: rgba(124,58,237,0.12); border-color: rgba(124,58,237,0.3); color: #a78bfa; }
+
+.profile-no-emp-note {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 6px 0;
+}
+
+.profile-calendar-grid button.empty-day {
+  background: var(--surface-raised);
+  color: var(--text-muted);
+  border: 1px dashed var(--border);
+  opacity: 0.6;
+}
+
+.profile-calendar-grid button.unpaid {
+  background: #9ca3af;
+}
+
+.profile-calendar-grid.loading-dim {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 .profile-calendar-weekdays,
 .profile-calendar-grid {
   display: grid;
@@ -5447,6 +5544,17 @@ button.metric-card {
 .profile-day-detail.presidential {
   border-color: #99f6e4;
   background: #f0fdfa;
+}
+
+.profile-day-detail.empty-day,
+.profile-day-detail.empty {
+  border-color: var(--border);
+  background: var(--surface-raised);
+}
+
+.profile-day-detail.unpaid {
+  border-color: #e5e7eb;
+  background: #f9fafb;
 }
 
 .profile-day-detail span,

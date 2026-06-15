@@ -474,19 +474,15 @@ function toInputDate(date) {
   return `${year}-${month}-${day}`;
 }
 
-function monthlyStatusForEmployee(employee, date) {
-  if (!employee) return "rest";
-  const day = date.getDate();
-  const id = Number(employee.id) || 1;
-  if ((id + day) % 7 === 0) return "rest";
-  if ((id * 7 + day) % 29 === 0) return "vacation";
-  if ((id * 5 + day) % 23 === 0) return "otpiska";
-  if ((id * 3 + day) % 17 === 0) return "trip";
-  if ((id * 2 + day) % 13 === 0) return "tjk";
-  if ((id * 3 + day) % 11 === 0) return "studio";
-  if ((id + day) % 19 === 0) return "administration";
-  if ((id + day) % 23 === 0) return "presidential";
-  return "work";
+const DAILY_CODE_TO_MONTHLY_STATUS = {
+  I: "work", S: "studio", T: "tjk", K: "trip",
+  D: "rest", M: "vacation", O: "otpiska",
+  A: "administration", P: "presidential", B: "sick", U: "unpaid",
+  empty: "empty"
+};
+
+function codeToMonthlyStatus(code) {
+  return DAILY_CODE_TO_MONTHLY_STATUS[code] || "empty";
 }
 
 function findShootingAssignmentForEmployee(employee) {
@@ -629,6 +625,14 @@ function App() {
     const interval = setInterval(loadNotifications, 30000);
     return () => clearInterval(interval);
   }, [currentUser, loadNotifications]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") loadDashboard();
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [currentUser, loadDashboard]);
 
   useEffect(() => {
     if (page === "monthly") {
@@ -1095,7 +1099,7 @@ function App() {
               {page === "monthly" && <MonthlyErrorBoundary onClose={closeMonthly}><MonthlyPage dashboard={dashboard} weekStart={weekStart} fullscreen onClose={closeMonthly} currentUser={currentUser} onNotify={notify} /></MonthlyErrorBoundary>}
               {page === "documents" && <DocumentsPage employees={dashboard.employees} onNotify={notify} onSaveEmployee={saveEmployee} currentUser={currentUser} />}
               {page === "shooting" && <ShootingPage onNotify={notify} currentUser={currentUser} />}
-              {page === "reports" && <ReportsPage dashboard={dashboard} />}
+              {page === "reports" && <ReportsPage dashboard={dashboard} departments={departments} />}
               {page === "tasks" && (
                 <VazifalarPage currentUser={currentUser} onNotify={notify} onNotificationsRefresh={loadNotifications} />
               )}
@@ -4685,7 +4689,7 @@ function WeeklyOverview({ rows, days }) {
   );
 }
 
-function ReportsPage({ dashboard }) {
+function ReportsPage({ dashboard, departments = [] }) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const reportItems = dashboard.reports || [];
@@ -4704,7 +4708,10 @@ function ReportsPage({ dashboard }) {
     const matchesStatus = statusFilter === "all" || person.statusType === statusFilter;
     return matchesQuery && matchesStatus;
   });
-  const departmentCounts = DEPARTMENTS.map((department) => ({
+  const deptList = departments.length > 0
+    ? departments.map((d) => ({ id: d.id || d.name, label: d.label, shortLabel: d.label.split(" ")[0] }))
+    : DEPARTMENTS;
+  const departmentCounts = deptList.map((department) => ({
     ...department,
     value: dashboard.employees.filter((employee) => employee.department === department.id).length
   }));
@@ -4907,6 +4914,10 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
   const [contactFormOpen, setContactFormOpen] = useState(false);
   const [todaySlide, setTodaySlide] = useState(0);
   const [selectedDate, setSelectedDate] = useState(() => toInputDate(new Date()));
+  const [profileStatuses, setProfileStatuses] = useState({});
+  const [profileCalYear, setProfileCalYear] = useState(() => new Date().getFullYear());
+  const [profileCalMonth, setProfileCalMonth] = useState(() => new Date().getMonth() + 1);
+  const [statsLoading, setStatsLoading] = useState(false);
   const formRef = useRef(null);
   const operators = dashboard.employees.filter((employee) => employee.role.includes("Operator")).length;
   const reporters = dashboard.employees.filter((employee) => employee.role.includes("Muxbir")).length;
@@ -4939,39 +4950,65 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
   }, [dashboard.groups, profileEmployee]);
   const activeAssignment = todayAssignments[todaySlide % Math.max(todayAssignments.length, 1)];
   const todayPlan = activeAssignment || shootingAssignment;
+
   const calendarInfo = useMemo(() => {
-    const base = new Date();
-    const year = base.getFullYear();
-    const month = base.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const totalDays = new Date(year, month + 1, 0).getDate();
+    const year = profileCalYear;
+    const month0 = profileCalMonth - 1;
+    const firstDay = new Date(year, month0, 1);
+    const totalDays = new Date(year, month0 + 1, 0).getDate();
     const offset = (firstDay.getDay() + 6) % 7;
     const blanks = Array.from({ length: offset }, () => null);
+    const empStatuses = profileEmployee ? (profileStatuses[profileEmployee.id] || {}) : {};
     const days = Array.from({ length: totalDays }, (_, index) => {
-      const date = new Date(year, month, index + 1);
+      const date = new Date(year, month0, index + 1);
       const dateText = toInputDate(date);
-      const status = monthlyStatusForEmployee(profileEmployee, date);
-      return {
-        date,
-        dateText,
-        day: index + 1,
-        status,
-        isToday: dateText === toInputDate(new Date())
-      };
+      const code = empStatuses[dateText] || "empty";
+      const status = codeToMonthlyStatus(code);
+      return { date, dateText, day: index + 1, status, code, isToday: dateText === toInputDate(new Date()) };
     });
-    return {
-      title: `${MONTH_NAMES[month]} ${year}`,
-      days: [...blanks, ...days]
-    };
-  }, [profileEmployee]);
+    return { title: `${MONTH_NAMES[month0]} ${year}`, days: [...blanks, ...days] };
+  }, [profileEmployee, profileStatuses, profileCalYear, profileCalMonth]);
+
+  const monthlyStats = useMemo(() => {
+    if (!profileEmployee) return { working: 0, rest: 0, hours: 0, trip: 0 };
+    const empStatuses = profileStatuses[profileEmployee.id] || {};
+    const daysInMonth = new Date(profileCalYear, profileCalMonth, 0).getDate();
+    const prefix = `${profileCalYear}-${String(profileCalMonth).padStart(2, "0")}`;
+    let working = 0, rest = 0, trip = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const code = empStatuses[`${prefix}-${String(d).padStart(2, "0")}`] || "empty";
+      if (["I", "S", "T", "A", "P"].includes(code)) working++;
+      else if (code === "K") trip++;
+      else if (["D", "M", "O", "B", "U"].includes(code)) rest++;
+    }
+    return { working, rest, hours: working * 9, trip };
+  }, [profileEmployee, profileStatuses, profileCalYear, profileCalMonth]);
+
   const selectedDay = calendarInfo.days.find((day) => day?.dateText === selectedDate) || calendarInfo.days.find((day) => day?.isToday) || calendarInfo.days.find(Boolean);
   const selectedStatusMeta = selectedDay ? (MONTHLY_STATUS_OPTIONS[selectedDay.status] || STATUS_META[selectedDay.status]) : null;
   const bannerStatusMeta = activeAssignment ? STATUS_META[activeAssignment.statusType] : selectedStatusMeta;
-  const showAssignmentDetail = selectedDay && !["rest", "vacation", "otpiska"].includes(selectedDay.status);
+  const showAssignmentDetail = selectedDay && !["rest", "vacation", "otpiska", "empty"].includes(selectedDay.status);
 
   useEffect(() => {
     setDraft(currentUser);
   }, [currentUser]);
+
+  useEffect(() => {
+    setStatsLoading(true);
+    api(`/api/daily-status?year=${profileCalYear}&month=${profileCalMonth}`)
+      .then((data) => setProfileStatuses(data.statuses || {}))
+      .catch(() => {})
+      .finally(() => setStatsLoading(false));
+  }, [profileCalYear, profileCalMonth]);
+
+  useEffect(() => {
+    if (selectedDate) {
+      const [y, m] = selectedDate.split("-").map(Number);
+      if (y !== profileCalYear || m !== profileCalMonth) {
+        setSelectedDate(toInputDate(new Date(profileCalYear, profileCalMonth - 1, 1)));
+      }
+    }
+  }, [profileCalYear, profileCalMonth]);
 
   useEffect(() => {
     setTodaySlide(0);
@@ -4984,6 +5021,15 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
     }, 5000);
     return () => window.clearInterval(timer);
   }, [todayAssignments.length]);
+
+  function prevProfileMonth() {
+    if (profileCalMonth === 1) { setProfileCalMonth(12); setProfileCalYear((y) => y - 1); }
+    else setProfileCalMonth((m) => m - 1);
+  }
+  function nextProfileMonth() {
+    if (profileCalMonth === 12) { setProfileCalMonth(1); setProfileCalYear((y) => y + 1); }
+    else setProfileCalMonth((m) => m + 1);
+  }
 
   function submitProfile(event) {
     event.preventDefault();
@@ -5106,23 +5152,57 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
       </section>
 
       <section className="profile-calendar-card">
-        <div className="section-head">
-          <h2>Mening oylik kalendarim</h2>
-          <span>{calendarInfo.title}</span>
+        <div className="section-head profile-cal-head">
+          <button type="button" className="cal-nav-btn" onClick={prevProfileMonth} aria-label="Oldingi oy">
+            <ChevronLeft size={18} />
+          </button>
+          <h2>{calendarInfo.title}</h2>
+          <button type="button" className="cal-nav-btn" onClick={nextProfileMonth} aria-label="Keyingi oy">
+            <ChevronRight size={18} />
+          </button>
         </div>
+
+        {profileEmployee ? (
+          <div className="profile-monthly-stats-row">
+            <span className="pms-chip pms-work" title="Ish kunlari">
+              <strong>{statsLoading ? "—" : monthlyStats.working}</strong>
+              <em>Ish</em>
+            </span>
+            <span className="pms-chip pms-rest" title="Dam olish">
+              <strong>{statsLoading ? "—" : monthlyStats.rest}</strong>
+              <em>Dam</em>
+            </span>
+            <span className="pms-chip pms-trip" title="Komandirovka">
+              <strong>{statsLoading ? "—" : monthlyStats.trip}</strong>
+              <em>Safar</em>
+            </span>
+            <span className="pms-chip pms-hours" title="Jami soat">
+              <strong>{statsLoading ? "—" : monthlyStats.hours}</strong>
+              <em>Soat</em>
+            </span>
+          </div>
+        ) : (
+          <p className="profile-no-emp-note">Profil xodimga ulanmagan — statistika ko'rinmaydi.</p>
+        )}
+
         <div className="profile-calendar-weekdays">
           {["Du", "Se", "Cho", "Pa", "Ju", "Sha", "Ya"].map((day) => <span key={day}>{day}</span>)}
         </div>
-        <div className="profile-calendar-grid">
+        <div className={`profile-calendar-grid${statsLoading ? " loading-dim" : ""}`}>
           {calendarInfo.days.map((day, index) => day ? (
             <button
-              className={`${day.status} ${day.isToday ? "today" : ""} ${selectedDate === day.dateText ? "selected" : ""}`}
+              className={`${day.status === "empty" ? "empty-day" : day.status} ${day.isToday ? "today" : ""} ${selectedDate === day.dateText ? "selected" : ""}`}
               type="button"
               key={day.dateText}
               onClick={() => setSelectedDate(day.dateText)}
+              title={MONTHLY_STATUS_OPTIONS[day.status]?.shift || (day.status === "empty" ? "Belgilanmagan" : day.status)}
             >
               <strong>{day.day}</strong>
-              <span>{MONTHLY_STATUS_OPTIONS[day.status]?.label || STATUS_META[day.status]?.code || "K"}</span>
+              <span>
+                {day.code !== "empty"
+                  ? (day.code || MONTHLY_STATUS_OPTIONS[day.status]?.label || "")
+                  : ""}
+              </span>
             </button>
           ) : <i key={`blank-${index}`} />)}
         </div>
@@ -5130,17 +5210,19 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
           <article className={`profile-day-detail ${selectedDay.status}`}>
             <div>
               <span>{selectedDay.dateText}</span>
-              <strong>{selectedStatusMeta?.shift || selectedStatusMeta?.label || "Ish kuni"}</strong>
-              <p>{profileEmployee ? `${profileEmployee.name} uchun oylik status.` : "Profil xodimga ulanmagan."}</p>
+              <strong>
+                {selectedDay.code !== "empty"
+                  ? (MONTHLY_STATUS_OPTIONS[selectedDay.status]?.shift || selectedStatusMeta?.shift || "Ish kuni")
+                  : "Belgilanmagan"}
+              </strong>
+              <p>{profileEmployee ? profileEmployee.name : "Xodim topilmadi"}</p>
             </div>
             <dl>
-              <div><dt>Status</dt><dd>{selectedStatusMeta?.shift || selectedStatusMeta?.label || STATUS_META[selectedDay.status]?.code || "K"}</dd></div>
-              <div><dt>Soat</dt><dd>{formatHourLabel(MONTHLY_STATUS_OPTIONS[selectedDay.status]?.hours ?? (STATUS_META[selectedDay.status]?.metric === "rest" ? 0 : 9))}</dd></div>
+              <div><dt>Kod</dt><dd>{selectedDay.code !== "empty" ? selectedDay.code : "—"}</dd></div>
+              <div><dt>Soat</dt><dd>{selectedDay.code !== "empty" ? formatHourLabel(MONTHLY_STATUS_OPTIONS[selectedDay.status]?.hours ?? 9) : "00:00"}</dd></div>
               {showAssignmentDetail && (
                 <>
                   <div><dt>Kamera raqami</dt><dd>{extractCameraNumber(shootingAssignment?.camera) || "Kiritilmagan"}</dd></div>
-                  <div><dt>Mashina</dt><dd>{driverContact?.vehicle || "Kiritilmagan"}</dd></div>
-                  <div><dt>Haydovchi</dt><dd>{extractDriverInfo(shootingAssignment?.topic) || driverContact?.name || "Kiritilmagan"}</dd></div>
                   <div><dt>Muxbir</dt><dd>{shootingAssignment?.reporters?.join(", ") || "Kiritilmagan"}</dd></div>
                 </>
               )}

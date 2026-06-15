@@ -109,6 +109,8 @@ const statusMap = {
   vacation: "Mehnat ta'tili",
   administration: "Administratsiya",
   presidential: "Prezidentskiy",
+  otpiska: "O'quv ta'tili",
+  unpaid: "Pulsiz ta'til",
   sick: "Balnishniy"
 };
 const statusMetricMap = {
@@ -119,6 +121,8 @@ const statusMetricMap = {
   presidential: "working",
   rest: "rest",
   vacation: "rest",
+  otpiska: "rest",
+  unpaid: "rest",
   sick: "rest",
   trip: "away"
 };
@@ -911,7 +915,8 @@ function buildDashboard(weekStartValue, options = {}) {
   const generatedAt = options.generatedAt || "Hali yaratilmagan";
   const groups = createGroups(weekStart, seed);
   const allPeople = groups.flatMap((group) => group.people);
-  const todayGroups = groups.filter((group) => group.day === "Dushanba");
+  const todayDayName = dayNames[(new Date().getDay() + 6) % 7];
+  const todayGroups = groups.filter((group) => group.day === todayDayName);
   const todayPeople = todayGroups.flatMap((group) => group.people);
   const studioToday = todayPeople.filter((person) => statusMetricMap[person.statusType] !== "rest").slice(0, 3).map((person) => ({ ...person, status: "Working" }));
 
@@ -1626,6 +1631,7 @@ export async function handleRequest(request, response) {
 
     // ─── Audit Logs ─────────────────────────────────────────────────────────
     if (url.pathname === "/api/audit-logs" && request.method === "GET") {
+      if (!requireAdmin(request, response)) return;
       const logs = [...(db.auditLogs || [])].reverse().slice(0, 200);
       return sendJson(response, 200, { logs });
     }
