@@ -1674,8 +1674,6 @@ export async function handleRequest(request, response) {
 
     // ─── Departments ────────────────────────────────────────────────────────
     if (url.pathname === "/api/departments" && request.method === "GET") {
-      const user = getAuthUser(request, response);
-      if (!user) return;
       return sendJson(response, 200, { departments });
     }
 

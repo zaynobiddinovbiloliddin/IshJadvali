@@ -602,8 +602,12 @@ function App() {
 
   useEffect(() => {
     loadDashboard();
+  }, [loadDashboard]);
+
+  useEffect(() => {
+    if (!currentUser) return;
     loadDepartments();
-  }, [loadDashboard, loadDepartments]);
+  }, [currentUser, loadDepartments]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
