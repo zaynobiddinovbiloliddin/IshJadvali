@@ -8630,6 +8630,14 @@ body { overflow-x: hidden; }
 .mtd-total.working { color: #22c55e; }
 .mtd-total.rest    { color: #ef4444; }
 .mtd-total.hours   { color: var(--accent); }
+.mth-act  { padding: 3px 4px; text-align: center; width: 58px; position: sticky; right: 0; background: var(--card-bg); z-index: 2; border-bottom: 1px solid var(--border); }
+.mtd-act  { padding: 3px 4px; text-align: center; white-space: nowrap; position: sticky; right: 0; background: var(--card-bg); z-index: 1; border-bottom: 1px solid var(--border); }
+.mtr-edit-btn, .mtr-del-btn { width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: background 0.14s, color 0.14s; }
+.mtr-edit-btn { color: var(--accent); margin-right: 2px; }
+.mtr-edit-btn:hover { background: var(--accent-light); border-color: var(--accent); }
+.mtr-del-btn { color: #ef4444; }
+.mtr-del-btn:hover { background: #fee2e2; border-color: #fca5a5; }
+.mtr:hover .mtd-act { background: var(--accent-light); }
 
 .mc { width: 26px; height: 26px; border-radius: 5px; border: none; font-size: 0.7rem; font-weight: 700; cursor: pointer; transition: transform 0.12s, box-shadow 0.12s; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
 .mc:hover:not(:disabled) { transform: scale(1.25); box-shadow: 0 2px 8px rgba(0,0,0,0.2); position: relative; z-index: 2; }

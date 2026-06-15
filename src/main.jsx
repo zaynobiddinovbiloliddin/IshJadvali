@@ -41,8 +41,10 @@ import {
   Upload,
   User,
   UserCheck,
+  UserPlus,
   UsersRound,
   Umbrella,
+  Pencil,
   X
 } from "lucide-react";
 import "./styles.css";
@@ -2260,8 +2262,58 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
   const [selectedCell, setSelectedCell] = useState(null);
   const [pickerEmp, setPickerEmp] = useState(null);
   const [pickerDay, setPickerDay] = useState(null);
+  const [empModal, setEmpModal] = useState(null); // null | { mode:"add"|"edit", emp?:obj }
+  const [empForm, setEmpForm] = useState({ name:"", role:"", department:"" });
+  const [empSaving, setEmpSaving] = useState(false);
+  const [localEmployees, setLocalEmployees] = useState(null); // null = use dashboard
 
-  const employees = dashboard.employees;
+  // deduplicate by id
+  const employees = useMemo(() => {
+    const source = localEmployees ?? dashboard.employees;
+    const seen = new Set();
+    return source.filter((e) => { if (seen.has(e.id)) return false; seen.add(e.id); return true; });
+  }, [localEmployees, dashboard.employees]);
+
+  async function reloadEmployees() {
+    try {
+      const data = await api("/api/employees");
+      if (data?.employees) setLocalEmployees(data.employees);
+    } catch {}
+  }
+
+  function openAddEmp() {
+    setEmpForm({ name: "", role: "Operator", department: "operator" });
+    setEmpModal({ mode: "add" });
+  }
+  function openEditEmp(emp) {
+    setEmpForm({ name: emp.name, role: emp.role || "Operator", department: emp.department || "operator" });
+    setEmpModal({ mode: "edit", emp });
+  }
+  async function saveEmpForm(e) {
+    e.preventDefault();
+    if (!empForm.name.trim()) { onNotify?.("Ism kiritilmadi", "error"); return; }
+    setEmpSaving(true);
+    try {
+      if (empModal.mode === "add") {
+        await api("/api/employees", { method: "POST", body: JSON.stringify({ name: empForm.name, role: empForm.role, department: empForm.department }) });
+        onNotify?.(`${empForm.name} qo'shildi ✓`);
+      } else {
+        await api(`/api/employees/${empModal.emp.id}`, { method: "PUT", body: JSON.stringify({ ...empModal.emp, name: empForm.name, role: empForm.role, department: empForm.department }) });
+        onNotify?.(`${empForm.name} yangilandi ✓`);
+      }
+      setEmpModal(null);
+      await reloadEmployees();
+    } catch (err) { onNotify?.(err.message, "error"); }
+    finally { setEmpSaving(false); }
+  }
+  async function deleteEmp(emp) {
+    if (!window.confirm(`"${emp.name}" ni o'chirasizmi? Bu amalni qaytarib bo'lmaydi.`)) return;
+    try {
+      await api(`/api/employees/${emp.id}`, { method: "DELETE" });
+      onNotify?.(`${emp.name} o'chirildi`);
+      await reloadEmployees();
+    } catch (err) { onNotify?.(err.message, "error"); }
+  }
   const daysInMonth = new Date(year, month, 0).getDate();
   const days = useMemo(() => Array.from({ length: daysInMonth }, (_, i) => i + 1), [year, month, daysInMonth]);
   const monthPrefix = `${year}-${String(month).padStart(2, "0")}`;
@@ -2620,6 +2672,11 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
         <button type="button" className="monthly-jpeg-btn" style={{ background: "none", color: "#64748b", border: "1px solid #cbd5e1" }} onClick={exportMonthlyJpeg} disabled={loading}>
           <Download size={15} /> JPEG yuklab olish
         </button>
+        {isAdmin(currentUser) && (
+          <button type="button" className="monthly-jpeg-btn" style={{ background: "#22c55e", color: "#fff", border: "none" }} onClick={openAddEmp}>
+            <UserPlus size={15} /> Xodim qo'shish
+          </button>
+        )}
       </div>
 
       <div className="monthly-summary">
@@ -2673,6 +2730,7 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
                 <th className="mth-sum">Ish</th>
                 <th className="mth-sum">Dam</th>
                 <th className="mth-sum">Soat</th>
+                {isAdmin(currentUser) && <th className="mth-act"></th>}
               </tr>
             </thead>
             <tbody>
@@ -2681,7 +2739,7 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
                 return (
                   <tr key={emp.id} className="mtr">
                     <td className="mtd-num">{idx + 1}</td>
-                    <td className="mtd-name">{emp.name}</td>
+                    <td className="mtd-name">{emp.name}<br /><small style={{color:"var(--text-secondary)",fontSize:"0.67rem"}}>{emp.role}</small></td>
                     {days.map((d) => {
                       const code = getCode(emp.id, d);
                       const dt = new Date(year, month - 1, d);
@@ -2701,6 +2759,12 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
                     <td className="mtd-total working">{rt.working}</td>
                     <td className="mtd-total rest">{rt.rest}</td>
                     <td className="mtd-total hours">{rt.hours}</td>
+                    {isAdmin(currentUser) && (
+                      <td className="mtd-act">
+                        <button type="button" className="mtr-edit-btn" title="Tahrirlash" onClick={() => openEditEmp(emp)}><Pencil size={13} /></button>
+                        <button type="button" className="mtr-del-btn" title="O'chirish" onClick={() => deleteEmp(emp)}><Trash2 size={13} /></button>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -2760,10 +2824,62 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
     </div>
   ) : null;
 
+  const empModalPanel = empModal ? (
+    <div style={{ position:"fixed", inset:0, zIndex:10001, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"flex-end", justifyContent:"center" }}
+      onClick={() => setEmpModal(null)}>
+      <div style={{ width:"100%", maxWidth:460, background:"var(--card-bg,#fff)", borderRadius:"16px 16px 0 0", padding:"20px 20px 40px" }}
+        onClick={(e) => e.stopPropagation()}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+          <strong style={{ fontSize:16 }}>{empModal.mode === "add" ? "Yangi xodim qo'shish" : "Xodimni tahrirlash"}</strong>
+          <button type="button" onClick={() => setEmpModal(null)} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"#6b7280" }}>✕</button>
+        </div>
+        <form onSubmit={saveEmpForm} style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          <div>
+            <label style={{ display:"block", fontSize:"0.8rem", fontWeight:600, color:"var(--text-secondary)", marginBottom:4 }}>F.I.Sh *</label>
+            <input value={empForm.name} onChange={(e) => setEmpForm({...empForm, name: e.target.value})}
+              placeholder="Abdullayev Abror Abdullayevich"
+              style={{ width:"100%", padding:"10px 12px", border:"1.5px solid var(--border)", borderRadius:8, font:"inherit", fontSize:"0.88rem", background:"var(--bg)", color:"var(--text-primary)" }} />
+          </div>
+          <div>
+            <label style={{ display:"block", fontSize:"0.8rem", fontWeight:600, color:"var(--text-secondary)", marginBottom:4 }}>Lavozim *</label>
+            <input value={empForm.role} onChange={(e) => setEmpForm({...empForm, role: e.target.value})}
+              placeholder="Operator, Muxbir, Rejissyor..."
+              style={{ width:"100%", padding:"10px 12px", border:"1.5px solid var(--border)", borderRadius:8, font:"inherit", fontSize:"0.88rem", background:"var(--bg)", color:"var(--text-primary)" }} />
+          </div>
+          <div>
+            <label style={{ display:"block", fontSize:"0.8rem", fontWeight:600, color:"var(--text-secondary)", marginBottom:4 }}>Bo'lim</label>
+            <select value={empForm.department} onChange={(e) => setEmpForm({...empForm, department: e.target.value})}
+              style={{ width:"100%", padding:"10px 12px", border:"1.5px solid var(--border)", borderRadius:8, font:"inherit", fontSize:"0.88rem", background:"var(--bg)", color:"var(--text-primary)" }}>
+              <option value="operator">Oddiy operatorlar</option>
+              <option value="pull">Tasvirga olish</option>
+              <option value="dron">Dron operatorlar</option>
+              <option value="tjk">TJK</option>
+              <option value="montaj">Montaj</option>
+              <option value="smm">SMM</option>
+              <option value="admin">Admin</option>
+              <option value="reporter">Muxbirlar</option>
+            </select>
+          </div>
+          <div style={{ display:"flex", gap:8, marginTop:4 }}>
+            <button type="button" onClick={() => setEmpModal(null)}
+              style={{ flex:1, padding:"11px", border:"1.5px solid var(--border)", borderRadius:8, background:"transparent", cursor:"pointer", color:"var(--text-primary)", font:"inherit", fontSize:"0.85rem" }}>
+              Bekor qilish
+            </button>
+            <button type="submit" disabled={empSaving}
+              style={{ flex:2, padding:"11px", border:"none", borderRadius:8, background:"#6366f1", color:"#fff", cursor:"pointer", font:"inherit", fontSize:"0.85rem", fontWeight:600 }}>
+              {empSaving ? "Saqlanmoqda..." : empModal.mode === "add" ? "Qo'shish" : "Saqlash"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  ) : null;
+
   if (!fullscreen) return (
     <>
       <section className="monthly-page">{monthlyBody}</section>
       {pickerPanel}
+      {empModalPanel}
     </>
   );
 
@@ -2782,6 +2898,7 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
         </section>
       </div>
       {pickerPanel}
+      {empModalPanel}
     </>
   ), document.body);
 }
