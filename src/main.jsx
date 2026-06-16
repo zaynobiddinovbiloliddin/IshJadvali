@@ -2314,45 +2314,41 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
     if (!empForm.name.trim()) { onNotify?.("Ism kiritilmadi", "error"); return; }
     setEmpSaving(true);
     if (empModal.mode === "add") {
-      // Optimistic: darhol qo'shish (_loading flag bilan)
-      const tempId = `_tmp_${Date.now()}`;
-      const tempEmp = { id: tempId, name: empForm.name, role: empForm.role, department: empForm.department, _loading: true };
-      setLocalEmployees(prev => [...(prev ?? dashboard.employees), tempEmp]);
-      setEmpModal(null);
       try {
         const created = await api("/api/employees", { method: "POST", body: JSON.stringify({ name: empForm.name, role: empForm.role, department: empForm.department }) });
         await reloadEmployees();
         setNewEmpId(created?.id ?? null);
         onNotify?.(`${empForm.name} qo'shildi ✓`);
+        setEmpModal(null);
       } catch (err) {
-        await reloadEmployees(); // revert
         onNotify?.(err.message, "error");
       } finally { setEmpSaving(false); }
     } else {
-      setEmpModal(null);
       try {
         await api(`/api/employees/${empModal.emp.id}`, { method: "PUT", body: JSON.stringify({ ...empModal.emp, name: empForm.name, role: empForm.role, department: empForm.department }) });
         await reloadEmployees();
         onNotify?.(`${empForm.name} yangilandi ✓`);
-      } catch (err) { onNotify?.(err.message, "error"); }
-      finally { setEmpSaving(false); }
+        setEmpModal(null);
+      } catch (err) {
+        onNotify?.(err.message, "error");
+      } finally { setEmpSaving(false); }
     }
   }
 
   function deleteEmp(emp) {
     setConfirmModal({
       message: `"${emp.name}" ni jadvaldan o'chirasizmi?`,
+      deleting: false,
       onConfirm: async () => {
-        setConfirmModal(null);
-        // Optimistic: darhol o'chirish
-        setLocalEmployees(prev => (prev ?? dashboard.employees).filter(e => String(e.id) !== String(emp.id)));
+        setConfirmModal(prev => ({ ...prev, deleting: true }));
         try {
           await api(`/api/employees/${emp.id}`, { method: "DELETE" });
-          onNotify?.(`${emp.name} o'chirildi`);
           await reloadEmployees();
+          onNotify?.(`${emp.name} o'chirildi`);
+          setConfirmModal(null);
         } catch (err) {
           onNotify?.(err.message, "error");
-          await reloadEmployees(); // revert
+          setConfirmModal(null);
         }
       }
     });
@@ -2878,18 +2874,20 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
 
   const confirmPanel = confirmModal ? (
     <div style={{ position:"fixed", inset:0, zIndex:10002, background:"rgba(0,0,0,0.55)", display:"flex", alignItems:"flex-end", justifyContent:"center" }}
-      onClick={() => setConfirmModal(null)}>
+      onClick={() => { if (!confirmModal.deleting) setConfirmModal(null); }}>
       <div style={{ width:"100%", maxWidth:460, background:"var(--card-bg,#fff)", borderRadius:"16px 16px 0 0", padding:"20px 20px 44px" }}
         onClick={(e) => e.stopPropagation()}>
         <p style={{ fontSize:"0.95rem", marginBottom:20, color:"var(--text-primary)", lineHeight:1.5 }}>{confirmModal.message}</p>
         <div style={{ display:"flex", gap:10 }}>
-          <button type="button" onClick={() => setConfirmModal(null)}
-            style={{ flex:1, padding:"12px", border:"1.5px solid var(--border)", borderRadius:10, background:"transparent", cursor:"pointer", color:"var(--text-primary)", font:"inherit", fontSize:"0.88rem" }}>
+          <button type="button" onClick={() => setConfirmModal(null)} disabled={confirmModal.deleting}
+            style={{ flex:1, padding:"12px", border:"1.5px solid var(--border)", borderRadius:10, background:"transparent", cursor: confirmModal.deleting ? "not-allowed" : "pointer", color:"var(--text-primary)", font:"inherit", fontSize:"0.88rem", opacity: confirmModal.deleting ? 0.5 : 1 }}>
             Bekor qilish
           </button>
-          <button type="button" onClick={confirmModal.onConfirm}
-            style={{ flex:1, padding:"12px", border:"none", borderRadius:10, background:"#ef4444", color:"#fff", cursor:"pointer", font:"inherit", fontSize:"0.88rem", fontWeight:700 }}>
-            O'chirish
+          <button type="button" onClick={confirmModal.deleting ? undefined : confirmModal.onConfirm} disabled={confirmModal.deleting}
+            style={{ flex:1, padding:"12px", border:"none", borderRadius:10, background:"#ef4444", color:"#fff", cursor: confirmModal.deleting ? "not-allowed" : "pointer", font:"inherit", fontSize:"0.88rem", fontWeight:700, opacity: confirmModal.deleting ? 0.75 : 1, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+            {confirmModal.deleting
+              ? <><span style={{ width:14, height:14, border:"2px solid rgba(255,255,255,0.4)", borderTopColor:"#fff", borderRadius:"50%", display:"inline-block", animation:"_spin .6s linear infinite" }} />O'chirilmoqda...</>
+              : "O'chirish"}
           </button>
         </div>
       </div>
@@ -2898,30 +2896,34 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
 
   const empModalPanel = empModal ? (
     <div style={{ position:"fixed", inset:0, zIndex:10001, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"flex-end", justifyContent:"center" }}
-      onClick={() => setEmpModal(null)}>
+      onClick={() => { if (!empSaving) setEmpModal(null); }}>
       <div style={{ width:"100%", maxWidth:460, background:"var(--card-bg,#fff)", borderRadius:"16px 16px 0 0", padding:"20px 20px 40px" }}
         onClick={(e) => e.stopPropagation()}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
           <strong style={{ fontSize:16 }}>{empModal.mode === "add" ? "Yangi xodim qo'shish" : "Xodimni tahrirlash"}</strong>
-          <button type="button" onClick={() => setEmpModal(null)} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"#6b7280" }}>✕</button>
+          <button type="button" onClick={() => { if (!empSaving) setEmpModal(null); }}
+            style={{ background:"none", border:"none", fontSize:22, cursor: empSaving ? "not-allowed" : "pointer", color:"#6b7280", opacity: empSaving ? 0.4 : 1 }}>✕</button>
         </div>
         <form onSubmit={saveEmpForm} style={{ display:"flex", flexDirection:"column", gap:12 }}>
           <div>
             <label style={{ display:"block", fontSize:"0.8rem", fontWeight:600, color:"var(--text-secondary)", marginBottom:4 }}>F.I.Sh *</label>
             <input value={empForm.name} onChange={(e) => setEmpForm({...empForm, name: e.target.value})}
+              disabled={empSaving}
               placeholder="Abdullayev Abror Abdullayevich"
-              style={{ width:"100%", padding:"10px 12px", border:"1.5px solid var(--border)", borderRadius:8, font:"inherit", fontSize:"0.88rem", background:"var(--bg)", color:"var(--text-primary)" }} />
+              style={{ width:"100%", padding:"10px 12px", border:"1.5px solid var(--border)", borderRadius:8, font:"inherit", fontSize:"0.88rem", background:"var(--bg)", color:"var(--text-primary)", opacity: empSaving ? 0.6 : 1 }} />
           </div>
           <div>
             <label style={{ display:"block", fontSize:"0.8rem", fontWeight:600, color:"var(--text-secondary)", marginBottom:4 }}>Lavozim *</label>
             <input value={empForm.role} onChange={(e) => setEmpForm({...empForm, role: e.target.value})}
+              disabled={empSaving}
               placeholder="Operator, Muxbir, Rejissyor..."
-              style={{ width:"100%", padding:"10px 12px", border:"1.5px solid var(--border)", borderRadius:8, font:"inherit", fontSize:"0.88rem", background:"var(--bg)", color:"var(--text-primary)" }} />
+              style={{ width:"100%", padding:"10px 12px", border:"1.5px solid var(--border)", borderRadius:8, font:"inherit", fontSize:"0.88rem", background:"var(--bg)", color:"var(--text-primary)", opacity: empSaving ? 0.6 : 1 }} />
           </div>
           <div>
             <label style={{ display:"block", fontSize:"0.8rem", fontWeight:600, color:"var(--text-secondary)", marginBottom:4 }}>Bo'lim</label>
             <select value={empForm.department} onChange={(e) => setEmpForm({...empForm, department: e.target.value})}
-              style={{ width:"100%", padding:"10px 12px", border:"1.5px solid var(--border)", borderRadius:8, font:"inherit", fontSize:"0.88rem", background:"var(--bg)", color:"var(--text-primary)" }}>
+              disabled={empSaving}
+              style={{ width:"100%", padding:"10px 12px", border:"1.5px solid var(--border)", borderRadius:8, font:"inherit", fontSize:"0.88rem", background:"var(--bg)", color:"var(--text-primary)", opacity: empSaving ? 0.6 : 1 }}>
               <option value="operator">Oddiy operatorlar</option>
               <option value="pull">Tasvirga olish</option>
               <option value="dron">Dron operatorlar</option>
@@ -2933,13 +2935,15 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
             </select>
           </div>
           <div style={{ display:"flex", gap:8, marginTop:4 }}>
-            <button type="button" onClick={() => setEmpModal(null)}
-              style={{ flex:1, padding:"11px", border:"1.5px solid var(--border)", borderRadius:8, background:"transparent", cursor:"pointer", color:"var(--text-primary)", font:"inherit", fontSize:"0.85rem" }}>
+            <button type="button" onClick={() => { if (!empSaving) setEmpModal(null); }} disabled={empSaving}
+              style={{ flex:1, padding:"11px", border:"1.5px solid var(--border)", borderRadius:8, background:"transparent", cursor: empSaving ? "not-allowed" : "pointer", color:"var(--text-primary)", font:"inherit", fontSize:"0.85rem", opacity: empSaving ? 0.5 : 1 }}>
               Bekor qilish
             </button>
             <button type="submit" disabled={empSaving}
-              style={{ flex:2, padding:"11px", border:"none", borderRadius:8, background:"#6366f1", color:"#fff", cursor:"pointer", font:"inherit", fontSize:"0.85rem", fontWeight:600 }}>
-              {empSaving ? "Saqlanmoqda..." : empModal.mode === "add" ? "Qo'shish" : "Saqlash"}
+              style={{ flex:2, padding:"11px", border:"none", borderRadius:8, background:"#6366f1", color:"#fff", cursor: empSaving ? "not-allowed" : "pointer", font:"inherit", fontSize:"0.85rem", fontWeight:600, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+              {empSaving
+                ? <><span style={{ width:14, height:14, border:"2px solid rgba(255,255,255,0.4)", borderTopColor:"#fff", borderRadius:"50%", display:"inline-block", animation:"_spin .6s linear infinite" }} />Saqlanmoqda...</>
+                : empModal.mode === "add" ? "Qo'shish" : "Saqlash"}
             </button>
           </div>
         </form>
