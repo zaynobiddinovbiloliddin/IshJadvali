@@ -3,7 +3,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { existsSync, mkdirSync, unlinkSync, readdirSync, readFileSync, writeFileSync, statSync } from "node:fs";
 import { extname, join, normalize, basename } from "node:path";
 import { fileURLToPath } from "node:url";
-import { gzipSync } from "node:zlib";
+import { gzipSync, brotliCompressSync, constants as zlibConstants } from "node:zlib";
 import { createHash } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
@@ -1387,11 +1387,18 @@ const CORS_HEADERS = {
 
 function sendJson(response, status, payload, request = null) {
   const body = JSON.stringify(payload);
-  const acceptsGzip = request && (request.headers["accept-encoding"] || "").includes("gzip");
-  if (acceptsGzip && body.length > 1024) {
-    const gz = gzipSync(Buffer.from(body), { level: 6 });
-    response.writeHead(status, { ...CORS_HEADERS, "Content-Encoding": "gzip", "Vary": "Accept-Encoding", "Content-Length": gz.length });
-    return response.end(gz);
+  if (body.length > 1024 && request) {
+    const enc = request.headers["accept-encoding"] || "";
+    if (enc.includes("br")) {
+      const br = brotliCompressSync(Buffer.from(body), { params: { [zlibConstants.BROTLI_PARAM_QUALITY]: 3 } });
+      response.writeHead(status, { ...CORS_HEADERS, "Content-Encoding": "br", "Vary": "Accept-Encoding", "Content-Length": br.length });
+      return response.end(br);
+    }
+    if (enc.includes("gzip")) {
+      const gz = gzipSync(Buffer.from(body), { level: 6 });
+      response.writeHead(status, { ...CORS_HEADERS, "Content-Encoding": "gzip", "Vary": "Accept-Encoding", "Content-Length": gz.length });
+      return response.end(gz);
+    }
   }
   response.writeHead(status, CORS_HEADERS);
   response.end(body);
@@ -1442,10 +1449,11 @@ function loadStaticCache() {
         const type = MIME[ext] || "application/octet-stream";
         const raw = readFileSync(full);
         const gz = COMPRESSIBLE.has(ext) ? gzipSync(raw, { level: 9 }) : null;
+        const br = COMPRESSIBLE.has(ext) ? brotliCompressSync(raw, { params: { [zlibConstants.BROTLI_PARAM_QUALITY]: 6 } }) : null;
         const etag = `"${createHash("md5").update(raw).digest("hex").slice(0, 16)}"`;
         // Assets with content hashes (e.g. index-BFXh6dZc.js) → 1-year cache
         const isHashed = /[.-][a-zA-Z0-9]{8,}\.(js|css)$/.test(name);
-        staticCache.set(urlPath, { raw, gz, type, etag, isHashed });
+        staticCache.set(urlPath, { raw, gz, br, type, etag, isHashed });
       }
     }
   }
@@ -1483,22 +1491,16 @@ async function serveStatic(request, response) {
       ? "no-cache"
       : "public, max-age=86400";
 
-  const acceptsGzip = (request.headers["accept-encoding"] || "").includes("gzip");
-  if (entry.gz && acceptsGzip) {
-    response.writeHead(200, {
-      "Content-Type": entry.type,
-      "Content-Encoding": "gzip",
-      "Vary": "Accept-Encoding",
-      "Cache-Control": cacheControl,
-      "ETag": entry.etag
-    });
+  const enc = request.headers["accept-encoding"] || "";
+  if (entry.br && enc.includes("br")) {
+    response.writeHead(200, { "Content-Type": entry.type, "Content-Encoding": "br", "Vary": "Accept-Encoding", "Cache-Control": cacheControl, "ETag": entry.etag });
+    return response.end(entry.br);
+  }
+  if (entry.gz && enc.includes("gzip")) {
+    response.writeHead(200, { "Content-Type": entry.type, "Content-Encoding": "gzip", "Vary": "Accept-Encoding", "Cache-Control": cacheControl, "ETag": entry.etag });
     return response.end(entry.gz);
   }
-  response.writeHead(200, {
-    "Content-Type": entry.type,
-    "Cache-Control": cacheControl,
-    "ETag": entry.etag
-  });
+  response.writeHead(200, { "Content-Type": entry.type, "Cache-Control": cacheControl, "ETag": entry.etag });
   response.end(entry.raw);
 }
 

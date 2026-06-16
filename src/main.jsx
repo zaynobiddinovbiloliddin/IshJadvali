@@ -582,17 +582,26 @@ function App() {
 
   const loadDepartments = useCallback(async () => {
     try {
-      const data = await api("/api/departments");
-      setDepartments(data?.departments || []);
+      const pf = window.__pf?.dept;
+      if (pf) { window.__pf.dept = null; const r = await pf; const data = r.ok ? await r.json() : await api("/api/departments"); setDepartments(data?.departments || []); }
+      else { const data = await api("/api/departments"); setDepartments(data?.departments || []); }
     } catch {}
   }, []);
 
   const loadDashboard = useCallback(async () => {
     if (!hasLoadedDashboard.current) setLoading(true);
     setError("");
-
     try {
-      setDashboard(await api(`/api/dashboard?weekStart=${weekStart}`));
+      let data;
+      const pf = window.__pf?.dash;
+      if (pf && !hasLoadedDashboard.current) {
+        window.__pf.dash = null;
+        const r = await pf;
+        data = r.ok ? await r.json() : await api(`/api/dashboard?weekStart=${weekStart}`);
+      } else {
+        data = await api(`/api/dashboard?weekStart=${weekStart}`);
+      }
+      setDashboard(data);
     } catch (loadError) {
       setError(loadError.message);
       notify(loadError.message, "error");
