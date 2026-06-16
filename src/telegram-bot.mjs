@@ -401,7 +401,10 @@ export function startTelegramBot(getDb) {
 
   getDbRef = getDb;
 
-  bot = new TelegramBot(BOT_TOKEN, { polling: true });
+  bot = new TelegramBot(BOT_TOKEN, {
+    polling: { interval: 2000, params: { timeout: 30 } },
+    request: { timeout: 60000 }
+  });
 
   bot.on("message", (msg) => {
     const chatId = String(msg.chat.id);
@@ -416,7 +419,18 @@ export function startTelegramBot(getDb) {
     bot.sendMessage(msg.chat.id, "✅ Tayyor! Endi sizga hujjatlar yuborilishi mumkin.").catch(() => {});
   });
 
-  bot.on("polling_error", (err) => console.error("Telegram polling:", err.message));
+  bot.on("error", (err) => console.error("Telegram bot xato:", err.message));
+
+  bot.on("polling_error", (err) => {
+    console.error("Telegram polling:", err.code || "", err.message);
+    if (err.code === "EFATAL" || (err.message && (err.message.includes("ETIMEDOUT") || err.message.includes("ECONNRESET")))) {
+      console.log("Telegram: 60 soniyadan keyin qayta ulanish...");
+      bot.stopPolling().catch(() => {});
+      setTimeout(() => {
+        bot.startPolling({ restart: true }).catch((e) => console.error("Telegram restart:", e.message));
+      }, 60000);
+    }
+  });
 
   console.log("🤖 Telegram bot ishga tushdi (polling + 30 daqiqada backup)");
 

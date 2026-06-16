@@ -1484,11 +1484,11 @@ async function serveStatic(request, response) {
     return response.end();
   }
 
-  // Cache-Control: hashed assets live forever; index.html must revalidate
+  // Cache-Control: hashed assets live forever; index.html + sw.js must revalidate every time
   const cacheControl = entry.isHashed
     ? "public, max-age=31536000, immutable"
-    : urlPath === "/index.html"
-      ? "no-cache"
+    : (urlPath === "/index.html" || urlPath === "/sw.js")
+      ? "no-cache, no-store, must-revalidate"
       : "public, max-age=86400";
 
   const enc = request.headers["accept-encoding"] || "";
