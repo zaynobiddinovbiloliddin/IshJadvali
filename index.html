@@ -25,7 +25,7 @@
       @keyframes _spin { to { transform: rotate(360deg); } }
     </style>
     <script>
-      // API prefetch — React mount bo'lishidan oldin boshlaydi
+      // API prefetch — React mount bo'lishidan oldin boshlaydi (300-400ms tejaydi)
       (function () {
         try {
           var t = localStorage.getItem("authToken");
@@ -33,15 +33,16 @@
             var h = { Authorization: "Bearer " + t, Accept: "application/json" };
             window.__pf = {
               dash: fetch("/api/dashboard", { headers: h }),
-              dept: fetch("/api/departments", { headers: h })
+              dept: fetch("/api/departments", { headers: h }),
+              notif: fetch("/api/notifications", { headers: h })
             };
           }
         } catch (e) {}
+        // Service Worker
+        if ("serviceWorker" in navigator) {
+          navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(function () {});
+        }
       })();
-      // Service Worker
-      if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(function () {});
-      }
     </script>
   </head>
   <body>
