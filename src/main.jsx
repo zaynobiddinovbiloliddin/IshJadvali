@@ -2360,12 +2360,13 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
   useEffect(() => { statusesRef.current = statuses; }, [statuses]);
 
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
-    setStatuses({});
     api(`/api/daily-status?year=${year}&month=${month}`)
-      .then((data) => setStatuses(data.statuses || {}))
-      .catch(() => { setStatuses({}); onNotify?.("Statuslarni yuklashda xato", "error"); })
-      .finally(() => setLoading(false));
+      .then((data) => { if (!cancelled) setStatuses(data.statuses || {}); })
+      .catch(() => { if (!cancelled) { setStatuses({}); onNotify?.("Statuslarni yuklashda xato", "error"); } })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [year, month]);
 
   const getCode = useCallback((empId, day) => {
@@ -2751,10 +2752,17 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
         ))}
       </div>
 
-      {loading ? (
-        <div className="monthly-loading">Yuklanmoqda...</div>
-      ) : (
-        <div className="monthly-scroll" role="region" aria-label="Oylik grafik">
+      <div style={{ position: "relative" }}>
+        {loading && (
+          <div style={{
+            position: "absolute", inset: 0, zIndex: 6, pointerEvents: "none",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: "rgba(6,12,30,0.45)", borderRadius: "12px"
+          }}>
+            <span className="mtr-spinner" style={{ width: 28, height: 28, borderWidth: 3 }} />
+          </div>
+        )}
+        <div className="monthly-scroll" role="region" aria-label="Oylik grafik" style={{ opacity: loading ? 0.65 : 1, transition: "opacity 0.2s" }}>
           <table className="monthly-table">
             <thead>
               <tr>
@@ -2821,7 +2829,7 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
             </tbody>
           </table>
         </div>
-      )}
+      </div>
 
       {selectedCell && selectedCell.info && (
         <div className="monthly-cell-info">

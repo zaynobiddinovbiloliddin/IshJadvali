@@ -17,12 +17,12 @@ develop-eggs/
 dist/
 downloads/
 eggs/
-.eggs/
+.eggs/555
 lib/
 lib64/
 parts/
 sdist/
-var/
+var/.
 wheels/
 *.egg-info/
 .installed.cfg

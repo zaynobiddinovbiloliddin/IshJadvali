@@ -1466,7 +1466,7 @@ loadStaticCache();
 async function serveStatic(request, response) {
   const url = parseRequestUrl(request);
   const safePath = normalize(url.pathname).replace(/^(\.\.[/\\])+/, "");
-  const urlPath = safePath === "/" ? "/index.html" : safePath;
+  const urlPath = safePath === "/" ? "/landing.html" : safePath;
 
   // Assets (hashed filenames) must return 404 if not found — no SPA fallback for them
   const isAsset = urlPath.startsWith("/assets/");
@@ -1487,7 +1487,7 @@ async function serveStatic(request, response) {
   // Cache-Control: hashed assets live forever; index.html + sw.js must revalidate every time
   const cacheControl = entry.isHashed
     ? "public, max-age=31536000, immutable"
-    : (urlPath === "/index.html" || urlPath === "/sw.js")
+    : (urlPath === "/index.html" || urlPath === "/landing.html" || urlPath === "/sw.js")
       ? "no-cache, no-store, must-revalidate"
       : "public, max-age=86400";
 
