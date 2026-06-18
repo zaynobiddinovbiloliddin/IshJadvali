@@ -16,7 +16,16 @@ import {
 } from "docx";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+const CHAT_ID   = process.env.TELEGRAM_CHAT_ID;
+
+// Webhook secret — Telegram sends this in X-Telegram-Bot-Api-Secret-Token header
+export const WEBHOOK_SECRET =
+  process.env.TELEGRAM_WEBHOOK_SECRET || "uz24staffflow_wh_s3cr3t";
+
+// Default webhook URL (override via env for local dev / custom domain)
+const WEBHOOK_URL =
+  process.env.TELEGRAM_WEBHOOK_URL ||
+  "https://operatorlar24.uz/api/telegram/webhook";
 
 let bot = null;
 
@@ -38,22 +47,20 @@ export function resolveChatId(input) {
   return tgUsers[key] ? String(tgUsers[key]) : null;
 }
 
-const UZ_DAYS = ["Yakshanba", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"];
-const UZ_MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"];
-
-function getTodayName() {
-  return UZ_DAYS[new Date().getDay()];
+// Called from server.mjs webhook route — passes incoming update to the bot
+export function handleWebhookUpdate(update) {
+  if (!bot) return;
+  try { bot.processUpdate(update); } catch (e) { console.error("Telegram processUpdate xato:", e.message); }
 }
 
-function formatUzDate(date) {
-  return `${date.getDate()} ${UZ_MONTHS[date.getMonth()]} ${date.getFullYear()} yil`;
-}
+const UZ_DAYS   = ["Yakshanba","Dushanba","Seshanba","Chorshanba","Payshanba","Juma","Shanba"];
+const UZ_MONTHS = ["yanvar","fevral","mart","aprel","may","iyun","iyul","avgust","sentabr","oktabr","noyabr","dekabr"];
 
-// Set by startTelegramBot() — returns the live in-memory `db` object that
-// server.mjs persists to Postgres, so the bot always sees current data
-// instead of a frozen-in-time JSON snapshot.
+function getTodayName()       { return UZ_DAYS[new Date().getDay()]; }
+function formatUzDate(date)   { return `${date.getDate()} ${UZ_MONTHS[date.getMonth()]} ${date.getFullYear()} yil`; }
+
+// Set by startTelegramBot()
 let getDbRef = null;
-
 function readDb() {
   const data = getDbRef?.();
   return data || { employees: [], schedules: {} };
@@ -67,14 +74,14 @@ function sqlStr(v) {
 }
 
 async function createBackup() {
-  const now = new Date();
-  const dateTag = now.toISOString().slice(0, 19).replace(/[T:]/g, "-");
+  const now  = new Date();
+  const dateTag  = now.toISOString().slice(0, 19).replace(/[T:]/g, "-");
   const fileName = `backup-${dateTag}.sql`;
   const filePath = join("/tmp", fileName);
 
-  const db = readDb();
+  const db  = readDb();
   const raw = JSON.stringify(db);
-  const ts = now.toISOString();
+  const ts  = now.toISOString();
 
   const lines = [
     `-- O'zbekiston 24 IshJadvali — SQL Backup`,
@@ -87,13 +94,12 @@ async function createBackup() {
     ``
   ];
 
-  // Employees
   lines.push(`-- ── Employee (${db.employees?.length || 0} ta) ─────────────────────`);
   if (db.employees?.length) {
     lines.push(`TRUNCATE TABLE "Employee" CASCADE;`);
     for (const e of db.employees) {
-      const portfolio = sqlStr(JSON.stringify(e.portfolio || []));
-      const documents = sqlStr(JSON.stringify(e.documents || {}));
+      const portfolio  = sqlStr(JSON.stringify(e.portfolio || []));
+      const documents  = sqlStr(JSON.stringify(e.documents || {}));
       lines.push(
         `INSERT INTO "Employee" (id,name,role,phone,telegram,department,avatar,address,portfolio,documents,"isActive","createdAt","updatedAt") VALUES ` +
         `(${e.id},${sqlStr(e.name)},${sqlStr(e.role)},${sqlStr(e.phone)},${sqlStr(e.telegram)},` +
@@ -104,7 +110,6 @@ async function createBackup() {
   }
   lines.push(``);
 
-  // Contacts
   lines.push(`-- ── Contact (${db.contacts?.length || 0} ta) ──────────────────────`);
   if (db.contacts?.length) {
     lines.push(`TRUNCATE TABLE "Contact";`);
@@ -117,7 +122,6 @@ async function createBackup() {
   }
   lines.push(``);
 
-  // Attendance
   lines.push(`-- ── Attendance (${db.attendance?.length || 0} ta) ─────────────────`);
   if (db.attendance?.length) {
     lines.push(`TRUNCATE TABLE "Attendance";`);
@@ -130,7 +134,6 @@ async function createBackup() {
   }
   lines.push(``);
 
-  // DailyStatuses
   const dsList = db.dailyStatuses || [];
   lines.push(`-- ── DailyStatus (${dsList.length} ta) ─────────────────────────`);
   if (dsList.length) {
@@ -144,7 +147,6 @@ async function createBackup() {
   }
   lines.push(``);
 
-  // Users (parolsiz)
   const users = (db.users || []).map((u) => ({ ...u, password: "***" }));
   lines.push(`-- ── User (${users.length} ta, parol yashirilgan) ───────────────`);
   if (users.length) {
@@ -163,33 +165,33 @@ async function createBackup() {
   lines.push(`-- Backup hajmi: ${(raw.length / 1024).toFixed(1)} KB  |  ${ts}`);
 
   writeFileSync(filePath, lines.join("\n"));
-  return { filePath, fileName, stats: { employees: db.employees?.length || 0, contacts: db.contacts?.length || 0, attendance: db.attendance?.length || 0, dailyStatuses: dsList.length } };
+  return {
+    filePath,
+    fileName,
+    stats: {
+      employees:    db.employees?.length    || 0,
+      contacts:     db.contacts?.length     || 0,
+      attendance:   db.attendance?.length   || 0,
+      dailyStatuses: dsList.length
+    }
+  };
 }
 
 // ─── Word document helpers ───────────────────────────────────
 
 const HEADER_GRAY = "D9D9D9";
-const LIGHT_BLUE = "BDD7EE";
-const WHITE = "FFFFFF";
-const RED_COLOR = "CC0000";
+const LIGHT_BLUE  = "BDD7EE";
+const WHITE       = "FFFFFF";
+const RED_COLOR   = "CC0000";
 
 function makeCell(text, fillColor, isHeader = false, columnSpan = 1) {
-  const lines = String(text || "").split("\n");
-  const children = lines.map(
-    (line, i) =>
-      new Paragraph({
-        spacing: { before: i === 0 ? 0 : 40 },
-        children: [
-          new TextRun({
-            text: line,
-            bold: isHeader,
-            size: isHeader ? 20 : 19,
-            font: "Times New Roman"
-          })
-        ]
-      })
+  const lines    = String(text || "").split("\n");
+  const children = lines.map((line, i) =>
+    new Paragraph({
+      spacing: { before: i === 0 ? 0 : 40 },
+      children: [new TextRun({ text: line, bold: isHeader, size: isHeader ? 20 : 19, font: "Times New Roman" })]
+    })
   );
-
   return new TableCell({
     columnSpan,
     shading: { fill: fillColor, type: ShadingType.CLEAR },
@@ -199,55 +201,35 @@ function makeCell(text, fillColor, isHeader = false, columnSpan = 1) {
 }
 
 function makeEquipmentRow(equipment = "HD jamlanmasi, mikrofon, chiroq, avtotransport") {
-  return new TableRow({
-    children: [
-      makeCell(`Kerakli jihoz va texnika:    ${equipment}`, LIGHT_BLUE, false, 5)
-    ]
-  });
+  return new TableRow({ children: [makeCell(`Kerakli jihoz va texnika:    ${equipment}`, LIGHT_BLUE, false, 5)] });
 }
 
 async function createFilmingScheduleWord() {
-  const dbData = readDb();
-  const today = new Date();
+  const dbData   = readDb();
+  const today    = new Date();
   today.setHours(0, 0, 0, 0);
-  const todayKey = today.toISOString().slice(0, 10);
+  const todayKey  = today.toISOString().slice(0, 10);
   const todayName = getTodayName();
 
-  // Find the schedule that contains today
-  const schedules = Object.values(dbData.schedules || {});
-  const validSchedules = schedules.filter((s) => {
-    const weekStart = s.week?.start;
-    return weekStart && weekStart <= todayKey;
-  });
+  const schedules      = Object.values(dbData.schedules || {});
+  const validSchedules = schedules.filter((s) => s.week?.start && s.week.start <= todayKey);
   validSchedules.sort((a, b) => b.week.start.localeCompare(a.week.start));
-  const saved = validSchedules[0] || null;
-
+  const saved    = validSchedules[0] || null;
   const employees = Array.isArray(dbData.employees) ? dbData.employees : [];
-
-  const rows = [];
+  const rows     = [];
 
   if (saved?.groups) {
     const todayGroups = saved.groups.filter((g) => g.day === todayName);
-
     for (const group of todayGroups) {
-      const workingPeople = group.people.filter(
-        (p) => !["rest", "vacation", "otpiska"].includes(p.statusType)
-      );
-      const operatorList = workingPeople
-        .filter((p) => !p.role?.toLowerCase().includes("muxbir"))
-        .map((p) => p.name)
-        .join("\n");
-      const reporterList = workingPeople
-        .filter((p) => p.role?.toLowerCase().includes("muxbir"))
-        .map((p) => p.name)
-        .join("\n");
-
+      const workingPeople = group.people.filter((p) => !["rest","vacation","otpiska"].includes(p.statusType));
+      const operatorList  = workingPeople.filter((p) => !p.role?.toLowerCase().includes("muxbir")).map((p) => p.name).join("\n");
+      const reporterList  = workingPeople.filter((p) =>  p.role?.toLowerCase().includes("muxbir")).map((p) => p.name).join("\n");
       if (workingPeople.length) {
         rows.push({
-          camera: group.meta || "",
-          time: workingPeople[0]?.time || "09:00-18:00",
+          camera:    group.meta || "",
+          time:      workingPeople[0]?.time || "09:00-18:00",
           operators: operatorList || workingPeople.map((p) => p.name).join("\n"),
-          topic: group.title || "Studiyada ish",
+          topic:     group.title || "Studiyada ish",
           reporters: reporterList || ""
         });
       }
@@ -258,46 +240,31 @@ async function createFilmingScheduleWord() {
     const names = employees.slice(0, 12).map((e) => e.name);
     rows.push(
       { camera: "3 Studiya", time: "9:00-22:00", operators: names.slice(0, 4).join("\n"), topic: "Studiyada tasvirga olish jarayoni", reporters: "" },
-      { camera: "35 TJK", time: "9:00-18:00", operators: names.slice(4, 8).join("\n"), topic: "TJK guruhi ishi", reporters: "" },
-      { camera: "3 Tongi", time: "9:00-18:00", operators: names.slice(8, 12).join("\n"), topic: "Tongi dastur", reporters: "" }
+      { camera: "35 TJK",    time: "9:00-18:00", operators: names.slice(4, 8).join("\n"), topic: "TJK guruhi ishi",                   reporters: "" },
+      { camera: "3 Tongi",   time: "9:00-18:00", operators: names.slice(8, 12).join("\n"),topic: "Tongi dastur",                       reporters: "" }
     );
   }
 
-  const titleLeft = new Paragraph({
-    children: [
-      new TextRun({ text: "Tasvirga olish jadvali", bold: true, size: 24, font: "Times New Roman" }),
-      new TextRun({ text: "\n" + formatUzDate(today), size: 22, font: "Times New Roman" })
-    ]
-  });
-
+  const titleLeft  = new Paragraph({ children: [new TextRun({ text: "Tasvirga olish jadvali", bold: true, size: 24, font: "Times New Roman" }), new TextRun({ text: "\n" + formatUzDate(today), size: 22, font: "Times New Roman" })] });
   const titleRight = new Paragraph({
     alignment: AlignmentType.RIGHT,
     children: [
       new TextRun({ text: '"TASDIQLAYMAN"', bold: true, size: 22, font: "Times New Roman" }),
       new TextRun({ text: '\n"O\'zbekiston 24" ijodiy', size: 22, font: "Times New Roman" }),
       new TextRun({ text: "\nbirlashmasi\" DM direktori", size: 22, font: "Times New Roman" }),
-      new TextRun({ text: "\n__________M. Safarov", size: 22, font: "Times New Roman" })
+      new TextRun({ text: "\n__________M. Safarov",       size: 22, font: "Times New Roman" })
     ]
   });
-
   const warningPara = new Paragraph({
     spacing: { before: 120, after: 120 },
-    children: [
-      new TextRun({
-        text: "Muhim eslatma! Tasvirga olish ishlari yakunlanishi bilan, material tayyorlashga kirishish shart.",
-        color: RED_COLOR,
-        bold: true,
-        size: 20,
-        font: "Times New Roman"
-      })
-    ]
+    children: [new TextRun({ text: "Muhim eslatma! Tasvirga olish ishlari yakunlanishi bilan, material tayyorlashga kirishish shart.", color: RED_COLOR, bold: true, size: 20, font: "Times New Roman" })]
   });
 
   const headerRow = new TableRow({
     tableHeader: true,
     children: [
       makeCell("Kamera\nraqami", HEADER_GRAY, true),
-      makeCell("Chiqish\nvaqti", HEADER_GRAY, true),
+      makeCell("Chiqish\nvaqti",  HEADER_GRAY, true),
       makeCell("Operator va\ntexnik xodim", HEADER_GRAY, true),
       makeCell("Tadbir o'tkazilish joyi va tadbir mavzusi", HEADER_GRAY, true),
       makeCell("Muxbirlar", HEADER_GRAY, true)
@@ -307,44 +274,19 @@ async function createFilmingScheduleWord() {
   const tableRows = [headerRow];
   for (const row of rows) {
     tableRows.push(makeEquipmentRow());
-    tableRows.push(
-      new TableRow({
-        children: [
-          makeCell(row.camera, WHITE),
-          makeCell(row.time, WHITE),
-          makeCell(row.operators, WHITE),
-          makeCell(row.topic, WHITE),
-          makeCell(row.reporters, WHITE)
-        ]
-      })
-    );
+    tableRows.push(new TableRow({ children: [makeCell(row.camera, WHITE), makeCell(row.time, WHITE), makeCell(row.operators, WHITE), makeCell(row.topic, WHITE), makeCell(row.reporters, WHITE)] }));
   }
 
-  const table = new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    columnWidths: [1500, 1200, 2000, 3300, 2000],
-    rows: tableRows
-  });
+  const table = new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [1500, 1200, 2000, 3300, 2000], rows: tableRows });
 
   const doc = new Document({
-    sections: [
-      {
-        properties: {
-          page: { margin: { top: 720, right: 720, bottom: 720, left: 720 } }
-        },
-        children: [
-          titleLeft,
-          titleRight,
-          new Paragraph({ children: [] }),
-          warningPara,
-          new Paragraph({ children: [] }),
-          table
-        ]
-      }
-    ]
+    sections: [{
+      properties: { page: { margin: { top: 720, right: 720, bottom: 720, left: 720 } } },
+      children: [titleLeft, titleRight, new Paragraph({ children: [] }), warningPara, new Paragraph({ children: [] }), table]
+    }]
   });
 
-  const buffer = await Packer.toBuffer(doc);
+  const buffer   = await Packer.toBuffer(doc);
   const fileName = `tasvirga-olish-jadvali-${todayKey}.docx`;
   const filePath = join("/tmp", fileName);
   writeFileSync(filePath, buffer);
@@ -354,21 +296,12 @@ async function createFilmingScheduleWord() {
 // ─── Send backup ─────────────────────────────────────────────
 
 export async function sendBackupAndSchedule() {
-  const now = new Date().toLocaleString("uz-UZ", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-
+  const now = new Date().toLocaleString("uz-UZ", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
   let backupPath = null;
-
   try {
     const backup = await createBackup();
     backupPath = backup.filePath;
     const { stats } = backup;
-
     await bot.sendDocument(CHAT_ID, backup.filePath, {
       caption:
         `🗄 *SQL Backup* — ${now}\n` +
@@ -379,19 +312,35 @@ export async function sendBackupAndSchedule() {
         `_Fayl: \`.sql\` — PostgreSQL INSERT statements_`,
       parse_mode: "Markdown"
     });
-
     console.log(`✅ Telegram SQL backup yuborildi — ${now}`);
   } catch (err) {
     console.error("❌ Telegram xato:", err.message);
-    try {
-      await bot.sendMessage(CHAT_ID, `❌ Backup xato: ${err.message}`);
-    } catch {}
+    try { await bot.sendMessage(CHAT_ID, `❌ Backup xato: ${err.message}`); } catch {}
   } finally {
     if (backupPath && existsSync(backupPath)) unlinkSync(backupPath);
   }
 }
 
-// ─── Start cron ───────────────────────────────────────────────
+// ─── Webhook registration ─────────────────────────────────────
+
+async function registerWebhook() {
+  try {
+    // Delete old webhook/polling state first
+    await bot.deleteWebHook({ drop_pending_updates: true });
+
+    await bot.setWebHook(WEBHOOK_URL, {
+      secret_token:         WEBHOOK_SECRET,
+      max_connections:      40,
+      drop_pending_updates: true,
+      allowed_updates:      ["message", "callback_query"]
+    });
+    console.log(`✅ Telegram webhook o'rnatildi: ${WEBHOOK_URL}`);
+  } catch (err) {
+    console.error("❌ Webhook o'rnatishda xato:", err.message);
+  }
+}
+
+// ─── Start (webhook mode) ─────────────────────────────────────
 
 export function startTelegramBot(getDb) {
   if (!BOT_TOKEN || !CHAT_ID) {
@@ -401,16 +350,14 @@ export function startTelegramBot(getDb) {
 
   getDbRef = getDb;
 
-  bot = new TelegramBot(BOT_TOKEN, {
-    polling: { interval: 2000, params: { timeout: 30 } },
-    request: { timeout: 60000 }
-  });
+  // No polling — Telegram will POST updates to our webhook endpoint
+  bot = new TelegramBot(BOT_TOKEN);
 
+  // Register user chat IDs when they message the bot
   bot.on("message", (msg) => {
-    const chatId = String(msg.chat.id);
     const username = msg.from?.username;
     if (username) {
-      tgUsers[username.toLowerCase()] = chatId;
+      tgUsers[username.toLowerCase()] = String(msg.chat.id);
       saveUsers(tgUsers);
     }
   });
@@ -421,19 +368,12 @@ export function startTelegramBot(getDb) {
 
   bot.on("error", (err) => console.error("Telegram bot xato:", err.message));
 
-  bot.on("polling_error", (err) => {
-    console.error("Telegram polling:", err.code || "", err.message);
-    if (err.code === "EFATAL" || (err.message && (err.message.includes("ETIMEDOUT") || err.message.includes("ECONNRESET")))) {
-      console.log("Telegram: 60 soniyadan keyin qayta ulanish...");
-      bot.stopPolling().catch(() => {});
-      setTimeout(() => {
-        bot.startPolling({ restart: true }).catch((e) => console.error("Telegram restart:", e.message));
-      }, 60000);
-    }
-  });
+  // Register webhook with Telegram (async, non-blocking)
+  registerWebhook().catch(() => {});
 
-  console.log("🤖 Telegram bot ishga tushdi (polling + 30 daqiqada backup)");
+  console.log("🤖 Telegram bot ishga tushdi (webhook rejimi)");
 
+  // Scheduled backups
   cron.schedule("0,30 6-21 * * *", () => sendBackupAndSchedule(), { timezone: "Asia/Tashkent" });
-  cron.schedule("0 22 * * *", () => sendBackupAndSchedule(), { timezone: "Asia/Tashkent" });
+  cron.schedule("0 22 * * *",       () => sendBackupAndSchedule(), { timezone: "Asia/Tashkent" });
 }

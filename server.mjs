@@ -1529,6 +1529,24 @@ export async function handleRequest(request, response) {
       return sendJson(response, 200, { ok: true, schedules: Object.keys(db.schedules).length });
     }
 
+    // ── Telegram webhook (no JWT auth — verified by secret header) ──────────
+    if (request.method === "POST" && url.pathname === "/api/telegram/webhook") {
+      const secretHeader = request.headers["x-telegram-bot-api-secret-token"];
+      if (!tgHandleUpdate || !tgWebhookSecret || secretHeader !== tgWebhookSecret) {
+        response.writeHead(403);
+        return response.end("Forbidden");
+      }
+      try {
+        const update = await readBody(request);
+        tgHandleUpdate(update);
+        response.writeHead(200, { "Content-Type": "application/json" });
+        return response.end('{"ok":true}');
+      } catch {
+        response.writeHead(400);
+        return response.end("Bad Request");
+      }
+    }
+
     if (request.method === "POST" && url.pathname === "/api/auth/login") {
       const ip = getClientIp(request);
       const lockedFor = checkLoginLock(ip);
@@ -2478,6 +2496,10 @@ export async function handleRequest(request, response) {
   }
 }
 
+// Telegram webhook handler — set at startup, used in handleRequest
+let tgHandleUpdate  = null;
+let tgWebhookSecret = null;
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const server = createServer(handleRequest);
   const HOST = process.env.HOST || "0.0.0.0";
@@ -2485,8 +2507,10 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     console.log(`Backend ready: http://${HOST}:${PORT}`);
     if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
       try {
-        const { startTelegramBot } = await import("./src/telegram-bot.mjs");
-        startTelegramBot(() => db);
+        const tgMod = await import("./src/telegram-bot.mjs");
+        tgMod.startTelegramBot(() => db);
+        tgHandleUpdate  = tgMod.handleWebhookUpdate;
+        tgWebhookSecret = tgMod.WEBHOOK_SECRET;
       } catch (err) {
         console.error("Telegram bot ishga tushmadi:", err.message);
       }
