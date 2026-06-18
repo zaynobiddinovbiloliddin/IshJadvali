@@ -22,7 +22,6 @@
       --card: #0d1a30;
       --card2: #111f3a;
       --blue: #3b82f6;
-      --blue2: #2563eb;
       --purple: #8b5cf6;
       --gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
       --text: #f1f5f9;
@@ -32,449 +31,239 @@
       --border2: rgba(255,255,255,0.07);
       --radius: 16px;
     }
-
     [data-theme="light"] {
-      --bg: #f8fafc;
-      --bg2: #f1f5f9;
-      --card: #ffffff;
-      --card2: #f8fafc;
-      --text: #0f172a;
-      --text2: #475569;
-      --text3: #94a3b8;
-      --border: rgba(59,130,246,0.2);
-      --border2: rgba(0,0,0,0.07);
+      --bg: #f8fafc; --bg2: #f1f5f9; --card: #ffffff; --card2: #f8fafc;
+      --text: #0f172a; --text2: #475569; --text3: #94a3b8;
+      --border: rgba(59,130,246,0.2); --border2: rgba(0,0,0,0.07);
     }
 
     html { scroll-behavior: smooth; }
+    body { font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); line-height:1.6; overflow-x:hidden; }
+    .container { max-width:1280px; margin:0 auto; padding:0 24px; }
 
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.6;
-      overflow-x: hidden;
-    }
+    /* ─── NAVBAR ─── */
+    .navbar { position:fixed; top:0; left:0; right:0; z-index:1000; background:rgba(6,12,30,.88); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-bottom:1px solid var(--border2); transition:box-shadow .3s; }
+    [data-theme="light"] .navbar { background:rgba(248,250,252,.92); }
+    .navbar-inner { display:flex; align-items:center; justify-content:space-between; height:72px; gap:24px; }
+    .logo { display:flex; align-items:center; gap:10px; text-decoration:none; flex-shrink:0; }
+    .logo-badge { width:40px; height:40px; background:var(--gradient); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:17px; font-weight:900; color:#fff; letter-spacing:-1px; }
+    .logo-text { display:flex; flex-direction:column; line-height:1.15; }
+    .logo-name { font-size:13px; font-weight:800; color:var(--text); letter-spacing:.3px; }
+    .logo-sub  { font-size:10px; font-weight:700; color:var(--blue); letter-spacing:1.5px; text-transform:uppercase; }
+    .nav-links { display:flex; align-items:center; gap:28px; list-style:none; }
+    .nav-links a { font-size:14px; font-weight:500; color:var(--text2); text-decoration:none; transition:color .2s; }
+    .nav-links a:hover { color:var(--text); }
+    .nav-actions { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+    .icon-btn { width:38px; height:38px; border-radius:10px; border:1px solid var(--border2); background:var(--card); color:var(--text2); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .2s; }
+    .icon-btn:hover { border-color:var(--blue); color:var(--text); }
+    .btn-primary { display:inline-flex; align-items:center; gap:7px; background:var(--gradient); color:#fff; font-size:14px; font-weight:600; padding:10px 20px; border-radius:10px; text-decoration:none; border:none; cursor:pointer; transition:opacity .2s,transform .2s; white-space:nowrap; }
+    .btn-primary:hover { opacity:.88; transform:translateY(-1px); }
+    .btn-outline { display:inline-flex; align-items:center; gap:7px; background:transparent; color:var(--text); font-size:14px; font-weight:600; padding:10px 20px; border-radius:10px; text-decoration:none; border:1px solid var(--border2); cursor:pointer; transition:all .2s; white-space:nowrap; }
+    .btn-outline:hover { border-color:var(--blue); color:var(--blue); }
+    .hamburger { display:none; }
+    .mobile-nav { display:none; position:fixed; top:72px; left:0; right:0; background:var(--bg); border-bottom:1px solid var(--border2); padding:16px 20px; z-index:999; flex-direction:column; gap:4px; }
+    .mobile-nav.open { display:flex; }
+    .mobile-nav a { padding:11px 14px; border-radius:10px; color:var(--text2); text-decoration:none; font-size:15px; font-weight:500; transition:all .2s; }
+    .mobile-nav a:hover { background:var(--card); color:var(--text); }
+    .mobile-nav .btn-primary { margin-top:8px; justify-content:center; }
 
-    .container { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
-
-    /* ─── NAVBAR ─────────────────────────── */
-    .navbar {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
-      background: rgba(6,12,30,0.88);
-      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--border2);
-      transition: box-shadow .3s;
-    }
-    [data-theme="light"] .navbar { background: rgba(248,250,252,0.92); }
-
-    .navbar-inner {
-      display: flex; align-items: center; justify-content: space-between;
-      height: 72px; gap: 24px;
-    }
-
-    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
-
-    .logo-badge {
-      width: 40px; height: 40px; background: var(--gradient);
-      border-radius: 10px; display: flex; align-items: center; justify-content: center;
-      font-size: 18px; font-weight: 900; color: #fff; letter-spacing: -1px;
-    }
-
-    .logo-text { display: flex; flex-direction: column; line-height: 1.15; }
-    .logo-name { font-size: 13px; font-weight: 800; color: var(--text); letter-spacing: .3px; }
-    .logo-sub  { font-size: 10px; font-weight: 700; color: var(--blue); letter-spacing: 1.5px; text-transform: uppercase; }
-
-    .nav-links { display: flex; align-items: center; gap: 28px; list-style: none; }
-    .nav-links a { font-size: 14px; font-weight: 500; color: var(--text2); text-decoration: none; transition: color .2s; }
-    .nav-links a:hover { color: var(--text); }
-
-    .nav-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-
-    .theme-btn {
-      width: 38px; height: 38px; border-radius: 10px;
-      border: 1px solid var(--border2); background: var(--card);
-      color: var(--text2); cursor: pointer; display: flex; align-items: center;
-      justify-content: center; font-size: 15px; transition: all .2s;
-    }
-    .theme-btn:hover { border-color: var(--blue); color: var(--text); }
-
-    .btn-primary {
-      display: inline-flex; align-items: center; gap: 7px;
-      background: var(--gradient); color: #fff;
-      font-size: 14px; font-weight: 600; padding: 10px 20px;
-      border-radius: 10px; text-decoration: none; border: none; cursor: pointer;
-      transition: opacity .2s, transform .2s; white-space: nowrap;
-    }
-    .btn-primary:hover { opacity: .88; transform: translateY(-1px); }
-
-    .btn-outline {
-      display: inline-flex; align-items: center; gap: 7px;
-      background: transparent; color: var(--text);
-      font-size: 14px; font-weight: 600; padding: 10px 20px;
-      border-radius: 10px; text-decoration: none;
-      border: 1px solid var(--border2); cursor: pointer;
-      transition: all .2s; white-space: nowrap;
-    }
-    .btn-outline:hover { border-color: var(--blue); color: var(--blue); }
-
-    .hamburger {
-      display: none; width: 38px; height: 38px; border-radius: 10px;
-      border: 1px solid var(--border2); background: var(--card);
-      color: var(--text); cursor: pointer; align-items: center;
-      justify-content: center; font-size: 18px;
-    }
-
-    .mobile-nav {
-      display: none; position: fixed; top: 72px; left: 0; right: 0;
-      background: var(--bg); border-bottom: 1px solid var(--border2);
-      padding: 16px 20px; z-index: 999; flex-direction: column; gap: 4px;
-    }
-    .mobile-nav.open { display: flex; }
-    .mobile-nav a {
-      padding: 11px 14px; border-radius: 10px; color: var(--text2);
-      text-decoration: none; font-size: 15px; font-weight: 500; transition: all .2s;
-    }
-    .mobile-nav a:hover { background: var(--card); color: var(--text); }
-    .mobile-nav .btn-primary { margin-top: 8px; justify-content: center; }
-
-    /* ─── HERO ───────────────────────────── */
-    .hero {
-      padding: 152px 0 96px; position: relative; overflow: hidden;
-    }
-    .hero::before {
-      content: ''; position: absolute; top: -100px; left: 50%;
-      transform: translateX(-50%);
-      width: 900px; height: 700px;
-      background: radial-gradient(ellipse at 50% 30%, rgba(59,130,246,.12) 0%, transparent 65%);
-      pointer-events: none;
-    }
-
-    .hero-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: center; }
-
-    .hero-tag {
-      display: inline-flex; align-items: center; gap: 7px;
-      background: rgba(59,130,246,.1); border: 1px solid rgba(59,130,246,.28);
-      color: var(--blue); font-size: 11px; font-weight: 700; padding: 6px 14px;
-      border-radius: 100px; margin-bottom: 22px; letter-spacing: .8px; text-transform: uppercase;
-    }
-
-    .hero-title {
-      font-size: 50px; font-weight: 900; line-height: 1.13;
-      margin-bottom: 22px; letter-spacing: -1.5px;
-    }
-    .hero-title .grad {
-      background: var(--gradient); -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent; background-clip: text;
-    }
-
-    .hero-desc { font-size: 17px; color: var(--text2); line-height: 1.72; margin-bottom: 34px; max-width: 460px; }
-
-    .hero-btns { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 36px; }
-    .hero-btns .btn-primary, .hero-btns .btn-outline { padding: 13px 26px; font-size: 15px; border-radius: 12px; }
-
-    .social-proof { display: flex; align-items: center; gap: 13px; }
-    .avatars { display: flex; }
-    .av {
-      width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--bg);
-      margin-left: -9px; display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 700; color: #fff;
-    }
-    .av:first-child { margin-left: 0; }
-    .sp-text { font-size: 13px; color: var(--text2); }
-    .sp-text strong { color: var(--text); }
+    /* ─── HERO ─── */
+    .hero { padding:152px 0 96px; position:relative; overflow:hidden; }
+    .hero::before { content:''; position:absolute; top:-100px; left:50%; transform:translateX(-50%); width:900px; height:700px; background:radial-gradient(ellipse at 50% 30%,rgba(59,130,246,.12) 0%,transparent 65%); pointer-events:none; }
+    .hero-wrap { display:grid; grid-template-columns:1fr 1fr; gap:72px; align-items:center; }
+    .hero-tag { display:inline-flex; align-items:center; gap:8px; background:rgba(59,130,246,.1); border:1px solid rgba(59,130,246,.28); color:var(--blue); font-size:11px; font-weight:700; padding:6px 14px; border-radius:100px; margin-bottom:22px; letter-spacing:.8px; text-transform:uppercase; }
+    .hero-title { font-size:50px; font-weight:900; line-height:1.13; margin-bottom:22px; letter-spacing:-1.5px; }
+    .hero-title .grad { background:var(--gradient); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .hero-desc { font-size:17px; color:var(--text2); line-height:1.72; margin-bottom:34px; max-width:460px; }
+    .hero-btns { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:36px; }
+    .hero-btns .btn-primary, .hero-btns .btn-outline { padding:13px 26px; font-size:15px; border-radius:12px; }
+    .social-proof { display:flex; align-items:center; gap:13px; }
+    .avatars { display:flex; }
+    .av { width:34px; height:34px; border-radius:50%; border:2px solid var(--bg); margin-left:-9px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#fff; }
+    .av:first-child { margin-left:0; }
+    .sp-text { font-size:13px; color:var(--text2); }
+    .sp-text strong { color:var(--text); }
 
     /* Device mockup */
-    .hero-visual { position: relative; height: 460px; display: flex; align-items: center; justify-content: center; }
-
-    .dev-laptop {
-      width: 460px; background: #1c2840; border-radius: 14px; padding: 10px;
-      border: 1px solid rgba(255,255,255,.1);
-      box-shadow: 0 40px 90px rgba(0,0,0,.6), 0 0 60px rgba(59,130,246,.09);
-      position: relative; z-index: 2;
-    }
-    .l-screen { background: #090f1e; border-radius: 7px; overflow: hidden; height: 296px; }
-    .l-base { height: 13px; background: #111e32; border-radius: 0 0 3px 3px; margin: 7px -10px -10px; }
-
-    .ap { display: flex; height: 100%; }
-    .ap-side {
-      width: 50px; background: #0c1524; border-right: 1px solid rgba(255,255,255,.05);
-      padding: 12px 8px; display: flex; flex-direction: column; gap: 7px; align-items: center;
-    }
-    .ap-dot { width: 30px; height: 30px; border-radius: 8px; background: rgba(255,255,255,.05); }
-    .ap-dot.on { background: rgba(59,130,246,.35); }
-    .ap-dot.g  { background: rgba(34,197,94,.2); }
-    .ap-dot.p  { background: rgba(139,92,246,.2); }
-
-    .ap-body { flex: 1; padding: 10px; overflow: hidden; }
-    .ap-bar { display: flex; gap: 7px; margin-bottom: 10px; align-items: center; }
-    .ap-blk { height: 18px; border-radius: 4px; background: rgba(255,255,255,.07); }
-
-    .ap-stat-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 5px; margin-bottom: 8px; }
-    .ap-stat-box { background: #101e36; border-radius: 7px; height: 48px; padding: 7px; border: 1px solid rgba(59,130,246,.1); }
-    .ap-s-l { height: 5px; border-radius: 3px; background: rgba(255,255,255,.14); margin-bottom: 6px; width: 65%; }
-    .ap-s-v { height: 13px; border-radius: 3px; width: 55%; }
-
-    .ap-chart {
-      background: #101e36; border-radius: 7px; height: 68px; padding: 8px;
-      margin-bottom: 8px; display: flex; align-items: flex-end; gap: 4px;
-      border: 1px solid rgba(59,130,246,.1);
-    }
-    .ap-bar-c { flex: 1; border-radius: 3px 3px 0 0; background: rgba(59,130,246,.3); }
-    .ap-bar-c.hi { background: rgba(59,130,246,.85); }
-
-    .ap-table { background: #101e36; border-radius: 7px; border: 1px solid rgba(59,130,246,.1); overflow: hidden; }
-    .ap-row { display: flex; gap: 5px; padding: 5px 7px; border-bottom: 1px solid rgba(255,255,255,.04); }
-    .ap-cell { height: 7px; border-radius: 3px; background: rgba(255,255,255,.1); }
-
-    /* Phone */
-    .dev-phone {
-      position: absolute; bottom: 16px; right: -44px; width: 108px;
-      background: #1c2840; border-radius: 20px; padding: 7px;
-      border: 1px solid rgba(255,255,255,.1);
-      box-shadow: 0 20px 50px rgba(0,0,0,.5); z-index: 3;
-    }
-    .p-screen { background: #090f1e; border-radius: 13px; height: 186px; overflow: hidden; padding: 8px; }
-    .p-notch { width: 38px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.18); margin: 0 auto 7px; }
-
-    /* Tablet */
-    .dev-tablet {
-      position: absolute; top: 14px; right: -22px; width: 154px;
-      background: #1c2840; border-radius: 14px; padding: 7px;
-      border: 1px solid rgba(255,255,255,.1);
-      box-shadow: 0 20px 50px rgba(0,0,0,.5); z-index: 1;
-    }
-    .t-screen { background: #090f1e; border-radius: 8px; height: 116px; overflow: hidden; padding: 7px; }
-
-    /* Floating cards */
-    .fc {
-      position: absolute; background: var(--card); border: 1px solid var(--border);
-      border-radius: 12px; padding: 11px 14px; display: flex; align-items: center; gap: 10px;
-      box-shadow: 0 8px 24px rgba(0,0,0,.35); z-index: 10; white-space: nowrap;
-    }
-    .fc1 { top: 34px; left: -24px; animation: bob 3s ease-in-out infinite; }
-    .fc2 { bottom: 90px; left: -32px; animation: bob 3.2s ease-in-out infinite .8s; }
+    .hero-visual { position:relative; height:460px; display:flex; align-items:center; justify-content:center; }
+    .dev-laptop { width:460px; background:#1c2840; border-radius:14px; padding:10px; border:1px solid rgba(255,255,255,.1); box-shadow:0 40px 90px rgba(0,0,0,.6),0 0 60px rgba(59,130,246,.09); position:relative; z-index:2; }
+    .l-screen { background:#090f1e; border-radius:7px; overflow:hidden; height:296px; }
+    .l-base { height:13px; background:#111e32; border-radius:0 0 3px 3px; margin:7px -10px -10px; }
+    .ap { display:flex; height:100%; }
+    .ap-side { width:50px; background:#0c1524; border-right:1px solid rgba(255,255,255,.05); padding:12px 8px; display:flex; flex-direction:column; gap:7px; align-items:center; }
+    .ap-dot { width:30px; height:30px; border-radius:8px; background:rgba(255,255,255,.05); }
+    .ap-dot.on { background:rgba(59,130,246,.35); } .ap-dot.g { background:rgba(34,197,94,.2); } .ap-dot.p { background:rgba(139,92,246,.2); }
+    .ap-body { flex:1; padding:10px; overflow:hidden; }
+    .ap-bar { display:flex; gap:7px; margin-bottom:10px; align-items:center; }
+    .ap-blk { height:18px; border-radius:4px; background:rgba(255,255,255,.07); }
+    .ap-stat-row { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; margin-bottom:8px; }
+    .ap-stat-box { background:#101e36; border-radius:7px; height:48px; padding:7px; border:1px solid rgba(59,130,246,.1); }
+    .ap-s-l { height:5px; border-radius:3px; background:rgba(255,255,255,.14); margin-bottom:6px; width:65%; }
+    .ap-s-v { height:13px; border-radius:3px; width:55%; }
+    .ap-chart { background:#101e36; border-radius:7px; height:68px; padding:8px; margin-bottom:8px; display:flex; align-items:flex-end; gap:4px; border:1px solid rgba(59,130,246,.1); }
+    .ap-bar-c { flex:1; border-radius:3px 3px 0 0; background:rgba(59,130,246,.3); }
+    .ap-bar-c.hi { background:rgba(59,130,246,.85); }
+    .ap-table { background:#101e36; border-radius:7px; border:1px solid rgba(59,130,246,.1); overflow:hidden; }
+    .ap-row { display:flex; gap:5px; padding:5px 7px; border-bottom:1px solid rgba(255,255,255,.04); }
+    .ap-cell { height:7px; border-radius:3px; background:rgba(255,255,255,.1); }
+    .dev-phone { position:absolute; bottom:16px; right:-44px; width:108px; background:#1c2840; border-radius:20px; padding:7px; border:1px solid rgba(255,255,255,.1); box-shadow:0 20px 50px rgba(0,0,0,.5); z-index:3; }
+    .p-screen { background:#090f1e; border-radius:13px; height:186px; overflow:hidden; padding:8px; }
+    .p-notch { width:38px; height:4px; border-radius:2px; background:rgba(255,255,255,.18); margin:0 auto 7px; }
+    .dev-tablet { position:absolute; top:14px; right:-22px; width:154px; background:#1c2840; border-radius:14px; padding:7px; border:1px solid rgba(255,255,255,.1); box-shadow:0 20px 50px rgba(0,0,0,.5); z-index:1; }
+    .t-screen { background:#090f1e; border-radius:8px; height:116px; overflow:hidden; padding:7px; }
+    .fc { position:absolute; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:11px 14px; display:flex; align-items:center; gap:10px; box-shadow:0 8px 24px rgba(0,0,0,.35); z-index:10; white-space:nowrap; }
+    .fc1 { top:34px; left:-24px; animation:bob 3s ease-in-out infinite; }
+    .fc2 { bottom:90px; left:-32px; animation:bob 3.2s ease-in-out infinite .8s; }
     @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
+    .fc-icon { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .fc-label { font-size:11px; color:var(--text2); margin-bottom:2px; }
+    .fc-val { font-size:13px; font-weight:700; }
 
-    .fc-icon {
-      width: 28px; height: 28px; border-radius: 8px;
-      display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0;
-    }
-    .fc-label { font-size: 11px; color: var(--text2); margin-bottom: 2px; }
-    .fc-val { font-size: 13px; font-weight: 700; }
+    /* ─── STATS ─── */
+    .stats-sec { padding:56px 0; }
+    .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; }
+    .s-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:26px 22px; display:flex; align-items:center; gap:16px; transition:transform .2s,border-color .2s; }
+    .s-card:hover { transform:translateY(-4px); border-color:var(--blue); }
+    .s-ico { width:52px; height:52px; border-radius:14px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+    .s-ico.b { background:rgba(59,130,246,.14); color:#3b82f6; }
+    .s-ico.p { background:rgba(139,92,246,.14); color:#8b5cf6; }
+    .s-ico.g { background:rgba(34,197,94,.14); color:#22c55e; }
+    .s-ico.o { background:rgba(249,115,22,.14); color:#f97316; }
+    .s-val { font-size:26px; font-weight:800; line-height:1; margin-bottom:3px; }
+    .s-lbl { font-size:13px; color:var(--text2); }
 
-    /* ─── STATS ──────────────────────────── */
-    .stats-sec { padding: 56px 0; }
-    .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 20px; }
-    .s-card {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 26px 22px;
-      display: flex; align-items: center; gap: 16px; transition: transform .2s, border-color .2s;
-    }
-    .s-card:hover { transform: translateY(-4px); border-color: var(--blue); }
-    .s-ico {
-      width: 52px; height: 52px; border-radius: 14px; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center; font-size: 22px;
-    }
-    .s-ico.b { background: rgba(59,130,246,.14); }
-    .s-ico.p { background: rgba(139,92,246,.14); }
-    .s-ico.g { background: rgba(34,197,94,.14); }
-    .s-ico.o { background: rgba(249,115,22,.14); }
-    .s-val { font-size: 26px; font-weight: 800; line-height: 1; margin-bottom: 3px; }
-    .s-lbl { font-size: 13px; color: var(--text2); }
+    /* ─── SECTION COMMONS ─── */
+    .sec-tag { display:inline-block; font-size:11px; font-weight:700; color:var(--blue); letter-spacing:1.8px; text-transform:uppercase; margin-bottom:10px; }
+    .sec-title { font-size:38px; font-weight:800; line-height:1.2; letter-spacing:-.5px; margin-bottom:14px; }
+    .sec-desc  { font-size:16px; color:var(--text2); line-height:1.72; }
 
-    /* ─── SECTION COMMONS ────────────────── */
-    .sec-tag {
-      display: inline-block; font-size: 11px; font-weight: 700;
-      color: var(--blue); letter-spacing: 1.8px; text-transform: uppercase; margin-bottom: 10px;
-    }
-    .sec-title { font-size: 38px; font-weight: 800; line-height: 1.2; letter-spacing: -.5px; margin-bottom: 14px; }
-    .sec-desc  { font-size: 16px; color: var(--text2); line-height: 1.72; }
+    /* ─── FEATURES ─── */
+    .feat-sec { padding:96px 0; }
+    .feat-head { display:grid; grid-template-columns:1fr 1fr; gap:72px; align-items:flex-start; margin-bottom:52px; }
+    .feat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+    .f-card { background:var(--card); border:1px solid var(--border2); border-radius:var(--radius); padding:26px 22px; transition:all .3s; }
+    .f-card:hover { border-color:var(--blue); transform:translateY(-4px); box-shadow:0 16px 36px rgba(0,0,0,.2); }
+    .f-ico { width:46px; height:46px; border-radius:12px; display:flex; align-items:center; justify-content:center; margin-bottom:16px; }
+    .f-ico.b  { background:rgba(59,130,246,.14); color:#3b82f6; }
+    .f-ico.g  { background:rgba(34,197,94,.14);  color:#22c55e; }
+    .f-ico.o  { background:rgba(249,115,22,.14); color:#f97316; }
+    .f-ico.r  { background:rgba(239,68,68,.14);  color:#ef4444; }
+    .f-ico.p  { background:rgba(139,92,246,.14); color:#8b5cf6; }
+    .f-ico.t  { background:rgba(20,184,166,.14); color:#14b8a6; }
+    .f-title { font-size:15px; font-weight:700; margin-bottom:8px; }
+    .f-desc  { font-size:13px; color:var(--text2); line-height:1.6; }
 
-    /* ─── FEATURES ───────────────────────── */
-    .feat-sec { padding: 96px 0; }
-    .feat-head { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: flex-start; margin-bottom: 52px; }
-    .feat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; }
-    .f-card {
-      background: var(--card); border: 1px solid var(--border2);
-      border-radius: var(--radius); padding: 26px 22px; transition: all .3s;
-    }
-    .f-card:hover { border-color: var(--blue); transform: translateY(-4px); box-shadow: 0 16px 36px rgba(0,0,0,.2); }
-    .f-ico {
-      width: 46px; height: 46px; border-radius: 12px;
-      display: flex; align-items: center; justify-content: center; font-size: 21px; margin-bottom: 16px;
-    }
-    .f-ico.b  { background: rgba(59,130,246,.14); }
-    .f-ico.g  { background: rgba(34,197,94,.14); }
-    .f-ico.o  { background: rgba(249,115,22,.14); }
-    .f-ico.r  { background: rgba(239,68,68,.14); }
-    .f-ico.p  { background: rgba(139,92,246,.14); }
-    .f-ico.t  { background: rgba(20,184,166,.14); }
-    .f-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
-    .f-desc  { font-size: 13px; color: var(--text2); line-height: 1.6; }
+    /* ─── NEWS ─── */
+    .news-sec { padding:96px 0; background:var(--bg2); }
+    .news-head { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:36px; }
+    .news-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:22px; }
+    .n-card { background:var(--card); border:1px solid var(--border2); border-radius:var(--radius); overflow:hidden; transition:all .3s; }
+    .n-card:hover { transform:translateY(-4px); border-color:var(--blue); }
+    .n-img { height:196px; overflow:hidden; }
+    .n-img-ph { width:100%; height:100%; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:10px; }
+    .n-img-ph span { font-size:11px; color:rgba(255,255,255,.35); letter-spacing:2px; text-transform:uppercase; }
+    .n-body { padding:20px; }
+    .n-date { font-size:12px; color:var(--text3); margin-bottom:7px; }
+    .n-title { font-size:15px; font-weight:600; line-height:1.45; margin-bottom:14px; color:var(--text); }
+    .n-link { font-size:13px; font-weight:600; color:var(--blue); text-decoration:none; display:inline-flex; align-items:center; gap:4px; transition:gap .2s; }
+    .n-link:hover { gap:8px; }
 
-    /* ─── NEWS ───────────────────────────── */
-    .news-sec { padding: 96px 0; background: var(--bg2); }
-    .news-head { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 36px; }
-    .news-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 22px; }
-    .n-card {
-      background: var(--card); border: 1px solid var(--border2);
-      border-radius: var(--radius); overflow: hidden; transition: all .3s;
-    }
-    .n-card:hover { transform: translateY(-4px); border-color: var(--blue); }
-    .n-img { height: 196px; overflow: hidden; position: relative; }
-    .n-img-ph { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
-    .n-body { padding: 20px; }
-    .n-date { font-size: 12px; color: var(--text3); margin-bottom: 7px; }
-    .n-title { font-size: 15px; font-weight: 600; line-height: 1.45; margin-bottom: 14px; color: var(--text); }
-    .n-link { font-size: 13px; font-weight: 600; color: var(--blue); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; transition: gap .2s; }
-    .n-link:hover { gap: 8px; }
+    /* ─── ABOUT ─── */
+    .about-sec { padding:96px 0; }
+    .about-grid { display:grid; grid-template-columns:1fr 1fr; gap:80px; align-items:center; }
+    .about-feats { display:flex; flex-direction:column; gap:22px; margin:30px 0; }
+    .ab-feat { display:flex; gap:14px; align-items:flex-start; }
+    .ab-ico { width:42px; height:42px; border-radius:11px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:rgba(59,130,246,.1); border:1px solid rgba(59,130,246,.2); color:var(--blue); }
+    .ab-title { font-size:14px; font-weight:700; margin-bottom:3px; }
+    .ab-desc  { font-size:13px; color:var(--text2); }
+    .about-img { border-radius:20px; overflow:hidden; aspect-ratio:4/3; border:1px solid var(--border2); box-shadow:0 36px 72px rgba(0,0,0,.4); }
+    .ab-inner { width:100%; height:100%; background:linear-gradient(135deg,#0f1f3d 0%,#1a2d50 50%,#0f1f3d 100%); display:flex; align-items:center; justify-content:center; }
+    .ab-24-logo { width:110px; height:110px; background:var(--gradient); border-radius:22px; display:flex; align-items:center; justify-content:center; font-size:52px; font-weight:900; color:#fff; letter-spacing:-3px; box-shadow:0 16px 40px rgba(59,130,246,.35); }
 
-    /* ─── ABOUT ──────────────────────────── */
-    .about-sec { padding: 96px 0; }
-    .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
-    .about-feats { display: flex; flex-direction: column; gap: 22px; margin: 30px 0; }
-    .ab-feat { display: flex; gap: 14px; align-items: flex-start; }
-    .ab-ico {
-      width: 42px; height: 42px; border-radius: 11px; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center; font-size: 19px;
-      background: rgba(59,130,246,.1); border: 1px solid rgba(59,130,246,.2);
-    }
-    .ab-title { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
-    .ab-desc  { font-size: 13px; color: var(--text2); }
+    /* ─── HOW ─── */
+    .how-sec { padding:96px 0; background:var(--bg2); }
+    .how-head { text-align:center; margin-bottom:60px; }
+    .steps { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; position:relative; }
+    .steps::after { content:''; position:absolute; top:44px; left:12.5%; right:12.5%; height:1px; background:linear-gradient(90deg,var(--blue),var(--purple),var(--blue)); z-index:0; }
+    .step { background:var(--card); border:1px solid var(--border2); border-radius:var(--radius); padding:24px 20px; text-align:center; position:relative; z-index:1; transition:all .3s; }
+    .step:hover { border-color:var(--blue); transform:translateY(-4px); }
+    .step-n { font-size:11px; font-weight:700; color:var(--blue); letter-spacing:1.2px; margin-bottom:10px; }
+    .step-ico { width:56px; height:56px; background:rgba(59,130,246,.1); border:1px solid rgba(59,130,246,.25); border-radius:14px; display:flex; align-items:center; justify-content:center; color:var(--blue); margin:0 auto 14px; }
+    .step-title { font-size:14px; font-weight:700; margin-bottom:7px; }
+    .step-desc  { font-size:12px; color:var(--text2); line-height:1.55; }
 
-    .about-img {
-      border-radius: 20px; overflow: hidden; aspect-ratio: 4/3;
-      background: linear-gradient(135deg,#1a2740,#0d1a30);
-      border: 1px solid var(--border2); box-shadow: 0 36px 72px rgba(0,0,0,.4);
-    }
-    .ab-inner {
-      width: 100%; height: 100%;
-      background: linear-gradient(135deg,#0f1f3d 0%,#1a2d50 50%,#0f1f3d 100%);
-      display: flex; align-items: center; justify-content: center;
-    }
-    .ab-24-logo {
-      width: 110px; height: 110px; background: var(--gradient); border-radius: 22px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 54px; font-weight: 900; color: #fff; letter-spacing: -3px;
-      box-shadow: 0 16px 40px rgba(59,130,246,.35);
-    }
+    /* ─── ACHIEVEMENTS ─── */
+    .ach-sec { padding:80px 0; position:relative; overflow:hidden; }
+    .ach-sec::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse at 50% 50%,rgba(59,130,246,.07) 0%,transparent 68%); }
+    .ach-box { border:1px solid rgba(59,130,246,.22); border-radius:24px; padding:56px 60px; background:rgba(59,130,246,.03); position:relative; }
+    .ach-top { display:grid; grid-template-columns:1fr 1fr; gap:72px; align-items:center; margin-bottom:44px; }
+    .ach-tag { font-size:11px; font-weight:700; color:var(--blue); letter-spacing:1.8px; text-transform:uppercase; margin-bottom:10px; }
+    .ach-title { font-size:34px; font-weight:800; line-height:1.22; }
+    .ach-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; }
+    .ach-item { text-align:center; padding:22px 16px; background:rgba(59,130,246,.05); border:1px solid rgba(59,130,246,.14); border-radius:14px; }
+    .ach-ico { width:42px; height:42px; background:rgba(59,130,246,.1); border-radius:11px; display:flex; align-items:center; justify-content:center; color:var(--blue); margin:0 auto 10px; }
+    .ach-val { font-size:34px; font-weight:900; line-height:1; margin-bottom:5px; background:var(--gradient); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .ach-lbl { font-size:12px; color:var(--text2); }
 
-    /* ─── HOW ────────────────────────────── */
-    .how-sec { padding: 96px 0; background: var(--bg2); }
-    .how-head { text-align: center; margin-bottom: 60px; }
-    .steps { display: grid; grid-template-columns: repeat(4,1fr); gap: 20px; position: relative; }
-    .steps::after {
-      content: ''; position: absolute; top: 44px; left: 12.5%; right: 12.5%; height: 1px;
-      background: linear-gradient(90deg,var(--blue),var(--purple),var(--blue)); z-index: 0;
-    }
-    .step {
-      background: var(--card); border: 1px solid var(--border2);
-      border-radius: var(--radius); padding: 24px 20px; text-align: center;
-      position: relative; z-index: 1; transition: all .3s;
-    }
-    .step:hover { border-color: var(--blue); transform: translateY(-4px); }
-    .step-n { font-size: 11px; font-weight: 700; color: var(--blue); letter-spacing: 1.2px; margin-bottom: 10px; }
-    .step-ico {
-      width: 56px; height: 56px; background: rgba(59,130,246,.1);
-      border: 1px solid rgba(59,130,246,.25); border-radius: 14px;
-      display: flex; align-items: center; justify-content: center; font-size: 22px;
-      margin: 0 auto 14px;
-    }
-    .step-title { font-size: 14px; font-weight: 700; margin-bottom: 7px; }
-    .step-desc  { font-size: 12px; color: var(--text2); line-height: 1.55; }
+    /* ─── CAREER ─── */
+    .career-sec { padding:96px 0; }
+    .career-grid { display:grid; grid-template-columns:1fr 1fr; gap:80px; align-items:center; }
+    .c-imgs { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .c-img { border-radius:14px; overflow:hidden; }
+    .c-img:first-child { grid-row:span 2; }
+    .c-img-ph { width:100%; height:100%; min-height:130px; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px; }
+    .c-img-ph span { font-size:10px; color:rgba(255,255,255,.3); letter-spacing:2px; text-transform:uppercase; }
 
-    /* ─── ACHIEVEMENTS ───────────────────── */
-    .ach-sec { padding: 80px 0; position: relative; overflow: hidden; }
-    .ach-sec::before {
-      content: ''; position: absolute; inset: 0;
-      background: radial-gradient(ellipse at 50% 50%, rgba(59,130,246,.07) 0%, transparent 68%);
-    }
-    .ach-box {
-      border: 1px solid rgba(59,130,246,.22); border-radius: 24px; padding: 56px 60px;
-      background: rgba(59,130,246,.03); position: relative;
-    }
-    .ach-top { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: center; margin-bottom: 44px; }
-    .ach-tag { font-size: 11px; font-weight: 700; color: var(--blue); letter-spacing: 1.8px; text-transform: uppercase; margin-bottom: 10px; }
-    .ach-title { font-size: 34px; font-weight: 800; line-height: 1.22; }
-    .ach-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 20px; }
-    .ach-item {
-      text-align: center; padding: 22px 16px;
-      background: rgba(59,130,246,.05); border: 1px solid rgba(59,130,246,.14);
-      border-radius: 14px;
-    }
-    .ach-ico { width: 42px; height: 42px; background: rgba(59,130,246,.1); border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 19px; margin: 0 auto 10px; }
-    .ach-val {
-      font-size: 34px; font-weight: 900; line-height: 1; margin-bottom: 5px;
-      background: var(--gradient); -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent; background-clip: text;
-    }
-    .ach-lbl { font-size: 12px; color: var(--text2); }
+    /* ─── FOOTER ─── */
+    .footer { background:#050a18; border-top:1px solid var(--border2); padding:60px 0 28px; }
+    .f-grid { display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr; gap:44px; margin-bottom:44px; }
+    .f-brand { max-width:250px; }
+    .f-desc { font-size:13px; color:var(--text2); line-height:1.7; margin:14px 0 20px; }
+    .socials { display:flex; gap:8px; }
+    .soc-a { width:34px; height:34px; border-radius:9px; background:var(--card); border:1px solid var(--border2); display:flex; align-items:center; justify-content:center; color:var(--text2); text-decoration:none; transition:all .2s; }
+    .soc-a:hover { border-color:var(--blue); color:var(--blue); }
+    .f-col h4 { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1.2px; margin-bottom:18px; }
+    .f-col ul { list-style:none; display:flex; flex-direction:column; gap:10px; }
+    .f-col a { font-size:13px; color:var(--text2); text-decoration:none; transition:color .2s; }
+    .f-col a:hover { color:var(--text); }
+    .f-bottom { border-top:1px solid var(--border2); padding-top:22px; text-align:center; font-size:13px; color:var(--text3); }
 
-    /* ─── CAREER ─────────────────────────── */
-    .career-sec { padding: 96px 0; }
-    .career-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
-    .c-imgs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .c-img { border-radius: 14px; overflow: hidden; }
-    .c-img:first-child { grid-row: span 2; min-height: 280px; }
-    .c-img-ph { width: 100%; height: 100%; min-height: 130px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 6px; }
+    /* ─── ANIMATIONS ─── */
+    .fi { opacity:0; transform:translateY(22px); transition:opacity .65s ease,transform .65s ease; }
+    .fi.vis { opacity:1; transform:translateY(0); }
 
-    /* ─── FOOTER ─────────────────────────── */
-    .footer { background: #050a18; border-top: 1px solid var(--border2); padding: 60px 0 28px; }
-    .f-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 44px; margin-bottom: 44px; }
-    .f-brand { max-width: 250px; }
-    .f-desc { font-size: 13px; color: var(--text2); line-height: 1.7; margin: 14px 0 20px; }
-    .socials { display: flex; gap: 8px; }
-    .soc-a {
-      width: 34px; height: 34px; border-radius: 9px;
-      background: var(--card); border: 1px solid var(--border2);
-      display: flex; align-items: center; justify-content: center;
-      color: var(--text2); text-decoration: none; font-size: 14px; transition: all .2s;
+    /* ─── RESPONSIVE ─── */
+    @media (max-width:1100px) {
+      .hero-wrap,.feat-head,.about-grid,.career-grid,.ach-top { grid-template-columns:1fr; gap:44px; }
+      .hero-visual { display:none; }
+      .stats-grid { grid-template-columns:repeat(2,1fr); }
+      .feat-grid { grid-template-columns:repeat(2,1fr); }
+      .ach-stats { grid-template-columns:repeat(2,1fr); }
+      .steps { grid-template-columns:repeat(2,1fr); }
+      .steps::after { display:none; }
+      .f-grid { grid-template-columns:1fr 1fr 1fr; }
+      .f-brand { grid-column:span 3; max-width:100%; }
     }
-    .soc-a:hover { border-color: var(--blue); color: var(--blue); }
-    .f-col h4 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 18px; }
-    .f-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-    .f-col a { font-size: 13px; color: var(--text2); text-decoration: none; transition: color .2s; }
-    .f-col a:hover { color: var(--text); }
-    .f-bottom { border-top: 1px solid var(--border2); padding-top: 22px; text-align: center; font-size: 13px; color: var(--text3); }
-
-    /* ─── FADE IN ANIMATION ──────────────── */
-    .fi { opacity: 0; transform: translateY(22px); transition: opacity .65s ease, transform .65s ease; }
-    .fi.vis { opacity: 1; transform: translateY(0); }
-
-    /* ─── RESPONSIVE ─────────────────────── */
-    @media (max-width: 1100px) {
-      .hero-wrap, .feat-head, .about-grid, .career-grid, .ach-top {
-        grid-template-columns: 1fr; gap: 44px;
-      }
-      .hero-visual { display: none; }
-      .stats-grid { grid-template-columns: repeat(2,1fr); }
-      .feat-grid   { grid-template-columns: repeat(2,1fr); }
-      .ach-stats   { grid-template-columns: repeat(2,1fr); }
-      .steps       { grid-template-columns: repeat(2,1fr); }
-      .steps::after { display: none; }
-      .f-grid { grid-template-columns: 1fr 1fr 1fr; }
-      .f-brand { grid-column: span 3; max-width: 100%; }
+    @media (max-width:768px) {
+      .nav-links { display:none; }
+      .hamburger { display:flex; }
+      .hero { padding:116px 0 56px; }
+      .hero-title { font-size:36px; }
+      .sec-title { font-size:30px; }
+      .news-grid { grid-template-columns:1fr; }
+      .ach-box { padding:32px 20px; }
+      .ach-title { font-size:26px; }
+      .f-grid { grid-template-columns:1fr 1fr; }
+      .f-brand { grid-column:span 2; }
     }
-    @media (max-width: 768px) {
-      .nav-links { display: none; }
-      .hamburger { display: flex; }
-      .hero { padding: 116px 0 56px; }
-      .hero-title { font-size: 36px; }
-      .sec-title { font-size: 30px; }
-      .news-grid { grid-template-columns: 1fr; }
-      .ach-box { padding: 32px 20px; }
-      .ach-title { font-size: 26px; }
-      .f-grid { grid-template-columns: 1fr 1fr; }
-      .f-brand { grid-column: span 2; }
-    }
-    @media (max-width: 480px) {
-      .container { padding: 0 16px; }
-      .hero-title { font-size: 30px; }
-      .hero-btns { flex-direction: column; align-items: stretch; }
-      .stats-grid, .ach-stats { grid-template-columns: 1fr 1fr; }
-      .feat-grid, .steps { grid-template-columns: 1fr; }
-      .f-grid { grid-template-columns: 1fr; }
-      .f-brand { grid-column: span 1; }
+    @media (max-width:480px) {
+      .container { padding:0 16px; }
+      .hero-title { font-size:30px; }
+      .hero-btns { flex-direction:column; align-items:stretch; }
+      .stats-grid,.ach-stats { grid-template-columns:1fr 1fr; }
+      .feat-grid,.steps { grid-template-columns:1fr; }
+      .f-grid { grid-template-columns:1fr; }
+      .f-brand { grid-column:span 1; }
     }
   </style>
 </head>
@@ -500,21 +289,27 @@
         <li><a href="#aloqa">Aloqa</a></li>
       </ul>
       <div class="nav-actions">
-        <button class="theme-btn" id="themeBtn" title="Mavzu">☀️</button>
-        <a href="/login" class="btn-primary">Tizimga kirish →</a>
-        <button class="hamburger" id="hbBtn">☰</button>
+        <button class="icon-btn" id="themeBtn" title="Mavzu">
+          <svg id="themeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        </button>
+        <a href="/login" class="btn-primary">Tizimga kirish
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
+        <button class="icon-btn hamburger" id="hbBtn">
+          <svg id="hbIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
       </div>
     </div>
   </div>
 </nav>
 
 <div class="mobile-nav" id="mNav">
-  <a href="#hero"        onclick="cm()">Bosh sahifa</a>
-  <a href="#haqimizda"   onclick="cm()">Biz haqimizda</a>
-  <a href="#imkoniyatlar" onclick="cm()">Imkoniyatlar</a>
-  <a href="#yangiliklar" onclick="cm()">Yangiliklar</a>
-  <a href="#karyera"     onclick="cm()">Karyera</a>
-  <a href="#aloqa"       onclick="cm()">Aloqa</a>
+  <a href="#hero"          onclick="cm()">Bosh sahifa</a>
+  <a href="#haqimizda"     onclick="cm()">Biz haqimizda</a>
+  <a href="#imkoniyatlar"  onclick="cm()">Imkoniyatlar</a>
+  <a href="#yangiliklar"   onclick="cm()">Yangiliklar</a>
+  <a href="#karyera"       onclick="cm()">Karyera</a>
+  <a href="#aloqa"         onclick="cm()">Aloqa</a>
   <a href="/login" class="btn-primary">Tizimga kirish →</a>
 </div>
 
@@ -522,9 +317,11 @@
 <section class="hero" id="hero">
   <div class="container">
     <div class="hero-wrap">
-      <!-- Left -->
       <div>
-        <div class="hero-tag">◇ RAQAMLI BOSHQARUV TIZIMI</div>
+        <div class="hero-tag">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+          RAQAMLI BOSHQARUV TIZIMI
+        </div>
         <h1 class="hero-title">
           O'zbekiston 24<br>
           jamoasi uchun<br>
@@ -533,8 +330,13 @@
         </h1>
         <p class="hero-desc">Xodimlar ish jadvali, vazifalar, hujjatlar, hisobotlar va ko'plab jarayonlarni yagona platformada boshqaring.</p>
         <div class="hero-btns">
-          <a href="/login" class="btn-primary">Tizimga kirish →</a>
-          <a href="#imkoniyatlar" class="btn-outline">▷ Imkoniyatlarni ko'rish</a>
+          <a href="/login" class="btn-primary">Tizimga kirish
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </a>
+          <a href="#imkoniyatlar" class="btn-outline">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Imkoniyatlarni ko'rish
+          </a>
         </div>
         <div class="social-proof">
           <div class="avatars">
@@ -548,23 +350,21 @@
         </div>
       </div>
 
-      <!-- Right: Device mockup -->
+      <!-- Device mockup -->
       <div class="hero-visual">
         <!-- Floating badge 1 -->
         <div class="fc fc1">
-          <div class="fc-icon" style="background:rgba(34,197,94,.14)">✅</div>
-          <div>
-            <div class="fc-label">Bugungi vazifalar</div>
-            <div class="fc-val" style="color:#22c55e">12 / 14 bajarildi</div>
+          <div class="fc-icon" style="background:rgba(34,197,94,.14);color:#22c55e">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
+          <div><div class="fc-label">Bugungi vazifalar</div><div class="fc-val" style="color:#22c55e">12 / 14 bajarildi</div></div>
         </div>
         <!-- Floating badge 2 -->
         <div class="fc fc2">
-          <div class="fc-icon" style="background:rgba(59,130,246,.14)">👥</div>
-          <div>
-            <div class="fc-label">Faol xodimlar</div>
-            <div class="fc-val" style="color:#3b82f6">87 ishda</div>
+          <div class="fc-icon" style="background:rgba(59,130,246,.14);color:#3b82f6">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
+          <div><div class="fc-label">Faol xodimlar</div><div class="fc-val" style="color:#3b82f6">87 ishda</div></div>
         </div>
 
         <!-- Laptop -->
@@ -572,12 +372,8 @@
           <div class="l-screen">
             <div class="ap">
               <div class="ap-side">
-                <div class="ap-dot on"></div>
-                <div class="ap-dot b" style="background:rgba(59,130,246,.2)"></div>
-                <div class="ap-dot"></div>
-                <div class="ap-dot p"></div>
-                <div class="ap-dot g"></div>
-                <div class="ap-dot"></div>
+                <div class="ap-dot on"></div><div class="ap-dot b" style="background:rgba(59,130,246,.2)"></div>
+                <div class="ap-dot"></div><div class="ap-dot p"></div><div class="ap-dot g"></div><div class="ap-dot"></div>
               </div>
               <div class="ap-body">
                 <div class="ap-bar">
@@ -592,16 +388,11 @@
                   <div class="ap-stat-box"><div class="ap-s-l"></div><div class="ap-s-v" style="background:rgba(249,115,22,.55)"></div></div>
                 </div>
                 <div class="ap-chart">
-                  <div class="ap-bar-c" style="height:38%"></div>
-                  <div class="ap-bar-c" style="height:62%"></div>
-                  <div class="ap-bar-c" style="height:48%"></div>
-                  <div class="ap-bar-c hi" style="height:88%"></div>
-                  <div class="ap-bar-c" style="height:68%"></div>
-                  <div class="ap-bar-c" style="height:52%"></div>
-                  <div class="ap-bar-c" style="height:92%"></div>
-                  <div class="ap-bar-c" style="height:58%"></div>
-                  <div class="ap-bar-c" style="height:74%"></div>
-                  <div class="ap-bar-c" style="height:44%"></div>
+                  <div class="ap-bar-c" style="height:38%"></div><div class="ap-bar-c" style="height:62%"></div>
+                  <div class="ap-bar-c" style="height:48%"></div><div class="ap-bar-c hi" style="height:88%"></div>
+                  <div class="ap-bar-c" style="height:68%"></div><div class="ap-bar-c" style="height:52%"></div>
+                  <div class="ap-bar-c" style="height:92%"></div><div class="ap-bar-c" style="height:58%"></div>
+                  <div class="ap-bar-c" style="height:74%"></div><div class="ap-bar-c" style="height:44%"></div>
                 </div>
                 <div class="ap-table">
                   <div class="ap-row" style="background:rgba(59,130,246,.08)">
@@ -609,21 +400,9 @@
                     <div class="ap-cell" style="flex:1;background:rgba(255,255,255,.15)"></div>
                     <div class="ap-cell" style="width:28px;background:rgba(34,197,94,.42)"></div>
                   </div>
-                  <div class="ap-row">
-                    <div class="ap-cell" style="width:56px"></div>
-                    <div class="ap-cell" style="flex:1"></div>
-                    <div class="ap-cell" style="width:28px;background:rgba(34,197,94,.28)"></div>
-                  </div>
-                  <div class="ap-row">
-                    <div class="ap-cell" style="width:56px"></div>
-                    <div class="ap-cell" style="flex:1"></div>
-                    <div class="ap-cell" style="width:28px;background:rgba(249,115,22,.28)"></div>
-                  </div>
-                  <div class="ap-row" style="border:none">
-                    <div class="ap-cell" style="width:56px"></div>
-                    <div class="ap-cell" style="flex:1"></div>
-                    <div class="ap-cell" style="width:28px;background:rgba(239,68,68,.28)"></div>
-                  </div>
+                  <div class="ap-row"><div class="ap-cell" style="width:56px"></div><div class="ap-cell" style="flex:1"></div><div class="ap-cell" style="width:28px;background:rgba(34,197,94,.28)"></div></div>
+                  <div class="ap-row"><div class="ap-cell" style="width:56px"></div><div class="ap-cell" style="flex:1"></div><div class="ap-cell" style="width:28px;background:rgba(249,115,22,.28)"></div></div>
+                  <div class="ap-row" style="border:none"><div class="ap-cell" style="width:56px"></div><div class="ap-cell" style="flex:1"></div><div class="ap-cell" style="width:28px;background:rgba(239,68,68,.28)"></div></div>
                 </div>
               </div>
             </div>
@@ -669,19 +448,27 @@
   <div class="container">
     <div class="stats-grid fi">
       <div class="s-card">
-        <div class="s-ico b">👥</div>
+        <div class="s-ico b">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
         <div><div class="s-val">100+</div><div class="s-lbl">Faol xodimlar</div></div>
       </div>
       <div class="s-card">
-        <div class="s-ico p">📋</div>
+        <div class="s-ico p">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+        </div>
         <div><div class="s-val">500+</div><div class="s-lbl">Vazifalar har oyda</div></div>
       </div>
       <div class="s-card">
-        <div class="s-ico g">📄</div>
+        <div class="s-ico g">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
         <div><div class="s-val">1000+</div><div class="s-lbl">Hujjatlar saqlangan</div></div>
       </div>
       <div class="s-card">
-        <div class="s-ico o">📊</div>
+        <div class="s-ico o">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
+        </div>
         <div><div class="s-val">99.9%</div><div class="s-lbl">Tizim barqorligi</div></div>
       </div>
     </div>
@@ -698,37 +485,51 @@
       </div>
       <div>
         <p class="sec-desc" style="margin-bottom:22px">Uz24 StaffFlow sizga kundalik ishlaringizni samarali boshqarish uchun barcha imkoniyatlarni taqdim etadi.</p>
-        <a href="/login" class="btn-primary">Barcha imkoniyatlar →</a>
+        <a href="/login" class="btn-primary">Barcha imkoniyatlar
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
       </div>
     </div>
     <div class="feat-grid fi">
       <div class="f-card">
-        <div class="f-ico b">📅</div>
+        <div class="f-ico b">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
         <div class="f-title">Ish jadvali</div>
         <div class="f-desc">Bugungi va ertangi ish rejasini ko'ring, smena va studiya jadvali</div>
       </div>
       <div class="f-card">
-        <div class="f-ico g">✅</div>
+        <div class="f-ico g">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
         <div class="f-title">Vazifalar</div>
         <div class="f-desc">Shaxsiy va jamoaviy vazifalar, muddati va holati boshqaruvi</div>
       </div>
       <div class="f-card">
-        <div class="f-ico o">📁</div>
+        <div class="f-ico o">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        </div>
         <div class="f-title">Hujjatlar</div>
         <div class="f-desc">Hujjatlarni yuklash, tahrirlash, saqlash va almashish</div>
       </div>
       <div class="f-card">
-        <div class="f-ico r">📊</div>
+        <div class="f-ico r">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
+        </div>
         <div class="f-title">Hisobotlar</div>
         <div class="f-desc">Kundalik, haftalik va oylik ish faoliyati hisobotlari</div>
       </div>
       <div class="f-card">
-        <div class="f-ico p">💰</div>
+        <div class="f-ico p">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        </div>
         <div class="f-title">Oylik maosh</div>
         <div class="f-desc">Ish saatlari, ustamalar va maosh hisob-kitobi</div>
       </div>
       <div class="f-card">
-        <div class="f-ico t">📈</div>
+        <div class="f-ico t">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        </div>
         <div class="f-title">Statistika</div>
         <div class="f-desc">Sizning samaradorligingiz bo'yicha batafsil tahlillar</div>
       </div>
@@ -744,46 +545,54 @@
         <div class="sec-tag">YANGILIKLAR</div>
         <h2 class="sec-title">So'nggi yangiliklar</h2>
       </div>
-      <a href="#" class="btn-outline">Barcha yangiliklar →</a>
+      <a href="#" class="btn-outline">Barcha yangiliklar
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
     </div>
     <div class="news-grid fi">
       <div class="n-card">
         <div class="n-img">
           <div class="n-img-ph" style="background:linear-gradient(135deg,#1a2d50,#0d1e3a)">
-            <div style="font-size:44px">📺</div>
-            <div style="font-size:10px;color:rgba(255,255,255,.3);letter-spacing:2px">STUDIO</div>
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <span>STUDIO</span>
           </div>
         </div>
         <div class="n-body">
           <div class="n-date">14 May, 2024</div>
           <div class="n-title">Yangi studio jihozlari ishga tushirildi</div>
-          <a href="#" class="n-link">Batafsil →</a>
+          <a href="#" class="n-link">Batafsil
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </a>
         </div>
       </div>
       <div class="n-card">
         <div class="n-img">
           <div class="n-img-ph" style="background:linear-gradient(135deg,#1a3040,#0d2030)">
-            <div style="font-size:44px">👥</div>
-            <div style="font-size:10px;color:rgba(255,255,255,.3);letter-spacing:2px">TRAINING</div>
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span>TRAINING</span>
           </div>
         </div>
         <div class="n-body">
           <div class="n-date">12 May, 2024</div>
           <div class="n-title">Jamoa uchun trening bo'lib o'tdi</div>
-          <a href="#" class="n-link">Batafsil →</a>
+          <a href="#" class="n-link">Batafsil
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </a>
         </div>
       </div>
       <div class="n-card">
         <div class="n-img">
           <div class="n-img-ph" style="background:linear-gradient(135deg,#1a1a40,#0d0d30)">
-            <div style="font-size:44px">🚀</div>
-            <div style="font-size:10px;color:rgba(255,255,255,.3);letter-spacing:2px">STAFFFLOW</div>
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+            <span>STAFFFLOW</span>
           </div>
         </div>
         <div class="n-body">
           <div class="n-date">10 May, 2024</div>
           <div class="n-title">Uz24 StaffFlow yangilanishi taqdim etildi</div>
-          <a href="#" class="n-link">Batafsil →</a>
+          <a href="#" class="n-link">Batafsil
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </a>
         </div>
       </div>
     </div>
@@ -800,25 +609,22 @@
         <p class="sec-desc">Uz24 StaffFlow — O'zbekiston 24 telekanal jamoasi uchun yaratilgan zamonaviy raqamli platforma. Bizning maqsadimiz kundalik ish jarayonlarini soddalashtirish, samaradorlikni oshirish va vaqtni tejash.</p>
         <div class="about-feats fi">
           <div class="ab-feat">
-            <div class="ab-ico">🏢</div>
-            <div>
-              <div class="ab-title">Markazlashgan boshqaruv</div>
-              <div class="ab-desc">Barcha ma'lumotlar yagona tizimda jamlangan</div>
+            <div class="ab-ico">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
             </div>
+            <div><div class="ab-title">Markazlashgan boshqaruv</div><div class="ab-desc">Barcha ma'lumotlar yagona tizimda jamlangan</div></div>
           </div>
           <div class="ab-feat">
-            <div class="ab-ico">⚡</div>
-            <div>
-              <div class="ab-title">Tezkor xabardorlik</div>
-              <div class="ab-desc">Real vaqt rejimida bildirishnomalar va yangiliklar</div>
+            <div class="ab-ico">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             </div>
+            <div><div class="ab-title">Tezkor xabardorlik</div><div class="ab-desc">Real vaqt rejimida bildirishnomalar va yangiliklar</div></div>
           </div>
           <div class="ab-feat">
-            <div class="ab-ico">🔒</div>
-            <div>
-              <div class="ab-title">Xavfsiz va ishonchli</div>
-              <div class="ab-desc">Ma'lumotlaringiz to'liq himoyalangan</div>
+            <div class="ab-ico">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             </div>
+            <div><div class="ab-title">Xavfsiz va ishonchli</div><div class="ab-desc">Ma'lumotlaringiz to'liq himoyalangan</div></div>
           </div>
         </div>
       </div>
@@ -845,25 +651,33 @@
     <div class="steps fi">
       <div class="step">
         <div class="step-n">01</div>
-        <div class="step-ico">🔑</div>
+        <div class="step-ico">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        </div>
         <div class="step-title">Tizimga kirish</div>
-        <div class="step-desc">Shaxsiy akkauntingiz orqali tizimga kiring</div>
+        <div class="step-desc">Shaxsiy PIN kodingiz orqali tizimga kiring</div>
       </div>
       <div class="step">
         <div class="step-n">02</div>
-        <div class="step-ico">📋</div>
+        <div class="step-ico">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><line x1="9" y1="14" x2="15" y2="14"/><line x1="9" y1="18" x2="12" y2="18"/></svg>
+        </div>
         <div class="step-title">Vazifalarni ko'rish</div>
         <div class="step-desc">Bugungi va ertangi vazifalaringizni ko'ring</div>
       </div>
       <div class="step">
         <div class="step-n">03</div>
-        <div class="step-ico">⚡</div>
+        <div class="step-ico">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
         <div class="step-title">Ishni bajarish</div>
         <div class="step-desc">Belgilangan vazifani muddatga bajaring</div>
       </div>
       <div class="step">
         <div class="step-n">04</div>
-        <div class="step-ico">📊</div>
+        <div class="step-ico">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
+        </div>
         <div class="step-title">Hisobot topshirish</div>
         <div class="step-desc">Natijani tizim orqali hisobot ko'rinishida yuboring</div>
       </div>
@@ -884,22 +698,30 @@
       </div>
       <div class="ach-stats fi">
         <div class="ach-item">
-          <div class="ach-ico">🕐</div>
+          <div class="ach-ico">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
           <div class="ach-val">24/7</div>
           <div class="ach-lbl">Tizim doimiy ishlaydi</div>
         </div>
         <div class="ach-item">
-          <div class="ach-ico">✅</div>
+          <div class="ach-ico">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
           <div class="ach-val">100%</div>
           <div class="ach-lbl">Ma'lumot xavfsizligi</div>
         </div>
         <div class="ach-item">
-          <div class="ach-ico">👥</div>
+          <div class="ach-ico">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
           <div class="ach-val">50+</div>
           <div class="ach-lbl">Faol bo'limlar</div>
         </div>
         <div class="ach-item">
-          <div class="ach-ico">💾</div>
+          <div class="ach-ico">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+          </div>
           <div class="ach-val">1M+</div>
           <div class="ach-lbl">Saqlangan ma'lumotlar</div>
         </div>
@@ -916,25 +738,27 @@
         <div class="sec-tag">KARYERA</div>
         <h2 class="sec-title">Biz bilan birga rivojlaning</h2>
         <p class="sec-desc" style="margin-bottom:28px">O'zbekiston 24 jamoasiga qo'shiling va professional o'sish imkoniyatiga ega bo'ling.</p>
-        <a href="#aloqa" class="btn-primary">Vakansiyalarni ko'rish →</a>
+        <a href="#aloqa" class="btn-primary">Vakansiyalarni ko'rish
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
       </div>
       <div class="c-imgs">
-        <div class="c-img">
+        <div class="c-img" style="min-height:280px">
           <div class="c-img-ph" style="background:linear-gradient(135deg,#1a2d50,#0d1a35);border-radius:14px;min-height:280px">
-            <div style="font-size:52px">🎬</div>
-            <div style="font-size:10px;color:rgba(255,255,255,.3);letter-spacing:2px">KAMERA OPERATORI</div>
+            <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+            <span>KAMERA OPERATORI</span>
           </div>
         </div>
         <div class="c-img">
           <div class="c-img-ph" style="background:linear-gradient(135deg,#1a3040,#0d2030);border-radius:14px">
-            <div style="font-size:36px">🎤</div>
-            <div style="font-size:10px;color:rgba(255,255,255,.3);letter-spacing:2px">MUXBIR</div>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            <span>MUXBIR</span>
           </div>
         </div>
         <div class="c-img">
           <div class="c-img-ph" style="background:linear-gradient(135deg,#1a1a40,#0d0d30);border-radius:14px">
-            <div style="font-size:36px">🎞️</div>
-            <div style="font-size:10px;color:rgba(255,255,255,.3);letter-spacing:2px">REJISSYOR</div>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>
+            <span>REJISSYOR</span>
           </div>
         </div>
       </div>
@@ -1011,45 +835,47 @@
 </footer>
 
 <script>
-  // Theme toggle
   var dark = true;
+  var sunSvg  = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
+  var moonSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+  var menuSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>';
+  var closeSvg= '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+
   var themeBtn = document.getElementById('themeBtn');
+  var hbBtn    = document.getElementById('hbBtn');
+  var mNav     = document.getElementById('mNav');
+
   themeBtn.onclick = function() {
     dark = !dark;
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-    themeBtn.textContent = dark ? '☀️' : '🌙';
+    themeBtn.innerHTML = dark ? sunSvg : moonSvg;
   };
 
-  // Mobile menu
-  var hbBtn = document.getElementById('hbBtn');
-  var mNav  = document.getElementById('mNav');
   hbBtn.onclick = function() {
     mNav.classList.toggle('open');
-    hbBtn.textContent = mNav.classList.contains('open') ? '✕' : '☰';
+    hbBtn.innerHTML = mNav.classList.contains('open') ? closeSvg : menuSvg;
   };
+
   function cm() {
     mNav.classList.remove('open');
-    hbBtn.textContent = '☰';
+    hbBtn.innerHTML = menuSvg;
   }
 
-  // Scroll fade-in
   var io = new IntersectionObserver(function(entries) {
     entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
   }, { threshold: 0.1 });
   document.querySelectorAll('.fi').forEach(function(el) { io.observe(el); });
 
-  // Navbar shadow on scroll
   window.addEventListener('scroll', function() {
     document.getElementById('nav').style.boxShadow =
       window.scrollY > 40 ? '0 4px 28px rgba(0,0,0,.45)' : 'none';
   });
 
-  // Smooth anchor scroll
   document.querySelectorAll('a[href^="#"]').forEach(function(a) {
     a.addEventListener('click', function(e) {
       var id = a.getAttribute('href').slice(1);
       var el = id ? document.getElementById(id) : document.body;
-      if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); cm(); }
+      if (el) { e.preventDefault(); el.scrollIntoView({ behavior:'smooth', block:'start' }); cm(); }
     });
   });
 </script>
