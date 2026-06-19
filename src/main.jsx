@@ -3180,10 +3180,6 @@ function StudioPage({ currentUser, departments, onLoadDepartments, dashboard, on
   const [draft, setDraft] = useState(blankEmployee);
   const [editingId, setEditingId] = useState(null);
   const formRef = useRef(null);
-  const today = dashboard.studioToday?.[0];
-  const todayNow = new Date();
-  const UZ_MONTHS_TEAM = ["Yan","Fev","Mar","Apr","May","Iyn","Iyl","Avg","Sen","Okt","Noy","Dek"];
-  const todayDateStr = `${todayNow.getDate()}-${UZ_MONTHS_TEAM[todayNow.getMonth()]}, ${todayNow.getFullYear()}`;
   const visibleEmployees = dashboard.employees.filter((employee) => {
     const query = search.trim().toLowerCase();
     const matchesDepartment = activeDepartment === "all" || employee.department === activeDepartment;
@@ -3238,16 +3234,6 @@ function StudioPage({ currentUser, departments, onLoadDepartments, dashboard, on
 
   return (
     <section className="team-page" aria-label="Jamoa bo'limi">
-      <section className="team-daily-card">
-        <div>
-          <strong>KUNLIK JADVAL</strong>
-          <span>BUGUN: {todayDateStr}</span>
-          {today && <span>Bosh Operator: {today.name}</span>}
-          <span>{dashboard.metrics.workingToday ?? dashboard.metrics.working} ta ishda bugun</span>
-        </div>
-        <button type="button" onClick={() => onOpenMonthly?.()}>Oylik grafik</button>
-      </section>
-
       <label className="team-search">
         <span><Search size={15} /></span>
         <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Jamoa azolarini ism yoki bo'lim bo'yicha qidirish..." />
