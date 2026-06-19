@@ -54,6 +54,7 @@ const WEEK_DAYS = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "S
 const DAY_TABS = ["Bugun", ...WEEK_DAYS, "Barcha kunlar"];
 const MONTH_NAMES = ["Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun", "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr"];
 const STATUS_OPTIONS = [
+  { id: "ishda", code: "I", label: "Ishda", metric: "working" },
   { id: "working", code: "S", label: "Studiyada", metric: "working" },
   { id: "rest", code: "D", label: "Damda", metric: "rest" },
   { id: "trip", code: "K", label: "Komandirovka", metric: "away" },
@@ -6357,7 +6358,7 @@ function ClockTimePicker({ valueH, valueM, period, onSelect, label }) {
 // ─── VazifalarPage ────────────────────────────────────────────────────────────
 function VazifalarPage({ currentUser, onNotify, onNotificationsRefresh }) {
   const [tasks, setTasks] = useState([]);
-  const [users, setUsers] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const emptyDraft = { title: "", description: "", assignedToId: "", dueDate: "", timeFromH: null, timeFromM: 0, timeFromP: "AM", timeToH: null, timeToM: 0, timeToP: "PM" };
@@ -6367,7 +6368,7 @@ function VazifalarPage({ currentUser, onNotify, onNotificationsRefresh }) {
   const [rejectReason, setRejectReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => { loadTasks(); loadUsers(); }, []);
+  useEffect(() => { loadTasks(); loadEmployees(); }, []);
 
   async function loadTasks() {
     try {
@@ -6377,11 +6378,11 @@ function VazifalarPage({ currentUser, onNotify, onNotificationsRefresh }) {
     finally { setLoading(false); }
   }
 
-  async function loadUsers() {
+  async function loadEmployees() {
     try {
-      const data = await api("/api/users");
-      setUsers((data.users || []).filter((u) => u.isActive));
-    } catch {}
+      const data = await api("/api/employees");
+      setEmployees(data.employees || []);
+    } catch (err) { onNotify(err.message, "error"); }
   }
 
   function toHHMM(h, m, p) {
@@ -6561,8 +6562,8 @@ function VazifalarPage({ currentUser, onNotify, onNotificationsRefresh }) {
                 <span>Xodim tanlash *</span>
                 <select value={draft.assignedToId} onChange={(e) => setDraft({ ...draft, assignedToId: e.target.value })} required>
                   <option value="">— Xodimni tanlang —</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>{u.fullName} ({u.role})</option>
+                  {employees.map((e) => (
+                    <option key={e.id} value={e.id}>{e.name} ({e.role})</option>
                   ))}
                 </select>
               </label>

@@ -101,6 +101,7 @@ function saveDepartments() {
   try { writeFileSync(DEPTS_FILE, JSON.stringify(departments, null, 2)); } catch {}
 }
 const statusMap = {
+  ishda: "Ishda",
   working: "Studiyada",
   rest: "Damda",
   backup: "Zaxira",
@@ -114,6 +115,7 @@ const statusMap = {
   sick: "Balnishniy"
 };
 const statusMetricMap = {
+  ishda: "working",
   working: "working",
   backup: "working",
   tjk: "working",
@@ -125,6 +127,17 @@ const statusMetricMap = {
   unpaid: "rest",
   sick: "rest",
   trip: "away"
+};
+// Oylik grafik bilan bir xil status manbasi (db.dailyStatuses) — kunlik ish jadvali shu yerdan o'qiydi
+const DAILY_CODE_TO_STATUS_TYPE = {
+  I: "ishda", S: "working", T: "tjk", K: "trip", D: "rest",
+  M: "vacation", O: "otpiska", A: "administration", P: "presidential",
+  B: "sick", U: "unpaid"
+};
+const STATUS_TYPE_TO_DAILY_CODE = {
+  ishda: "I", working: "S", tjk: "T", trip: "K", rest: "D",
+  vacation: "M", otpiska: "O", administration: "A", presidential: "P",
+  sick: "B", unpaid: "U", backup: "I"
 };
 
 const initialEmployees = [
@@ -582,11 +595,12 @@ function getAuthUser(request, response, adminOnly = false) {
   return user;
 }
 function enrichTask(t) {
-  const toUser = db.users.find((u) => u.id === t.assignedToId);
+  // assignedToId — Employee id (xodim), assignedById — User id (vazifa bergan admin)
+  const toEmployee = db.employees.find((e) => e.id === t.assignedToId);
   const byUser = db.users.find((u) => u.id === t.assignedById);
   return {
     ...t,
-    assignedTo: toUser ? { id: toUser.id, fullName: toUser.fullName, username: toUser.username } : { id: t.assignedToId, fullName: "Noma'lum", username: "" },
+    assignedTo: toEmployee ? { id: toEmployee.id, fullName: toEmployee.name, username: "" } : { id: t.assignedToId, fullName: "Noma'lum", username: "" },
     assignedBy: byUser ? { id: byUser.id, fullName: byUser.fullName, username: byUser.username } : { id: t.assignedById, fullName: "Noma'lum", username: "" }
   };
 }
@@ -858,12 +872,11 @@ function buildAttendanceSummary() {
   };
 }
 
-function buildPerson(employee, studio, dayIndex, offset, seed) {
-  const rest = (employee.id + dayIndex + seed) % 7 === 0;
-  const backup = (employee.id + offset + seed) % 11 === 0;
-  const trip = (employee.id + dayIndex + offset + seed) % 13 === 0;
-  const tjk = studio.name.toLowerCase().includes("tjk") || (employee.department === "tjk" && (employee.id + dayIndex + seed) % 5 === 0);
-  const statusType = rest ? "rest" : tjk ? "tjk" : trip ? "trip" : backup ? "backup" : "working";
+function buildPerson(employee, studio, dateStr) {
+  const record = (db.dailyStatuses || []).find(
+    (s) => String(s.employeeId) === String(employee.id) && s.date === dateStr
+  );
+  const statusType = (record && DAILY_CODE_TO_STATUS_TYPE[record.statusCode]) || "ishda";
 
   return {
     ...scheduleEmployee(employee),
@@ -877,10 +890,11 @@ function buildPerson(employee, studio, dayIndex, offset, seed) {
 function createGroups(weekStart, seed) {
   return dayNames.flatMap((day, dayIndex) => {
     const date = addDays(weekStart, dayIndex);
+    const dateStr = formatInputDate(date);
 
     return studios.map((studio, studioIndex) => {
       const base = dayIndex * 2 + studioIndex * 3 + seed;
-      const people = [0, 1, 2].map((offset) => buildPerson(pickEmployee(base + offset), studio, dayIndex, offset, seed));
+      const people = [0, 1, 2].map((offset) => buildPerson(pickEmployee(base + offset), studio, dateStr));
 
       return {
         id: `${dayIndex}-${studio.name}`,
@@ -1090,7 +1104,7 @@ async function updateEmployee(id, payload) {
 
   db.employees[index] = cleanEmployeePayload(payload, db.employees[index]);
 
-  for (const schedule of Object.values(db.schedules)) {
+  for (const [scheduleKey, schedule] of Object.entries(db.schedules)) {
     schedule.employees = publicEmployees();
     schedule.groups = schedule.groups.map((group) => ({
       ...group,
@@ -1098,7 +1112,7 @@ async function updateEmployee(id, payload) {
         String(person.id) === String(id) ? { ...person, ...scheduleEmployee(db.employees[index]), time: person.time, employeeId: person.employeeId, status: person.status, statusType: person.statusType } : person
       ))
     }));
-    refreshScheduleDerivedData(schedule);
+    refreshScheduleDerivedData(schedule, scheduleKey);
   }
 
   pushAuditLog("UPDATE", "Employee", id, `${db.employees[index].name} yangilandi`);
@@ -1122,7 +1136,7 @@ async function deleteEmployee(id) {
       people: (group.people || []).filter((person) => String(person.id) !== String(id))
     }));
     schedule.employees = publicEmployees();
-    refreshScheduleDerivedData(schedule);
+    refreshScheduleDerivedData(schedule, key);
   }
 
   await saveDb();
@@ -1182,15 +1196,25 @@ async function scanAttendance(payload) {
   return { action: "checkin", employee: scheduleEmployee(employee), record, dashboard: getDashboard(payload.weekStart) };
 }
 
-function refreshScheduleDerivedData(schedule) {
+function refreshScheduleDerivedData(schedule, weekStartValue) {
   if (!Array.isArray(schedule.groups)) schedule.groups = [];
-  schedule.groups = schedule.groups.map((group) => ({
-    ...group,
-    people: group.people.map((person) => {
-      const employee = db.employees.find((item) => String(item.id) === String(person.id));
-      return employee ? { ...person, ...scheduleEmployee(employee), time: person.time, employeeId: person.employeeId, status: person.status, statusType: person.statusType } : person;
-    })
-  }));
+  const weekStart = weekStartValue ? getWeekStart(weekStartValue) : null;
+  schedule.groups = schedule.groups.map((group) => {
+    const dayIndex = Number(String(group.id).split("-")[0]);
+    const dateStr = weekStart && Number.isInteger(dayIndex) ? formatInputDate(addDays(weekStart, dayIndex)) : null;
+    return {
+      ...group,
+      people: group.people.map((person) => {
+        const employee = db.employees.find((item) => String(item.id) === String(person.id));
+        if (!employee) return person;
+        const record = dateStr ? (db.dailyStatuses || []).find(
+          (s) => String(s.employeeId) === String(employee.id) && s.date === dateStr
+        ) : null;
+        const statusType = record ? (DAILY_CODE_TO_STATUS_TYPE[record.statusCode] || "ishda") : person.statusType;
+        return { ...person, ...scheduleEmployee(employee), time: person.time, employeeId: person.employeeId, status: statusMap[statusType] || person.status, statusType };
+      })
+    };
+  });
 
   const allPeople = schedule.groups.flatMap((group) => group.people);
   const todayGroups = schedule.groups.filter((group) => group.day === "Dushanba");
@@ -1271,7 +1295,7 @@ function getDashboard(weekStartValue) {
   if (db.schedules[key]) {
     db.schedules[key].employees = publicEmployees();
     db.schedules[key].contacts = publicContacts();
-    refreshScheduleDerivedData(db.schedules[key]);
+    refreshScheduleDerivedData(db.schedules[key], key);
     data = db.schedules[key];
   } else {
     data = buildDashboard(key);
@@ -1307,10 +1331,16 @@ async function deleteSchedule(weekStartValue) {
 async function updatePersonStatus(weekStartValue, payload) {
   const key = getScheduleKey(weekStartValue);
   if (!db.schedules[key]) db.schedules[key] = buildDashboard(key, { saved: true });
-  const statusType = statusMap[payload.statusType] ? payload.statusType : "working";
+  const statusType = statusMap[payload.statusType] ? payload.statusType : "ishda";
 
   const schedule = db.schedules[key];
   let updated = false;
+
+  const dayIndex = Number(String(payload.groupId).split("-")[0]);
+  if (Number.isInteger(dayIndex)) {
+    const dateStr = formatInputDate(addDays(getWeekStart(weekStartValue), dayIndex));
+    upsertDailyStatus(payload.personId, dateStr, STATUS_TYPE_TO_DAILY_CODE[statusType] || "I");
+  }
 
   schedule.groups = schedule.groups.map((group) => {
     if (group.id !== payload.groupId) return group;
@@ -1330,7 +1360,7 @@ async function updatePersonStatus(weekStartValue, payload) {
 
   if (!updated) throw new Error("Jadvaldagi xodim topilmadi");
   schedule.week.saved = true;
-  refreshScheduleDerivedData(schedule);
+  refreshScheduleDerivedData(schedule, key);
   invalidateDashCache(key);
   await saveDb();
   return schedule;
@@ -1373,7 +1403,7 @@ async function addScheduleGroup(weekStartValue, payload) {
   schedule.week.saved = true;
   schedule.week.generatedAt = new Date().toLocaleString("uz-UZ", { hour: "2-digit", minute: "2-digit" });
   schedule.employees = publicEmployees();
-  refreshScheduleDerivedData(schedule);
+  refreshScheduleDerivedData(schedule, key);
   await saveDb();
   return schedule;
 }
@@ -1760,6 +1790,7 @@ export async function handleRequest(request, response) {
         update: { statusCode, updatedAt: new Date() },
         create: { id: `ds-${empId}-${date}`, employeeId: empId, date, statusCode }
       });
+      invalidateDashCache(getScheduleKey(date));
       return sendJson(response, 200, { ok: true, employeeId, date, statusCode });
     }
 
@@ -2362,7 +2393,7 @@ export async function handleRequest(request, response) {
       if (!db.tasks) db.tasks = [];
       const tasks = (["admin", "superadmin"].includes(user.role)
         ? db.tasks.filter((t) => t.assignedById === user.id)
-        : db.tasks.filter((t) => t.assignedToId === user.id))
+        : db.tasks.filter((t) => user.employeeId != null && t.assignedToId === Number(user.employeeId)))
         .map(enrichTask)
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       return sendJson(response, 200, { success: true, tasks });
@@ -2375,7 +2406,7 @@ export async function handleRequest(request, response) {
       if (!title?.trim()) return sendJson(response, 400, { message: "Vazifa nomini kiriting" });
       if (!assignedToId) return sendJson(response, 400, { message: "Xodimni tanlang" });
       const toId = Number(assignedToId);
-      const assignee = db.users.find((u) => u.id === toId);
+      const assignee = db.employees.find((e) => e.id === toId);
       if (!assignee) return sendJson(response, 404, { message: "Xodim topilmadi" });
       if (!db.tasks) db.tasks = [];
       const now = new Date().toISOString();
@@ -2383,8 +2414,9 @@ export async function handleRequest(request, response) {
       const fullDesc = timePrefix + (description ? String(description).trim() : "");
       const task = { id: nextTaskId(), title: String(title).trim(), description: fullDesc || null, assignedToId: toId, assignedById: user.id, status: "PENDING", rejectReason: null, dueDate: dueDate || null, completedAt: null, createdAt: now, updatedAt: now };
       db.tasks.push(task);
-      createNotif(toId, "📋 Yangi vazifa tayinlandi", `${user.fullName || user.username} sizga vazifa yubordi: "${task.title}"`, "task", task.id);
-      pushAuditLog("CREATE", "Task", task.id, `"${task.title}" vazifasi ${assignee.fullName} ga tayinlandi`);
+      const linkedUser = db.users.find((u) => u.employeeId === toId);
+      if (linkedUser) createNotif(linkedUser.id, "📋 Yangi vazifa tayinlandi", `${user.fullName || user.username} sizga vazifa yubordi: "${task.title}"`, "task", task.id);
+      pushAuditLog("CREATE", "Task", task.id, `"${task.title}" vazifasi ${assignee.name} ga tayinlandi`);
       await saveDb();
       return sendJson(response, 201, { success: true, task: enrichTask(task) });
     }
@@ -2430,7 +2462,7 @@ export async function handleRequest(request, response) {
       const idx = db.tasks.findIndex((t) => t.id === taskId);
       if (idx === -1) return sendJson(response, 404, { message: "Vazifa topilmadi" });
       const task = db.tasks[idx];
-      if (task.assignedToId !== user.id) return sendJson(response, 403, { message: "Ruxsat yo'q" });
+      if (user.employeeId == null || task.assignedToId !== Number(user.employeeId)) return sendJson(response, 403, { message: "Ruxsat yo'q" });
       db.tasks[idx] = { ...task, status, rejectReason: status === "REJECTED" ? (rejectReason || "") : null, completedAt: status === "COMPLETED" ? new Date().toISOString() : task.completedAt, updatedAt: new Date().toISOString() };
       const msgs = {
         ACCEPTED: { title: "✅ Vazifa qabul qilindi", message: `${user.fullName} "${task.title}" vazifasini qabul qildi`, type: "info" },
