@@ -756,10 +756,6 @@ function getWeekStart(value) {
   return safeDate;
 }
 
-function pickEmployee(index) {
-  return db.employees[index % db.employees.length];
-}
-
 function scheduleEmployee(employee) {
   const { address, documents, ...publicEmployee } = employee;
   return publicEmployee;
@@ -872,39 +868,43 @@ function buildAttendanceSummary() {
   };
 }
 
-function buildPerson(employee, studio, dateStr) {
-  const record = (db.dailyStatuses || []).find(
-    (s) => String(s.employeeId) === String(employee.id) && s.date === dateStr
-  );
-  const statusType = (record && DAILY_CODE_TO_STATUS_TYPE[record.statusCode]) || "ishda";
-
-  return {
-    ...scheduleEmployee(employee),
-    time: studio.time,
-    employeeId: employee.id === 9 ? "EMP-009" : "",
-    status: statusMap[statusType],
-    statusType
-  };
+// Oylik grafikda statusi belgilangan, shu kuni haqiqatda ishda bo'lgan xodimlarni
+// kod bo'yicha tegishli studiya/guruh "savatchasi"ga taqsimlaydi.
+function buildWorkingPeopleByStudio(dateStr) {
+  const buckets = { "3 Studiya": [], "TJK guruhi": [], "3 Tongi dastur": [] };
+  for (const record of (db.dailyStatuses || [])) {
+    if (record.date !== dateStr) continue;
+    if (!WORKING_DAILY_CODES.includes(record.statusCode)) continue;
+    const employee = db.employees.find((e) => String(e.id) === String(record.employeeId));
+    if (!employee) continue;
+    const statusType = DAILY_CODE_TO_STATUS_TYPE[record.statusCode] || "ishda";
+    const bucketName = record.statusCode === "T" ? "TJK guruhi" : record.statusCode === "S" ? "3 Studiya" : "3 Tongi dastur";
+    const studio = studios.find((s) => s.name === bucketName);
+    buckets[bucketName].push({
+      ...scheduleEmployee(employee),
+      time: studio.time,
+      employeeId: employee.id === 9 ? "EMP-009" : "",
+      status: statusMap[statusType],
+      statusType
+    });
+  }
+  return buckets;
 }
 
-function createGroups(weekStart, seed) {
+function createGroups(weekStart) {
   return dayNames.flatMap((day, dayIndex) => {
     const date = addDays(weekStart, dayIndex);
     const dateStr = formatInputDate(date);
+    const buckets = buildWorkingPeopleByStudio(dateStr);
 
-    return studios.map((studio, studioIndex) => {
-      const base = dayIndex * 2 + studioIndex * 3 + seed;
-      const people = [0, 1, 2].map((offset) => buildPerson(pickEmployee(base + offset), studio, dateStr));
-
-      return {
-        id: `${dayIndex}-${studio.name}`,
-        day,
-        title: `${day}, ${formatDate(date)}`,
-        meta: studio.name,
-        tone: studio.tone,
-        people
-      };
-    });
+    return studios.map((studio) => ({
+      id: `${dayIndex}-${studio.name}`,
+      day,
+      title: `${day}, ${formatDate(date)}`,
+      meta: studio.name,
+      tone: studio.tone,
+      people: buckets[studio.name]
+    }));
   });
 }
 
@@ -927,7 +927,7 @@ function buildDashboard(weekStartValue, options = {}) {
   const weekEnd = addDays(weekStart, 6);
   const seed = Number(options.seed || 0);
   const generatedAt = options.generatedAt || "Hali yaratilmagan";
-  const groups = createGroups(weekStart, seed);
+  const groups = createGroups(weekStart);
   const allPeople = groups.flatMap((group) => group.people);
   const todayDayName = dayNames[(new Date().getDay() + 6) % 7];
   const todayGroups = groups.filter((group) => group.day === todayDayName);
@@ -1202,16 +1202,19 @@ function refreshScheduleDerivedData(schedule, weekStartValue) {
   schedule.groups = schedule.groups.map((group) => {
     const dayIndex = Number(String(group.id).split("-")[0]);
     const dateStr = weekStart && Number.isInteger(dayIndex) ? formatInputDate(addDays(weekStart, dayIndex)) : null;
+
+    // Avtomatik 3 studiya guruhi — har doim oylik grafikdagi haqiqiy ma'lumotdan to'liq qayta tiklanadi
+    if (dateStr && studios.some((s) => s.name === group.meta)) {
+      const buckets = buildWorkingPeopleByStudio(dateStr);
+      return { ...group, people: buckets[group.meta] || [] };
+    }
+
+    // Qo'lda qo'shilgan maxsus guruhlar — faqat xodim ma'lumotlari yangilanadi, tarkibi o'zgarmaydi
     return {
       ...group,
       people: group.people.map((person) => {
         const employee = db.employees.find((item) => String(item.id) === String(person.id));
-        if (!employee) return person;
-        const record = dateStr ? (db.dailyStatuses || []).find(
-          (s) => String(s.employeeId) === String(employee.id) && s.date === dateStr
-        ) : null;
-        const statusType = record ? (DAILY_CODE_TO_STATUS_TYPE[record.statusCode] || "ishda") : person.statusType;
-        return { ...person, ...scheduleEmployee(employee), time: person.time, employeeId: person.employeeId, status: statusMap[statusType] || person.status, statusType };
+        return employee ? { ...person, ...scheduleEmployee(employee), time: person.time, employeeId: person.employeeId, status: person.status, statusType: person.statusType } : person;
       })
     };
   });

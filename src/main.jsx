@@ -3014,9 +3014,10 @@ function WeeklyPage({ activeDay, currentUser, dashboard, onCreate, onDeleteSched
       .catch(() => {});
   }, []);
   const filteredGroups = useMemo(() => {
-    if (activeDay === "Barcha kunlar") return dashboard.groups;
-    const selectedDay = activeDay === "Bugun" ? todayName : activeDay;
-    return dashboard.groups.filter((group) => group.day === selectedDay);
+    const byDay = activeDay === "Barcha kunlar"
+      ? dashboard.groups
+      : dashboard.groups.filter((group) => group.day === (activeDay === "Bugun" ? todayName : activeDay));
+    return byDay.filter((group) => group.people.length > 0);
   }, [activeDay, dashboard.groups, todayName]);
   const visiblePeople = useMemo(() => filteredGroups.flatMap((group) => group.people.map((person) => ({ ...person, groupTitle: group.title, groupMeta: group.meta }))), [filteredGroups]);
   const dayMetrics = useMemo(() => {
