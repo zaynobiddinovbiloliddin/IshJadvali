@@ -1201,9 +1201,16 @@ async function scanAttendance(payload) {
   return { action: "checkin", employee: scheduleEmployee(employee), record, dashboard: getDashboard(payload.weekStart) };
 }
 
+const LEGACY_STUDIO_NAMES = ["3 Tongi dastur"];
+
 function refreshScheduleDerivedData(schedule, weekStartValue) {
   if (!Array.isArray(schedule.groups)) schedule.groups = [];
   const weekStart = weekStartValue ? getWeekStart(weekStartValue) : null;
+
+  // Eskirgan avtomatik guruhlar (masalan "3 Tongi dastur") butunlay olib tashlanadi —
+  // joriy studios ro'yxatidan kelib chiqib quyida qaytadan tiklanadi
+  schedule.groups = schedule.groups.filter((group) => !LEGACY_STUDIO_NAMES.includes(group.meta));
+
   schedule.groups = schedule.groups.map((group) => {
     const dayIndex = Number(String(group.id).split("-")[0]);
     const dateStr = weekStart && Number.isInteger(dayIndex) ? formatInputDate(addDays(weekStart, dayIndex)) : null;
@@ -1223,6 +1230,28 @@ function refreshScheduleDerivedData(schedule, weekStartValue) {
       })
     };
   });
+
+  // Joriy studios ro'yxatidagi yangi guruhlar (masalan "Ishda") har bir kun uchun mavjudligini ta'minlaymiz
+  if (weekStart) {
+    dayNames.forEach((day, dayIndex) => {
+      const date = addDays(weekStart, dayIndex);
+      const dateStr = formatInputDate(date);
+      const buckets = buildWorkingPeopleByStudio(dateStr);
+      for (const studio of studios) {
+        const id = `${dayIndex}-${studio.name}`;
+        if (!schedule.groups.some((g) => g.id === id)) {
+          schedule.groups.push({
+            id,
+            day,
+            title: `${day}, ${formatDate(date)}`,
+            meta: studio.name,
+            tone: studio.tone,
+            people: buckets[studio.name] || []
+          });
+        }
+      }
+    });
+  }
 
   const allPeople = schedule.groups.flatMap((group) => group.people);
   const todayGroups = schedule.groups.filter((group) => group.day === "Dushanba");
