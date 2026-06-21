@@ -219,7 +219,10 @@ const initialEmployees = [
 const studios = [
   { name: "3 Studiya", tone: "purple", time: "9:00 - 22:00" },
   { name: "TJK guruhi", tone: "purple", time: "9:00 - 18:00" },
-  { name: "3 Tongi dastur", tone: "blue", time: "9:00 - 18:00" }
+  { name: "Ishda", tone: "blue", time: "9:00 - 18:00" },
+  { name: "Komandirovka", tone: "blue", time: "9:00 - 18:00" },
+  { name: "Administratsiya", tone: "blue", time: "9:00 - 18:00" },
+  { name: "Prezidentskiy", tone: "blue", time: "9:00 - 18:00" }
 ];
 const initialContacts = [
   { id: "contact-1", type: "Muxbir", name: "Sarvar Raximov", vehicle: "", phone: "+998 90 302 55 92" },
@@ -871,14 +874,16 @@ function buildAttendanceSummary() {
 // Oylik grafikda statusi belgilangan, shu kuni haqiqatda ishda bo'lgan xodimlarni
 // kod bo'yicha tegishli studiya/guruh "savatchasi"ga taqsimlaydi.
 function buildWorkingPeopleByStudio(dateStr) {
-  const buckets = { "3 Studiya": [], "TJK guruhi": [], "3 Tongi dastur": [] };
+  const buckets = { "3 Studiya": [], "TJK guruhi": [], "Ishda": [], "Komandirovka": [], "Administratsiya": [], "Prezidentskiy": [] };
+  const CODE_TO_BUCKET = { T: "TJK guruhi", S: "3 Studiya", I: "Ishda", K: "Komandirovka", A: "Administratsiya", P: "Prezidentskiy" };
   for (const record of (db.dailyStatuses || [])) {
     if (record.date !== dateStr) continue;
     if (!WORKING_DAILY_CODES.includes(record.statusCode)) continue;
     const employee = db.employees.find((e) => String(e.id) === String(record.employeeId));
     if (!employee) continue;
     const statusType = DAILY_CODE_TO_STATUS_TYPE[record.statusCode] || "ishda";
-    const bucketName = record.statusCode === "T" ? "TJK guruhi" : record.statusCode === "S" ? "3 Studiya" : "3 Tongi dastur";
+    const bucketName = CODE_TO_BUCKET[record.statusCode];
+    if (!bucketName) continue;
     const studio = studios.find((s) => s.name === bucketName);
     buckets[bucketName].push({
       ...scheduleEmployee(employee),

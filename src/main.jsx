@@ -79,15 +79,15 @@ const OPERATOR_NAMES = [
 ];
 const SHIFT_LABELS = ["09:00-18:00", "09:00-22:00", "18:00-09:00", "Dam"];
 const MONTHLY_STATUS_OPTIONS = {
-  work: { label: "I", shift: "Ishda", hours: 9 },
+  work: { label: "I", shift: "Ishda", hours: 8 },
   rest: { label: "D", shift: "Dam", hours: 0 },
-  trip: { label: "K", shift: "Komandirovka", hours: 9 },
-  tjk: { label: "T", shift: "TJK guruhi", hours: 9 },
-  studio: { label: "S", shift: "Studiyada", hours: 9 },
+  trip: { label: "K", shift: "Komandirovka", hours: 8 },
+  tjk: { label: "T", shift: "TJK guruhi", hours: 8 },
+  studio: { label: "S", shift: "Studiyada", hours: 8 },
   vacation: { label: "M", shift: "Ta'tilda", hours: 0 },
   otpiska: { label: "O", shift: "O'quv ta'tili", hours: 0 },
-  administration: { label: "A", shift: "Administratsiya", hours: 9 },
-  presidential: { label: "P", shift: "Prezidentskiy", hours: 9 },
+  administration: { label: "A", shift: "Administratsiya", hours: 8 },
+  presidential: { label: "P", shift: "Prezidentskiy", hours: 8 },
   sick: { label: "B", shift: "Kasal", hours: 0 },
   unpaid: { label: "U", shift: "Pulsiz ta'til", hours: 0 }
 };
@@ -2412,7 +2412,7 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
       let working = 0, rest = 0, hours = 0;
       for (let d = 1; d <= daysInMonth; d++) {
         const code = empSt[`${monthPrefix}-${String(d).padStart(2, "0")}`] || "empty";
-        if (WORKING_DAILY.includes(code)) { working++; hours += 9; }
+        if (WORKING_DAILY.includes(code)) { working++; hours += 8; }
         if (["D", "M", "O", "B", "U"].includes(code)) rest++;
       }
       result[emp.id] = { working, rest, hours };
@@ -2428,7 +2428,7 @@ function MonthlyPage({ dashboard, weekStart, fullscreen = false, onClose, curren
         const code = empSt[`${monthPrefix}-${String(d).padStart(2, "0")}`] || "empty";
         if (code !== "empty") {
           if (r[code] !== undefined) r[code]++;
-          if (WORKING_DAILY.includes(code)) { r.working++; r.hours += 9; }
+          if (WORKING_DAILY.includes(code)) { r.working++; r.hours += 8; }
           if (["D", "M", "O", "B", "U"].includes(code)) r.rest++;
         }
       }
@@ -5194,7 +5194,7 @@ function ProfilePage({ currentUser, dashboard, theme, onLogout, onRefresh, onThe
       else if (code === "K") trip++;
       else if (["D", "M", "O", "B", "U"].includes(code)) rest++;
     }
-    return { working, rest, hours: working * 9, trip };
+    return { working, rest, hours: working * 8, trip };
   }, [profileEmployee, profileStatuses, profileCalYear, profileCalMonth]);
 
   const selectedDay = calendarInfo.days.find((day) => day?.dateText === selectedDate) || calendarInfo.days.find((day) => day?.isToday) || calendarInfo.days.find(Boolean);
