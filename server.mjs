@@ -634,7 +634,7 @@ function requireAdmin(request, response) {
 
 // ─── Daily Status helpers ─────────────────────────────────────────────────────
 const VALID_STATUS_CODES = new Set(["I", "S", "T", "K", "D", "M", "O", "A", "P", "B", "U", "empty"]);
-const WORKING_DAILY_CODES = ["I", "S", "T", "A", "P"];
+const WORKING_DAILY_CODES = ["I", "S", "T", "A", "P", "K"];
 
 function upsertDailyStatus(employeeId, date, statusCode) {
   if (!db.dailyStatuses) db.dailyStatuses = [];
